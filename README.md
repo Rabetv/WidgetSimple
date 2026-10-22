@@ -16,14 +16,17 @@ A text-only app launcher for the iPhone Home Screen. Design a medium (or large) 
 
 ## Build without a Mac (GitHub → TestFlight)
 
-The **TestFlight** workflow (`.github/workflows/testflight.yml`) archives, signs and uploads the app on a GitHub-hosted Mac.
+The **TestFlight** workflow (`.github/workflows/testflight.yml`) archives, signs and uploads the app on a GitHub-hosted Mac. It uses the same setup as JAAPP: [codemagic-cli-tools](https://github.com/codemagic-ci-cd/cli-tools) creates or reuses the distribution certificate and the provisioning profiles through the App Store Connect API.
 
-1. Register the App IDs `com.rabetv.widgetsimple` and `com.rabetv.widgetsimple.widget` with the App Group `group.com.rabetv.widgetsimple` (developer.apple.com › Identifiers).
+1. developer.apple.com › Identifiers: register the App IDs `com.rabetv.widgetsimple` and `com.rabetv.widgetsimple.widget`, create the App Group `group.com.rabetv.widgetsimple` and tick it under *App Groups* for both App IDs. (Apple's API can't assign App Groups, so this one step is manual.)
 2. Create the app record in App Store Connect with bundle ID `com.rabetv.widgetsimple`.
-3. App Store Connect › Users and Access › Integrations › App Store Connect API: create a key with the **Admin** role.
-4. Repository secrets (Settings › Secrets and variables › Actions): `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (whole .p8 file), and `GH_SECRETS_TOKEN` (fine-grained token with *Secrets: Read and write* on this repo).
-5. Actions › TestFlight › Run workflow. The first run creates an Apple Distribution certificate via the API and stores it as `SIGNING_P12_BASE64` / `SIGNING_P12_PASSWORD`; later runs reuse it. Provisioning profiles are recreated on every run (`ci/asc_signing.py`).
-6. Install from the TestFlight app on your iPhone.
+3. Repository secrets (Settings › Secrets and variables › Actions), the same values JAAPP uses:
+   - `APP_STORE_CONNECT_ISSUER_ID`: Issuer ID (App Store Connect › Users and Access › Integrations › App Store Connect API)
+   - `APP_STORE_CONNECT_KEY_IDENTIFIER`: Key ID of an API key with the **Admin** role
+   - `APP_STORE_CONNECT_PRIVATE_KEY`: whole contents of that key's `AuthKey_XXXX.p8` file
+   - `CERTIFICATE_PRIVATE_KEY`: RSA private key (PEM) of the distribution certificate. Reusing JAAPP's key reuses its certificate; a new key (`ssh-keygen -t rsa -b 2048 -m PEM -f cert_key -q -N ""`) makes the workflow create a new certificate.
+4. Actions › TestFlight › Run workflow.
+5. Install from the TestFlight app on your iPhone.
 
 ## Build with a Mac
 

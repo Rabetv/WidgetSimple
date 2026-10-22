@@ -1,14 +1,16 @@
 # Builds, signs and uploads WidgetSimple to App Store Connect / TestFlight
 # on a GitHub-hosted Mac. Start it from the Actions tab (no Mac needed).
 #
-# Repository secrets (Settings › Secrets and variables › Actions):
-#   ASC_KEY_ID        App Store Connect API key ID
-#   ASC_ISSUER_ID     Issuer ID shown above the key list
-#   ASC_KEY_P8        Full contents of the downloaded AuthKey_XXXX.p8 file
-#   GH_SECRETS_TOKEN  Fine-grained GitHub token with "Secrets: Read and write"
-#                     on this repository. Needed on the first run, which creates
-#                     the signing certificate and stores it as two more secrets:
-#   SIGNING_P12_BASE64, SIGNING_P12_PASSWORD   (created automatically)
+# Same setup as JAAPP: codemagic-cli-tools creates (or reuses) the Apple
+# Distribution certificate and the App Store provisioning profiles through
+# the App Store Connect API, so no signing files have to be made by hand.
+#
+# Repository secrets (Settings › Secrets and variables › Actions). The values
+# are the same ones JAAPP uses, so the existing certificate is reused:
+#   APP_STORE_CONNECT_ISSUER_ID       Issuer ID shown above the API key list
+#   APP_STORE_CONNECT_KEY_IDENTIFIER  Key ID of the API key (Admin role)
+#   APP_STORE_CONNECT_PRIVATE_KEY     Full contents of the AuthKey_XXXX.p8 file
+#   CERTIFICATE_PRIVATE_KEY           RSA private key (PEM) of the distribution certificate
 
 name: TestFlight
 
@@ -32,48 +34,42 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 45
     env:
-      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-      APP_PROFILE: WidgetSimple CI App
-      WIDGET_PROFILE: WidgetSimple CI Widget
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+      CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check repository secrets
-        env:
-          HAS_P12: ${{ secrets.SIGNING_P12_BASE64 != '' }}
-          HAS_TOKEN: ${{ secrets.GH_SECRETS_TOKEN != '' }}
+      # Fails fast if a secret is missing. Only prints lengths, never the values.
+      - name: Check required secrets are present
         run: |
-          missing=""
-          [ -n "$ASC_KEY_ID" ] || missing="$missing ASC_KEY_ID"
-          [ -n "$ASC_ISSUER_ID" ] || missing="$missing ASC_ISSUER_ID"
-          [ -n "$ASC_KEY_P8" ] || missing="$missing ASC_KEY_P8"
-          if [ -n "$missing" ]; then
-            echo "::error::Missing repository secrets:$missing (Settings › Secrets and variables › Actions)."
-            exit 1
-          fi
-          if [ "$HAS_P12" != "true" ] && [ "$HAS_TOKEN" != "true" ]; then
-            echo "::error::First run: add the GH_SECRETS_TOKEN secret so the signing certificate can be stored for later runs."
-            exit 1
-          fi
+          set -euo pipefail
+          missing=0
+          for name in APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_KEY_IDENTIFIER APP_STORE_CONNECT_PRIVATE_KEY CERTIFICATE_PRIVATE_KEY; do
+            value="${!name:-}"
+            echo "$name length=${#value}"
+            if [ -z "$value" ]; then
+              echo "::error::Secret $name is empty or not set (Settings › Secrets and variables › Actions)."
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ]
 
       - name: Read project settings
         run: |
           read_setting() { sed -n "s/^$1 *= *//p" Config/Base.xcconfig | tr -d '[:space:]'; }
-          TEAM_ID=$(read_setting DEVELOPMENT_TEAM)
           PREFIX=$(read_setting BUNDLE_ID_PREFIX)
-          if [ -z "$TEAM_ID" ] || [ -z "$PREFIX" ]; then
-            echo "::error::Set DEVELOPMENT_TEAM and BUNDLE_ID_PREFIX in Config/Base.xcconfig."
+          if [ -z "$PREFIX" ]; then
+            echo "::error::Set BUNDLE_ID_PREFIX in Config/Base.xcconfig."
             exit 1
           fi
           {
-            echo "TEAM_ID=$TEAM_ID"
             echo "APP_ID=$PREFIX.widgetsimple"
             echo "WIDGET_ID=$PREFIX.widgetsimple.widget"
             echo "APP_GROUP=group.$PREFIX.widgetsimple"
           } >> "$GITHUB_ENV"
-          echo "Team $TEAM_ID · app $PREFIX.widgetsimple · widget $PREFIX.widgetsimple.widget"
+          echo "App $PREFIX.widgetsimple · widget $PREFIX.widgetsimple.widget · group group.$PREFIX.widgetsimple"
 
       - name: Select newest Xcode
         run: |
@@ -81,68 +77,90 @@ jobs:
           sudo xcode-select -s "$XCODE"
           xcodebuild -version
 
-      - name: Install helper dependencies
-        run: |
-          python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check pyjwt cryptography
-          echo "PY=$RUNNER_TEMP/venv/bin/python" >> "$GITHUB_ENV"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Signing certificate
-        env:
-          SIGNING_P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
-          SIGNING_P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
-          GH_TOKEN: ${{ secrets.GH_SECRETS_TOKEN }}
+      - name: Install codemagic-cli-tools
+        run: pip install codemagic-cli-tools
+
+      - name: Set up keychain to be used for code signing
         run: |
-          P12="$RUNNER_TEMP/dist.p12"
-          if [ -n "$SIGNING_P12_BASE64" ]; then
-            printf '%s' "$SIGNING_P12_BASE64" | base64 --decode > "$P12"
-            PW="$SIGNING_P12_PASSWORD"
-            echo "Using the stored signing certificate."
-          else
-            # Make sure the token can store secrets BEFORE creating a certificate.
-            if ! gh api "repos/$GITHUB_REPOSITORY/actions/secrets/public-key" --silent; then
-              echo "::error::GH_SECRETS_TOKEN can't manage secrets here. It needs access to $GITHUB_REPOSITORY with permission Secrets: Read and write."
-              exit 1
+          set -euo pipefail
+          keychain initialize
+          echo "KEYCHAIN_PATH=$(keychain get-default)" >> "$GITHUB_ENV"
+
+      - name: Fetch signing files for the app and the widget
+        run: |
+          set -euo pipefail
+          for id in "$APP_ID" "$WIDGET_ID"; do
+            app-store-connect fetch-signing-files "$id" \
+              --type IOS_APP_STORE \
+              --strict-match-identifier \
+              --create
+          done
+          keychain add-certificates
+
+      # Picks the installed profile for each bundle ID and checks it carries the
+      # App Group: that part can only be set up in the developer portal.
+      - name: Find provisioning profiles and signing identity
+        run: |
+          set -euo pipefail
+          PLIST="$RUNNER_TEMP/profile.plist"
+          # Sets PROFILE_UUID and PROFILE_TEAM for the bundle ID in $1.
+          find_profile() {
+            local bundle="$1" without_group=""
+            PROFILE_UUID=""
+            for f in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision \
+                     "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"/*.mobileprovision; do
+              [ -f "$f" ] || continue
+              security cms -D -i "$f" > "$PLIST" 2>/dev/null || continue
+              appid=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PLIST" 2>/dev/null || true)
+              [ "${appid#*.}" = "$bundle" ] || continue
+              groups=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.security.application-groups' "$PLIST" 2>/dev/null || true)
+              if grep -qF "$APP_GROUP" <<< "$groups"; then
+                PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PLIST")
+                PROFILE_TEAM=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PLIST")
+              else
+                without_group=1
+              fi
+            done
+            if [ -n "$PROFILE_UUID" ]; then return; fi
+            if [ -n "$without_group" ]; then
+              echo "::error::The profile for $bundle has no App Group $APP_GROUP. developer.apple.com › Certificates, Identifiers & Profiles › Identifiers: create the App Group $APP_GROUP if needed, then open $bundle › App Groups › Configure, tick it, save, and run this workflow again."
+            else
+              echo "::error::No App Store provisioning profile for $bundle was installed."
             fi
-            PW=$(openssl rand -hex 24)
-            echo "::add-mask::$PW"
-            "$PY" ci/asc_signing.py create-cert --out "$P12" --password "$PW"
-            base64 -i "$P12" | tr -d '\n' | gh secret set SIGNING_P12_BASE64 --repo "$GITHUB_REPOSITORY"
-            printf '%s' "$PW" | gh secret set SIGNING_P12_PASSWORD --repo "$GITHUB_REPOSITORY"
-            echo "Stored the new certificate as repository secrets for future runs."
+            exit 1
+          }
+          find_profile "$APP_ID"
+          APP_PROFILE="$PROFILE_UUID"
+          find_profile "$WIDGET_ID"
+          WIDGET_PROFILE="$PROFILE_UUID"
+          # Line 1 of find-identity: '  1) <SHA-1> "Apple Distribution: Name (TEAM)"'
+          IDENTITY_LINE=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | sed -n 1p)
+          IDENTITY_NAME=$(sed -n 's/.*"\(.*\)".*/\1/p' <<< "$IDENTITY_LINE")
+          IDENTITY_SHA1=$(awk '{print $2}' <<< "$IDENTITY_LINE")
+          if [ -z "$IDENTITY_NAME" ] || [ ${#IDENTITY_SHA1} -ne 40 ]; then
+            echo "::error::No signing certificate in the keychain."
+            exit 1
           fi
-          echo "P12_PATH=$P12" >> "$GITHUB_ENV"
-          echo "P12_PASSWORD=$PW" >> "$GITHUB_ENV"
-
-      - name: Keychain
-        run: |
-          KC="$RUNNER_TEMP/signing.keychain-db"
-          KCPW=$(openssl rand -hex 16)
-          echo "::add-mask::$KCPW"
-          security create-keychain -p "$KCPW" "$KC"
-          security set-keychain-settings -lut 21600 "$KC"
-          security unlock-keychain -p "$KCPW" "$KC"
-          curl -fsSL -o "$RUNNER_TEMP/AppleWWDRCAG3.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
-          security import "$RUNNER_TEMP/AppleWWDRCAG3.cer" -k "$KC" -T /usr/bin/codesign || true
-          security import "$P12_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KCPW" "$KC" > /dev/null
-          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
-          security find-identity -v -p codesigning "$KC"
-          echo "KEYCHAIN=$KC" >> "$GITHUB_ENV"
-
-      - name: Provisioning profiles
-        run: |
-          "$PY" ci/asc_signing.py profiles \
-            --p12 "$P12_PATH" --password "$P12_PASSWORD" \
-            --app "$APP_ID" --widget "$WIDGET_ID" --group "$APP_GROUP" \
-            --app-profile "$APP_PROFILE" --widget-profile "$WIDGET_PROFILE" \
-            --outdir "$RUNNER_TEMP/profiles"
+          {
+            echo "APP_PROFILE=$APP_PROFILE"
+            echo "WIDGET_PROFILE=$WIDGET_PROFILE"
+            echo "TEAM_ID=$PROFILE_TEAM"
+            echo "SIGNING_IDENTITY=$IDENTITY_NAME"
+            echo "SIGNING_SHA1=$IDENTITY_SHA1"
+          } >> "$GITHUB_ENV"
+          echo "Team $PROFILE_TEAM · app profile $APP_PROFILE · widget profile $WIDGET_PROFILE · $IDENTITY_NAME"
 
       - name: Archive
         env:
           BUILD_INPUT: ${{ github.event.inputs.build_number }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
+          set -euo pipefail
           BUILD="${BUILD_INPUT:-$RUN_NUMBER}"
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
           echo "Archiving build $BUILD"
@@ -151,53 +169,73 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/WidgetSimple.xcarchive" \
             CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             APP_PROFILE_SPECIFIER="$APP_PROFILE" \
             WIDGET_PROFILE_SPECIFIER="$WIDGET_PROFILE" \
-            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
             CURRENT_PROJECT_VERSION="$BUILD" \
             archive
 
-      - name: Upload to App Store Connect
+      - name: Export ipa
         run: |
-          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
-          "$PY" ci/asc_signing.py write-key --out "$KEY"
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>teamID</key><string>$TEAM_ID</string>
-            <key>signingCertificate</key><string>Apple Distribution</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>$APP_ID</key><string>$APP_PROFILE</string>
-              <key>$WIDGET_ID</key><string>$WIDGET_PROFILE</string>
-            </dict>
-            <key>uploadSymbols</key><true/>
-            <key>manageAppVersionAndBuildNumber</key><false/>
-          </dict>
-          </plist>
-          EOF
+          set -euo pipefail
+          OPTS="$RUNNER_TEMP/ExportOptions.plist"
+          pb() { /usr/libexec/PlistBuddy -c "$1" "$OPTS" > /dev/null; }
+          pb "Add :method string app-store-connect"
+          pb "Add :destination string export"
+          pb "Add :signingStyle string manual"
+          pb "Add :teamID string $TEAM_ID"
+          pb "Add :signingCertificate string $SIGNING_SHA1"
+          pb "Add :provisioningProfiles dict"
+          pb "Add :provisioningProfiles:$APP_ID string $APP_PROFILE"
+          pb "Add :provisioningProfiles:$WIDGET_ID string $WIDGET_PROFILE"
+          pb "Add :uploadSymbols bool true"
+          pb "Add :manageAppVersionAndBuildNumber bool false"
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/WidgetSimple.xcarchive" \
-            -exportPath "$RUNNER_TEMP/export" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -exportOptionsPlist "$OPTS"
+          ls -l "$RUNNER_TEMP/ipa"
+
+      # Retries only on transient Apple server errors; anything else
+      # (credentials, missing app record, validation) fails right away.
+      - name: Publish to App Store Connect
+        run: |
+          set -euo pipefail
+          max_attempts=4
+          attempt=1
+          while :; do
+            echo "Publish attempt $attempt of $max_attempts"
+            log=$(mktemp)
+            set +e
+            app-store-connect publish --path "$RUNNER_TEMP/ipa/*.ipa" 2>&1 | tee "$log"
+            status=${PIPESTATUS[0]}
+            set -e
+            [ "$status" -eq 0 ] && break
+            if grep -Eqi '(502|500|UNEXPECTED_ERROR|Bad Gateway)' "$log" && [ "$attempt" -lt "$max_attempts" ]; then
+              echo "Transient error, retrying in 120s..."
+              attempt=$((attempt + 1))
+              sleep 120
+              continue
+            fi
+            if grep -qi "no suitable application records" "$log"; then
+              echo "::error::App Store Connect has no app with bundle ID $APP_ID yet. Create it: App Store Connect › Apps › + › New App, bundle ID $APP_ID."
+            fi
+            echo "::error::app-store-connect publish failed"
+            exit "$status"
+          done
           {
             echo "### Uploaded build $BUILD"
             echo "It appears in App Store Connect › TestFlight after Apple finishes processing (usually 5–30 minutes)."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Clean up
+      - name: Clean up keychain and signing files
         if: always()
         run: |
-          if [ -n "${KEYCHAIN:-}" ]; then security delete-keychain "$KEYCHAIN" || true; fi
-          rm -f "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP"/AuthKey_*.p8
+          set +e
+          if [ -n "${KEYCHAIN_PATH:-}" ]; then keychain delete -p "$KEYCHAIN_PATH"; fi
+          rm -rf "$HOME/Library/MobileDevice/Provisioning Profiles" \
+                 "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+                 "$HOME/Library/MobileDevice/Certificates"
+          exit 0
