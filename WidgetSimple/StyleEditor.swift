@@ -25,27 +25,29 @@ struct StyleEditor: View {
             ForEach(FontWeightOption.allCases) { Text($0.title).tag($0) }
         }
 
-        Toggle("Italic", isOn: $style.italic)
-        Toggle("Underline", isOn: $style.underline)
-
         ColorPicker("Color", selection: Binding(
             get: { style.color.color },
             set: { style.color = RGBA($0) }
         ), supportsOpacity: true)
 
-        SliderRow(title: "Letter spacing", value: $style.tracking, range: -3...15, step: 0.5, format: "%.1f")
+        DisclosureGroup("More") {
+            Toggle("Italic", isOn: $style.italic)
+            Toggle("Underline", isOn: $style.underline)
 
-        Picker("Case", selection: $style.textCase) {
-            ForEach(TextCaseOption.allCases) { Text($0.title).tag($0) }
-        }
+            SliderRow(title: "Letter spacing", value: $style.tracking, range: -3...15, step: 0.5, format: "%.1f")
 
-        Toggle("Shadow (better readability)", isOn: $style.shadow)
-        if style.shadow {
-            SliderRow(title: "Shadow blur", value: $style.shadowRadius, range: 0...12)
-            ColorPicker("Shadow color", selection: Binding(
-                get: { style.shadowColor.color },
-                set: { style.shadowColor = RGBA($0) }
-            ), supportsOpacity: true)
+            Picker("Case", selection: $style.textCase) {
+                ForEach(TextCaseOption.allCases) { Text($0.title).tag($0) }
+            }
+
+            Toggle("Shadow", isOn: $style.shadow)
+            if style.shadow {
+                SliderRow(title: "Shadow blur", value: $style.shadowRadius, range: 0...12)
+                ColorPicker("Shadow color", selection: Binding(
+                    get: { style.shadowColor.color },
+                    set: { style.shadowColor = RGBA($0) }
+                ), supportsOpacity: true)
+            }
         }
     }
 }
@@ -74,7 +76,7 @@ struct FontPickerView: View {
             } header: {
                 Text("Your fonts")
             } footer: {
-                Text("Imported fonts work in the widget too. Get .ttf/.otf files from Files, iCloud Drive or a download.")
+                Text("Import .ttf or .otf files.")
             }
             Section("Built into iOS") {
                 ForEach(filter(FontCatalog.familyFonts)) { row($0) }
@@ -153,7 +155,7 @@ struct FontLibraryView: View {
                     FontPickerView(selection: $selection)
                 }
             } footer: {
-                Text("WidgetSimple includes the system fonts and 40 font families built into iOS. You can also import your own .ttf/.otf files.")
+                Text("40+ fonts built in. Import your own .ttf or .otf.")
             }
             if !fonts.isEmpty {
                 Section("Imported") {

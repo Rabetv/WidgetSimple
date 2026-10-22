@@ -1,16 +1,15 @@
 import Foundation
 
-/// Decides how a widget tap reaches the target app.
+/// How a widget tap reaches the target app.
 ///
-/// * Direct: the widget runs `OpenTargetIntent`, which hands the URL to the
-///   system (`OpenURLIntent`). Works reliably for web links / universal links.
-///   For custom app schemes this depends on the iOS version, so it is opt-in.
-/// * Via WidgetSimple: the widget opens `widgetsimple://open?u=…`, the app
-///   immediately forwards the URL and gets out of the way. Works for every app.
+/// iOS sends every widget tap to the widget's own app; a widget can't open another
+/// app by itself. So the widget opens `widgetsimple://open?u=…` and WidgetSimple
+/// forwards the URL immediately on a black screen.
 enum LaunchRouter {
     static let scheme = "widgetsimple"
 
     static func hopURL(for target: URL) -> URL {
+        if target.scheme?.lowercased() == scheme { return target }
         let encoded = Data(target.absoluteString.utf8).base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
@@ -30,18 +29,5 @@ enum LaunchRouter {
         guard let data = Data(base64Encoded: base64),
               let string = String(data: data, encoding: .utf8) else { return nil }
         return URL(string: string)
-    }
-
-    static func isWeb(_ url: URL) -> Bool {
-        let s = url.scheme?.lowercased() ?? ""
-        return s == "http" || s == "https"
-    }
-
-    static func usesDirect(_ url: URL, method: LaunchMethod) -> Bool {
-        switch method {
-        case .auto: return isWeb(url)
-        case .direct: return true
-        case .viaApp: return false
-        }
     }
 }

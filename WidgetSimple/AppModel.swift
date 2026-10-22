@@ -17,8 +17,12 @@ final class AppModel: ObservableObject {
     /// True while the app is only forwarding a widget tap to another app.
     @Published var isForwarding = false
     @Published var launchError: String?
-    /// A wallpaper screenshot shown behind transparent widgets in the in-app preview only.
-    @Published private(set) var previewBackdrop: UIImage?
+    @Published var clock: ClockStyle {
+        didSet {
+            store.saveClock(clock)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
 
     let store = SharedStore.shared
     private var saveTask: Task<Void, Never>?
@@ -33,20 +37,37 @@ final class AppModel: ObservableObject {
         layouts = loaded
         settings = store.loadSettings()
         metrics = store.loadMetrics()
-        previewBackdrop = (try? Data(contentsOf: backdropURL)).flatMap(UIImage.init(data:))
+        clock = store.loadClock()
     }
 
-    // MARK: Preview backdrop (app only, never used by the widget)
+    // MARK: No edges
 
-    private var backdropURL: URL { store.rootURL.appendingPathComponent("preview-backdrop.jpg") }
+    /// Gives every widget (launchers and clock) a flat background in `color`, and
+    /// switches text to black or white where it would be hard to read.
+    func applyBackground(_ color: RGBA) {
+        let readable: RGBA = color.luminance >= 0.5 ? .black : .white
+        layouts = layouts.map { layout in
+            var updated = layout
+            updated.background.mode = .color
+            updated.background.color = color
+            updated.background.darkColor = nil
+            if abs(updated.style.color.luminance - color.luminance) < 0.35 {
+                updated.style.color = readable
+            }
+            return updated
+        }
+        var newClock = clock
+        newClock.background = color
+        if abs(newClock.color.luminance - color.luminance) < 0.35 {
+            newClock.color = readable
+        }
+        clock = newClock
+    }
 
-    func setPreviewBackdrop(_ image: UIImage?) {
-        if let image, let data = image.jpegData(compressionQuality: 0.85) {
-            try? data.write(to: backdropURL, options: .atomic)
-            previewBackdrop = image
-        } else {
-            try? FileManager.default.removeItem(at: backdropURL)
-            previewBackdrop = nil
+    /// True when every widget already uses `color` as its background.
+    func usesBackground(_ color: RGBA) -> Bool {
+        clock.background == color && layouts.allSatisfy {
+            $0.background.mode == .color && $0.background.darkColor == nil && $0.background.color == color
         }
     }
 

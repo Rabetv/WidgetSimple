@@ -40,6 +40,7 @@ final class SharedStore: @unchecked Sendable {
     var layoutsURL: URL { rootURL.appendingPathComponent("layouts.json") }
     var settingsURL: URL { rootURL.appendingPathComponent("settings.json") }
     var metricsURL: URL { rootURL.appendingPathComponent("widget-metrics.json") }
+    var clockURL: URL { rootURL.appendingPathComponent("clock.json") }
     var fontsIndexURL: URL { rootURL.appendingPathComponent("fonts.json") }
     var backgroundsURL: URL { rootURL.appendingPathComponent("Backgrounds", isDirectory: true) }
     var fontsURL: URL { rootURL.appendingPathComponent("Fonts", isDirectory: true) }
@@ -84,6 +85,16 @@ final class SharedStore: @unchecked Sendable {
 
     func saveSettings(_ settings: AppSettings) {
         write(settings, to: settingsURL)
+    }
+
+    // MARK: Clock widget
+
+    func loadClock() -> ClockStyle {
+        read(ClockStyle.self, from: clockURL) ?? ClockStyle()
+    }
+
+    func saveClock(_ clock: ClockStyle) {
+        write(clock, to: clockURL)
     }
 
     // MARK: Widget metrics (written by the widget)

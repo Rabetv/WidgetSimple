@@ -47,7 +47,8 @@ enum AppCatalog {
     static let apps: [CatalogApp] = [
         // Apple
         CatalogApp("phone", "Phone", "mobilephone://", .apple, wellKnown: false),
-        CatalogApp("messages", "Messages", "sms://", .apple),
+        // sms:, imessage:// and messages:// open a new message on iOS 26; ichat:// opens the app.
+        CatalogApp("messages", "Messages", "ichat://", .apple),
         CatalogApp("mail", "Mail", "message://", .apple),
         CatalogApp("safari", "Safari", "x-web-search://", .apple),
         CatalogApp("music", "Music", "music://", .apple),
@@ -95,7 +96,7 @@ enum AppCatalog {
         CatalogApp("viber", "Viber", "viber://", .social),
         CatalogApp("line", "LINE", "line://", .social),
         CatalogApp("wechat", "WeChat", "weixin://", .social),
-        CatalogApp("bluesky", "Bluesky", "bluesky://", .social, wellKnown: false),
+        CatalogApp("bluesky", "Bluesky", "https://bsky.app", .social),
 
         // Music & video
         CatalogApp("youtube", "YouTube", "youtube://", .media),
@@ -147,7 +148,7 @@ enum AppCatalog {
         CatalogApp("booking", "Booking.com", "booking://", .travel),
         CatalogApp("strava", "Strava", "strava://", .travel),
         CatalogApp("bolt", "Bolt", "bolt://", .travel, wellKnown: false),
-        CatalogApp("wolt", "Wolt", "wolt://", .travel, wellKnown: false),
+        CatalogApp("wolt", "Wolt", "https://wolt.com/discovery", .travel),
 
         // Shopping & money
         CatalogApp("amazon", "Amazon", "com.amazon.mobile.shopping://", .shopping),

@@ -2,12 +2,13 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
+    @AppStorage("didSeeTutorial") private var didSeeTutorial = false
     @State private var path: [UUID] = []
 
     var body: some View {
         NavigationStack(path: $path) {
             List {
-                Section {
+                Section("Widgets") {
                     ForEach(model.layouts) { layout in
                         NavigationLink(value: layout.id) {
                             LayoutRow(layout: layout)
@@ -25,29 +26,20 @@ struct RootView: View {
                         let layout = model.addLayout()
                         path.append(layout.id)
                     } label: {
-                        Label("New widget layout", systemImage: "plus")
+                        Label("New widget", systemImage: "plus")
                     }
-                } header: {
-                    Text("Your widgets")
-                } footer: {
-                    Text("Each layout is one widget design. On the Home Screen, long-press a WidgetSimple widget, tap Edit Widget and choose the layout.")
                 }
 
-                Section("Set up") {
+                Section {
                     NavigationLink {
-                        AddWidgetGuideView()
+                        ClockEditorView()
                     } label: {
-                        Label("Add the widget to your Home Screen", systemImage: "square.grid.2x2")
+                        Label("Clock widget", systemImage: "clock")
                     }
                     NavigationLink {
-                        GlassGuideView()
+                        NoEdgesView()
                     } label: {
-                        Label("Transparent widgets & the glass edge", systemImage: "rectangle.dashed")
-                    }
-                    NavigationLink {
-                        LaunchSettingsView()
-                    } label: {
-                        Label("How apps open", systemImage: "arrow.up.forward.app")
+                        Label("Hide the edges", systemImage: "square.dashed")
                     }
                     NavigationLink {
                         FontLibraryView()
@@ -61,14 +53,14 @@ struct RootView: View {
                         Button(role: .destructive) {
                             model.stopCalibration()
                         } label: {
-                            Label("Stop calibration (widget is magenta)", systemImage: "xmark.circle")
+                            Label("Stop magenta widget", systemImage: "xmark.circle")
                         }
                     }
                 }
 
                 if !model.store.isAppGroupAvailable {
                     Section {
-                        Label("App Group not configured. The widget can't see your layouts until signing and the App Group are set up (see README).", systemImage: "exclamationmark.triangle")
+                        Label("App Group missing: widgets can't load.", systemImage: "exclamationmark.triangle")
                             .font(.footnote)
                             .foregroundStyle(.orange)
                     }
@@ -76,7 +68,17 @@ struct RootView: View {
             }
             .navigationTitle("WidgetSimple")
             .toolbar {
-                EditButton()
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        didSeeTutorial = false
+                    } label: {
+                        Image(systemName: "questionmark.circle")
+                    }
+                    .accessibilityLabel("Tutorial")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    EditButton()
+                }
             }
             .navigationDestination(for: UUID.self) { id in
                 LayoutEditorView(layoutID: id)
@@ -96,13 +98,9 @@ private struct LayoutRow: View {
                 .font(FontCatalog.font(id: layout.style.fontID, size: 13))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-            HStack(spacing: 6) {
-                Text(layout.size.title)
-                Text("·")
-                Text(layout.background.isWallpaperReady ? "Wallpaper matched" : layout.background.mode.title)
-            }
-            .font(.caption)
-            .foregroundStyle(.tertiary)
+            Text(layout.size.title)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 2)
     }

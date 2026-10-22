@@ -1,8 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// The widget background: either the cropped wallpaper (so the widget blends into the
-/// Home Screen and the iOS glass outline has nothing to contrast with) or a solid color.
+/// The widget background: a solid color (matching a flat wallpaper) or a cropped
+/// copy of the wallpaper behind the widget.
 struct WidgetBackgroundView: View {
     let layout: LauncherLayout
     let lightImage: UIImage?
@@ -15,40 +15,18 @@ struct WidgetBackgroundView: View {
         if calibrating {
             CalibrationMarker.color
         } else {
-            fill.overlay { edgeBand }
-        }
-    }
-
-    @ViewBuilder
-    private var fill: some View {
-        switch layout.background.mode {
-        case .transparent:
-            // Nothing behind the text: iOS 26+ shows the wallpaper through the widget.
-            Color.clear
-        case .wallpaper:
-            if let image = currentImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
+            switch layout.background.mode {
+            case .wallpaper:
+                if let image = currentImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    solidColor
+                }
+            case .color:
                 solidColor
             }
-        case .color:
-            solidColor
-        }
-    }
-
-    /// iOS draws its glass outline on top of the widget, so it can't be painted over.
-    /// A soft darker (or lighter) band underneath can cancel it out; tuned by eye on the device.
-    @ViewBuilder
-    private var edgeBand: some View {
-        let bg = layout.background
-        if bg.edgeCorrection, bg.edgeTone != 0 {
-            let width = CGFloat(max(1, bg.edgeWidth))
-            ContainerRelativeShape()
-                .strokeBorder(bg.edgeTone < 0 ? Color.black : Color.white, lineWidth: width)
-                .blur(radius: width / 2)
-                .opacity(min(abs(bg.edgeTone), 100) / 100)
         }
     }
 
@@ -67,8 +45,10 @@ struct WidgetBackgroundView: View {
 enum WidgetSizing {
     static func estimatedSize(for option: WidgetSizeOption, screenWidth: CGFloat) -> CGSize {
         let width = (screenWidth * 0.8465).rounded()
+        let height = (width * 0.467).rounded()
         switch option {
-        case .medium: return CGSize(width: width, height: (width * 0.467).rounded())
+        case .small: return CGSize(width: height, height: height)
+        case .medium: return CGSize(width: width, height: height)
         case .large: return CGSize(width: width, height: (width * 1.05).rounded())
         }
     }

@@ -189,7 +189,9 @@ struct LaunchTarget: Codable, Hashable {
 
     /// The URL that actually gets opened.
     var url: URL? {
-        let v = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        var v = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Catalog apps use the catalog's current link, so fixed links reach existing widgets.
+        if kind == .app, let id = catalogID, let app = AppCatalog.app(id: id) { v = app.url }
         guard !v.isEmpty else { return nil }
         switch kind {
         case .app, .urlScheme:
@@ -308,10 +310,11 @@ enum VAlignOption: String, Codable, CaseIterable, Identifiable {
 }
 
 enum WidgetSizeOption: String, Codable, CaseIterable, Identifiable {
-    case medium, large
+    case small, medium, large
     var id: String { rawValue }
     var title: String {
         switch self {
+        case .small: return "Small"
         case .medium: return "Medium"
         case .large: return "Large"
         }
@@ -319,24 +322,21 @@ enum WidgetSizeOption: String, Codable, CaseIterable, Identifiable {
 }
 
 enum BackgroundMode: String, Codable, CaseIterable, Identifiable {
-    /// No background at all: the wallpaper shows through (iOS 26+).
-    case transparent
-    /// A pixel copy of the wallpaper behind the widget (fallback).
-    case wallpaper
     case color
+    /// A pixel copy of the wallpaper behind the widget.
+    case wallpaper
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .transparent: return "Transparent"
-        case .wallpaper: return "Wallpaper copy"
         case .color: return "Color"
+        case .wallpaper: return "Wallpaper"
         }
     }
 }
 
 struct BackgroundSettings: Codable, Hashable {
-    var mode: BackgroundMode = .transparent
-    var color: RGBA = .charcoal
+    var mode: BackgroundMode = .color
+    var color: RGBA = .black
     /// Optional separate color for Dark Mode (solid color mode).
     var darkColor: RGBA? = nil
     /// Where the widget sits in the screenshot (pixels).
@@ -345,34 +345,31 @@ struct BackgroundSettings: Codable, Hashable {
     var hasLightImage: Bool = false
     var hasDarkImage: Bool = false
     var imageVersion: Int = 0
-    /// Soft band just inside the widget edge, under the iOS glass outline, to cancel it out.
-    var edgeCorrection: Bool = false
-    /// Band width in points.
-    var edgeWidth: Double = 3
-    /// Percent: negative darkens the edge, positive lightens it.
-    var edgeTone: Double = -20
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case mode, color, darkColor, cropRect, screenshotSize, hasLightImage, hasDarkImage, imageVersion
-        case edgeCorrection, edgeWidth, edgeTone
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        mode = (try? c.decodeIfPresent(BackgroundMode.self, forKey: .mode)) ?? .transparent
-        color = try c.decodeIfPresent(RGBA.self, forKey: .color) ?? .charcoal
+        let rawMode = try? c.decodeIfPresent(String.self, forKey: .mode)
+        color = try c.decodeIfPresent(RGBA.self, forKey: .color) ?? .black
+        if rawMode == "transparent" {
+            // Older builds offered "Transparent", but iOS draws its own gray box behind
+            // a clear widget. Those layouts become black.
+            mode = .color
+            color = .black
+        } else {
+            mode = rawMode.flatMap { BackgroundMode(rawValue: $0) } ?? .color
+        }
         darkColor = try c.decodeIfPresent(RGBA.self, forKey: .darkColor)
         cropRect = try c.decodeIfPresent(PixelRect.self, forKey: .cropRect)
         screenshotSize = try c.decodeIfPresent(PixelSize.self, forKey: .screenshotSize)
         hasLightImage = try c.decodeIfPresent(Bool.self, forKey: .hasLightImage) ?? false
         hasDarkImage = try c.decodeIfPresent(Bool.self, forKey: .hasDarkImage) ?? false
         imageVersion = try c.decodeIfPresent(Int.self, forKey: .imageVersion) ?? 0
-        let d = BackgroundSettings()
-        edgeCorrection = try c.decodeIfPresent(Bool.self, forKey: .edgeCorrection) ?? d.edgeCorrection
-        edgeWidth = try c.decodeIfPresent(Double.self, forKey: .edgeWidth) ?? d.edgeWidth
-        edgeTone = try c.decodeIfPresent(Double.self, forKey: .edgeTone) ?? d.edgeTone
     }
 
     var isWallpaperReady: Bool { mode == .wallpaper && hasLightImage }
@@ -444,32 +441,39 @@ struct LauncherLayout: Codable, Identifiable, Hashable {
 
 // MARK: - Settings shared with the widget
 
-enum LaunchMethod: String, Codable, CaseIterable, Identifiable {
-    case auto, direct, viaApp
-    var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .auto: return "Automatic"
-        case .direct: return "Always direct (experimental)"
-        case .viaApp: return "Always via WidgetSimple"
-        }
-    }
-}
-
 struct AppSettings: Codable, Hashable {
-    var launchMethod: LaunchMethod = .auto
     /// While set, widgets showing this layout turn solid magenta so the app
     /// can find their exact position in a screenshot.
     var calibratingLayoutID: UUID? = nil
 
     init() {}
 
-    enum CodingKeys: String, CodingKey { case launchMethod, calibratingLayoutID }
+    enum CodingKeys: String, CodingKey { case calibratingLayoutID }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        launchMethod = (try? c.decodeIfPresent(LaunchMethod.self, forKey: .launchMethod)) ?? .auto
         calibratingLayoutID = try c.decodeIfPresent(UUID.self, forKey: .calibratingLayoutID)
+    }
+}
+
+/// Look of the clock widget.
+struct ClockStyle: Codable, Hashable {
+    var fontID: String = "sys:mono"
+    var weight: FontWeightOption = .regular
+    var color: RGBA = .white
+    var background: RGBA = .black
+
+    init() {}
+
+    enum CodingKeys: String, CodingKey { case fontID, weight, color, background }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = ClockStyle()
+        fontID = try c.decodeIfPresent(String.self, forKey: .fontID) ?? d.fontID
+        weight = (try? c.decodeIfPresent(FontWeightOption.self, forKey: .weight)) ?? d.weight
+        color = try c.decodeIfPresent(RGBA.self, forKey: .color) ?? d.color
+        background = try c.decodeIfPresent(RGBA.self, forKey: .background) ?? d.background
     }
 }
 

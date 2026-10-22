@@ -31,6 +31,7 @@ struct WidgetSimpleApp: App {
 /// WidgetSimple is as invisible as possible. Normal launches fade the UI in.
 struct AppShell: View {
     @EnvironmentObject private var model: AppModel
+    @AppStorage("didSeeTutorial") private var didSeeTutorial = false
     @State private var revealed = false
 
     var body: some View {
@@ -45,6 +46,12 @@ struct AppShell: View {
             // Give a widget tap a moment to arrive before showing the UI.
             try? await Task.sleep(nanoseconds: 120_000_000)
             withAnimation(.easeOut(duration: 0.15)) { revealed = true }
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { revealed && !didSeeTutorial && !model.isForwarding },
+            set: { if !$0 { didSeeTutorial = true } }
+        )) {
+            TutorialView { didSeeTutorial = true }
         }
         .alert("Couldn't open", isPresented: Binding(
             get: { model.launchError != nil },

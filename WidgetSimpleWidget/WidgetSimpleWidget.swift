@@ -6,7 +6,6 @@ struct LauncherEntry: TimelineEntry {
     let date: Date
     let layout: LauncherLayout
     let calibrating: Bool
-    let launchMethod: LaunchMethod
     let lightImage: UIImage?
     let darkImage: UIImage?
     /// Full-color label images for the Clear / Tinted Home Screen styles.
@@ -14,7 +13,7 @@ struct LauncherEntry: TimelineEntry {
 
     static var placeholder: LauncherEntry {
         LauncherEntry(date: .now, layout: .starter(), calibrating: false,
-                      launchMethod: .auto, lightImage: nil, darkImage: nil)
+                      lightImage: nil, darkImage: nil)
     }
 }
 
@@ -42,6 +41,7 @@ struct Provider: AppIntentTimelineProvider {
 
     private func sizeOption(for family: WidgetFamily) -> WidgetSizeOption? {
         switch family {
+        case .systemSmall: return .small
         case .systemMedium: return .medium
         case .systemLarge: return .large
         default: return nil
@@ -55,9 +55,9 @@ struct Provider: AppIntentTimelineProvider {
         guard let layout = store.layout(id: selectedID) else {
             if context.isPreview { return .placeholder }
             var empty = LauncherLayout(name: "")
-            empty.background.color = .charcoal
+            empty.background.color = .black
             return LauncherEntry(date: .now, layout: empty, calibrating: false,
-                                 launchMethod: .auto, lightImage: nil, darkImage: nil)
+                                 lightImage: nil, darkImage: nil)
         }
         let settings = store.loadSettings()
         let calibrating = settings.calibratingLayoutID == layout.id && !context.isPreview
@@ -72,7 +72,7 @@ struct Provider: AppIntentTimelineProvider {
             labels = await MainActor.run { LabelRasterizer.render(layout) }
         }
         return LauncherEntry(date: .now, layout: layout, calibrating: calibrating,
-                             launchMethod: settings.launchMethod, lightImage: light, darkImage: dark,
+                             lightImage: light, darkImage: dark,
                              labelImages: labels)
     }
 }
@@ -88,7 +88,7 @@ struct WidgetSimpleEntryView: View {
                 Color.clear
             } else {
                 LauncherCanvas(layout: entry.layout,
-                               mode: .widget(entry.launchMethod),
+                               mode: .widget,
                                labelImages: keepsColors ? entry.labelImages : nil)
             }
         }
@@ -115,7 +115,7 @@ struct WidgetSimpleWidget: Widget {
         }
         .configurationDisplayName("Text Launcher")
         .description("Your apps as plain text. Tap a word to open the app.")
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
 }
@@ -124,5 +124,6 @@ struct WidgetSimpleWidget: Widget {
 struct WidgetSimpleWidgetBundle: WidgetBundle {
     var body: some Widget {
         WidgetSimpleWidget()
+        ClockWidget()
     }
 }

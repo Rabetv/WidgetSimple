@@ -53,24 +53,3 @@ struct SelectLayoutIntent: WidgetConfigurationIntent {
 
     init() {}
 }
-
-// MARK: - Direct launch from a widget tap
-
-struct OpenTargetIntent: AppIntent {
-    static let title: LocalizedStringResource = "Open Launcher Item"
-    static let isDiscoverable: Bool = false
-    static let openAppWhenRun: Bool = false
-
-    @Parameter(title: "URL")
-    var url: URL
-
-    init() {}
-
-    init(url: URL) {
-        self.url = url
-    }
-
-    func perform() async throws -> some IntentResult & OpensIntent {
-        .result(opensIntent: OpenURLIntent(url))
-    }
-}

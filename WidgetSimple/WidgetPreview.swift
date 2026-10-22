@@ -15,42 +15,20 @@ struct WidgetPreview: View {
             let target = previewSize(available: geo.size.width)
             let scale = min(1, geo.size.width / max(target.width, 1))
             ZStack {
-                if layout.background.mode == .transparent {
-                    backdrop(size: target)
-                }
                 WidgetBackgroundView(layout: layout, lightImage: lightImage, darkImage: darkImage)
                 LauncherCanvas(layout: layout, mode: .preview(onTap: onTap))
             }
             .frame(width: target.width, height: target.height)
-            .containerShape(RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous))
             .clipShape(RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous))
-            .overlay {
-                // Only a transparent widget needs an outline to show where it is.
-                if layout.background.mode == .transparent {
-                    RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                }
-            }
+            .overlay(
+                RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+            )
             .scaleEffect(scale, anchor: .top)
             .frame(width: geo.size.width, height: target.height * scale, alignment: .top)
         }
         .frame(height: scaledHeight)
         .task(id: imageKey) { loadImages() }
-    }
-
-    /// What sits behind a transparent widget: your wallpaper screenshot if you picked one.
-    @ViewBuilder
-    private func backdrop(size: CGSize) -> some View {
-        if let image = model.previewBackdrop {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: size.width, height: size.height)
-                .clipped()
-        } else {
-            LinearGradient(colors: [Color(red: 0.16, green: 0.20, blue: 0.32), Color(red: 0.36, green: 0.24, blue: 0.38)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
     }
 
     private var scaledHeight: CGFloat {

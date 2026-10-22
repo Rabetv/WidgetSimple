@@ -65,7 +65,7 @@ struct AppPickerView: View {
                     } header: {
                         Text("More apps")
                     } footer: {
-                        Text("iOS lets an app check only a limited number of other apps, so WidgetSimple can't tell whether these are installed. Tick the ones you have.")
+                        Text("iOS only lets WidgetSimple check some apps. Tick the ones you have.")
                     }
                 }
 
@@ -79,8 +79,6 @@ struct AppPickerView: View {
                         }
                     } header: {
                         Text("Not in the list?")
-                    } footer: {
-                        Text("Most apps also open through a link, e.g. spotify:// or https://youtube.com.")
                     }
                 }
             }

@@ -130,13 +130,13 @@ struct ItemEditorView: View {
     private var targetFooter: String {
         switch item.wrappedValue.target.kind {
         case .app:
-            return "Pick from your apps. If an app is missing, use “URL scheme” (many apps document theirs)."
+            return "Pick from your apps."
         case .urlScheme:
-            return "Any link an app understands, e.g. spotify://, tel://123, sms://, mailto:me@example.com."
+            return "e.g. spotify:// or tel://123"
         case .website:
-            return "Opens in Safari, or in the matching app if it supports universal links (YouTube, Instagram, …)."
+            return "Opens the site, or its app if installed."
         case .shortcut:
-            return "Runs the Shortcut with exactly this name."
+            return "Runs this Shortcut."
         }
     }
 }

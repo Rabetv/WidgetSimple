@@ -75,15 +75,14 @@ struct WallpaperMatchView: View {
 
     private var checklistSection: some View {
         Section {
-            ChecklistRow(text: "Home Screen style = Default. Long-press the Home Screen › Edit › Customize › Default (Light, Dark or Automatic). “Clear” and “Tinted” always replace widget backgrounds with glass.")
-            ChecklistRow(text: "Wallpaper Blur off: long-press › Edit › Edit Wallpaper › Blur.")
-            ChecklistRow(text: "Perspective Zoom off: long-press › Edit › Edit Wallpaper › ⋯ › Perspective Zoom (stops the wallpaper from shifting; Reduce Motion is not needed).")
-            ChecklistRow(text: "Settings › Accessibility › Display & Text Size: Reduce Transparency and Increase Contrast OFF.")
-            ChecklistRow(text: "Optional: Edit › Customize › large icon size hides ALL labels under apps and widgets.")
-        } header: {
+            ChecklistRow(text: "Home Screen: Edit › Customize › Default.")
+            ChecklistRow(text: "Wallpaper: Blur off.")
+            ChecklistRow(text: "Wallpaper ⋯: Perspective Zoom off.")
+            ChecklistRow(text: "Reduce Transparency and Increase Contrast off.")
+                    } header: {
             Text("Before you start")
         } footer: {
-            Text("Fallback only. Use the Transparent background first; it needs none of this. A wallpaper copy is for iPhones where Transparent shows a solid box.")
+            Text("Copies the wallpaper behind the widget so it looks see-through.")
         }
     }
 
@@ -98,7 +97,7 @@ struct WallpaperMatchView: View {
         } header: {
             Text("Step 1 · Your wallpaper")
         } footer: {
-            Text("Long-press the Home Screen until the icons wiggle, swipe to an empty page (drag one app to a new page if you have none), then press Side button + Volume Up. If you use Dark Mode at night, take a second screenshot in Dark Mode.")
+            Text("Screenshot an empty Home Screen page (Side + Volume Up).")
         }
     }
 
@@ -129,7 +128,7 @@ struct WallpaperMatchView: View {
         } header: {
             Text("Step 2 · Where the widget sits")
         } footer: {
-            Text("Put the widget where you want it first (this layout must be selected in Edit Widget). Tap “Turn my widget magenta”, go to the Home Screen, take a screenshot, come back and pick it. Only needed again if you move the widget.")
+            Text("Place the widget first. Turn it magenta, screenshot, pick it here.")
         }
     }
 
@@ -144,7 +143,7 @@ struct WallpaperMatchView: View {
         } header: {
             Text("Step 3 · Apply")
         } footer: {
-            Text("The widget updates within a second. If it looks a few pixels off, nudge the frame above and apply again.")
+            Text("A few pixels off? Nudge and apply again.")
         }
     }
 

@@ -1,18 +1,17 @@
 # WidgetSimple
 
-A text-only app launcher for the iPhone Home Screen. Design a medium (or large) widget whose apps are just words in the font, size and color you choose, floating on your wallpaper with no widget background. Tap a word, the app opens. No icons, no label under the widget.
+A text-only app launcher for the iPhone Home Screen. Your apps are just words in the font, size and color you choose. Tap a word, the app opens. Plus a clock widget. No icons, no label under the widget.
 
 ## Features
 
-- **Text launcher widget** (Medium and Large). Grid/list or flowing-text layouts, 1–6 columns, alignment, spacing and margins.
-- **Fully transparent widgets** (iOS 26+): no background at all, the wallpaper shows straight through. Nothing to line up, works with any wallpaper and with motion effects on.
-- **Your colors in every Home Screen style**: in Clear/Tinted style iOS turns widget text white; WidgetSimple draws the words as full-color images there so fonts and colors stay.
-- **Full typography control**: SF Pro / Rounded / New York / Mono, 40 font families built into iOS, or import your own `.ttf`/`.otf` (works in the widget too). Size, weight, italic, underline, color + opacity, letter spacing, case, shadow. Per-item overrides.
-- **Pick from your apps**: a checklist of ~100 well-known apps; the ones on your iPhone are detected and listed first, tick the ones the widget shows. Custom URL schemes and websites/universal links for anything else. No Shortcuts needed.
-- **No glass edge**: *Hide the glass edge* saves a flat wallpaper and fills the widget with exactly that color, so the iOS 26+ glass outline has nothing to show. Optional edge correction draws a soft band under the outline to cancel what's left.
-- **No name under the widget**: the Home Screen name is an invisible character (configurable).
-- Several layouts → several widgets (choose per widget via *Edit Widget*).
-- Fallback backgrounds: solid color, or an exact wallpaper copy (found automatically via a magenta calibration screenshot).
+- **Text launcher widget** (Small, Medium, Large). Grid/list or flowing text, 1–6 columns, alignment, spacing.
+- **Clock widget** (Small, Medium, Large): day, time, date and the current week (month on Large), in your font and colors. Tap opens Calendar.
+- **Pick from your apps**: a checklist of ~100 apps; the ones detected on your iPhone come first. Websites and URL schemes for anything else.
+- **Hide the edges**: a flat wallpaper, the same color on every widget and four iPhone settings (below).
+- **Typography**: system fonts, 40 font families built into iOS, or your own `.ttf`/`.otf`.
+- **No name under the widget**: the Home Screen name is an invisible character.
+- Backgrounds: a color, or an exact copy of the wallpaper behind the widget (magenta calibration screenshot).
+- A 4-page tutorial on first launch (**?** brings it back).
 
 ## Build without a Mac (GitHub → TestFlight)
 
@@ -32,19 +31,19 @@ The **TestFlight** workflow (`.github/workflows/testflight.yml`) archives, signs
 
 Xcode 26 or newer. `Config/Base.xcconfig` holds the team (`DEVELOPMENT_TEAM`), bundle prefix and Home Screen name. Open `WidgetSimple.xcodeproj`, enable automatic signing for both targets, run. The **Build** workflow compiles every push unsigned.
 
-## Transparent widgets and the glass edge
+## Hiding the widget edges
 
-Since iOS 26 a widget may have no background, so the wallpaper shows through. WidgetSimple layouts default to that (`containerBackground` = clear). iOS still draws its own thin glass edge on top of every widget, outside the widget's control, so the widget can't paint over it.
+iOS can't show a widget without a background: a clear background becomes a gray box. iOS also draws a glass edge on top of every widget, which no widget can paint over. The edge only shows what is behind it, so on iOS 27 it disappears when:
 
-The edge only shows the wallpaper behind it (refracted and highlighted). **Layout › Background › Hide the glass edge** removes what it has to show: it saves a flat wallpaper (white, gray, black or any color) to Photos, fills the widget with exactly that color, lists the iPhone settings that matter (Home Screen style *Default*, matching Light/Dark appearance, Reduce Motion, Reduce Transparency / Increase Contrast) and can copy the exact on-screen color from a Home Screen screenshot. If a faint line is left, *Edge correction* draws a soft darker or lighter band just inside the edge, tuned by eye on the device.
+| | Black | Gray | White |
+|---|---|---|---|
+| Wallpaper (Blur off) and widget color | same flat black | same flat gray | same flat white |
+| Display & Brightness | Dark | Dark | Light |
+| Increase Contrast | **On** | Off | Off |
+| Show Borders | Off | Off | **On** |
+| Reduce Transparency | Off | Off | Off |
 
-| Home Screen style | Result |
-|---|---|
-| Default (Light/Dark/Auto) | See-through, your exact fonts and colors |
-| Clear | Most see-through, very light clear glass; colors kept via full-color label images |
-| Tinted | Works, but iOS tints around the words |
-
-If a device ever shows a solid box, switch that layout's background to *Wallpaper copy*: take a wallpaper screenshot and a screenshot with the widget turned magenta, and the app crops an exact copy. For that fallback turn off *Perspective Zoom* (Edit Wallpaper › ⋯); Reduce Motion is not needed.
+Plus Home Screen › Customize › Default with large icons. Accessibility settings are under Settings › Accessibility › Display & Text Size. This follows what [Blank Spaces](https://help.blankspaces.app/en/articles/5884313-how-to-set-up-the-dark-theme-ios-27) documents for iOS 27. On iOS 26 a faint outline always stays, and photo wallpapers always keep a faint edge. *Hide the edges* in the app saves the wallpaper, applies the color to every widget and can copy the exact on-screen color from a screenshot.
 
 ## Which apps are detected
 
@@ -52,13 +51,7 @@ iOS has no public API that lists installed apps. WidgetSimple checks its catalog
 
 ## How taps open other apps
 
-| Launch method | Websites / universal links | App URL schemes |
-|---|---|---|
-| Automatic (default) | Direct from the widget (`OpenURLIntent`) | Via WidgetSimple: forwards instantly on a black screen |
-| Always direct (experimental) | Direct | Direct, if the iOS version allows it |
-| Always via WidgetSimple | Via app | Via app |
-
-Apple documents widget taps as opening the widget's own app. Forwarding from there works for every app; the direct path is offered as an option because newer iOS versions handle more cases.
+iOS sends every widget tap to the widget's own app; a widget can't open another app by itself (`OpenURLIntent` only opens the widget app's own links). So each word links to `widgetsimple://open?u=…`, and WidgetSimple forwards it at once on a black screen. Catalog items always use the catalog's current link, so a fixed link (e.g. Messages → `ichat://`, which opens the app instead of a new message; Wolt → `https://wolt.com/discovery`) reaches existing widgets too.
 
 ## No name under the widget
 

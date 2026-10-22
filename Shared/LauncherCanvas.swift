@@ -1,11 +1,10 @@
 import SwiftUI
-import AppIntents
 import WidgetKit
 
 /// Where the canvas is drawn.
 enum CanvasMode {
     /// On the Home Screen: every item is a tap target that launches its app.
-    case widget(LaunchMethod)
+    case widget
     /// Inside the app: taps call back into the editor.
     case preview(onTap: ((LaunchItem) -> Void)?)
 }
@@ -119,17 +118,10 @@ struct LauncherCanvas: View {
     @ViewBuilder
     private func cell(_ item: LaunchItem) -> some View {
         switch mode {
-        case .widget(let method):
+        case .widget:
             if let url = item.target.url {
-                if LaunchRouter.usesDirect(url, method: method) {
-                    Button(intent: OpenTargetIntent(url: url)) {
-                        label(item)
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    Link(destination: LaunchRouter.hopURL(for: url)) {
-                        label(item)
-                    }
+                Link(destination: LaunchRouter.hopURL(for: url)) {
+                    label(item)
                 }
             } else {
                 label(item)
