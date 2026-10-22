@@ -15,7 +15,7 @@ struct LauncherFace<Cell: View>: View {
     let date: Date
     let size: FaceSize
     let apps: [String]
-    /// White on the system glass (Clear / Tinted Home Screen), the system text color otherwise.
+    /// The chosen word color; white on the system glass (Clear / Tinted Home Screen).
     let color: Color
     /// Shown when there is nothing else to show.
     var hint: String = ""
