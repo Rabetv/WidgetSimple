@@ -18,13 +18,24 @@ final class AppModel: ObservableObject {
     }
     @Published var message: String?
     @Published private(set) var working = false
+    /// The piece of wallpaper behind a medium widget, so the preview in the app shows
+    /// the real thing instead of a sample gradient once step 2 is done.
+    @Published private(set) var previewPiece: UIImage?
 
     let store = SharedStore.shared
 
     init() {
         FontRegistry.registerAllOnce()
+        let state = store.loadSeeThrough()
         look = store.loadLook()
-        seeThrough = store.loadSeeThrough()
+        seeThrough = state
+        previewPiece = Self.previewPiece(for: state, in: store)
+    }
+
+    private static func previewPiece(for state: SeeThroughState, in store: SharedStore) -> UIImage? {
+        let spot = state.spots.first { SpotKey.family(of: $0.key) == .medium } ?? state.spots.first
+        guard let spot else { return nil }
+        return UIImage(contentsOfFile: store.spotImageURL(key: spot.key).path)
     }
 
     // MARK: See-through
@@ -95,6 +106,7 @@ final class AppModel: ObservableObject {
                 }
             }
         }.value
+        previewPiece = Self.previewPiece(for: seeThrough, in: store)
         WidgetCenter.shared.reloadAllTimelines()
     }
 

@@ -15,11 +15,16 @@ struct RootView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("WidgetSimple")
-                    .font(.largeTitle.bold())
-                    .padding(.top, 8)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("WidgetSimple")
+                        .font(.largeTitle.bold())
+                    Text("Your apps as words, with the wallpaper showing through.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 8)
 
-                WidgetPreviewCard(look: model.look)
+                WidgetPreviewCard(look: model.look, wallpaper: model.previewPiece)
 
                 Step(number: 1, title: "Add the widget") {
                     Hint(symbol: "hand.tap", text: "Hold the Home Screen › Edit › Add Widget › the WidgetSimple icon.")
@@ -156,6 +161,8 @@ struct RootView: View {
 /// The widget as it will look on the Home Screen: just the words on the wallpaper.
 private struct WidgetPreviewCard: View {
     let look: Look
+    /// The piece of wallpaper the app cut for the user, once step 2 is done.
+    var wallpaper: UIImage?
 
     var body: some View {
         TimelineView(.everyMinute) { context in
@@ -165,7 +172,16 @@ private struct WidgetPreviewCard: View {
         .frame(maxWidth: .infinity)
         .aspectRatio(338.0 / 158.0, contentMode: .fit)
         .padding(18)
-        .background(LinearGradient.sampleWallpaper, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+        .background {
+            if let wallpaper {
+                Image(uiImage: wallpaper)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                LinearGradient.sampleWallpaper
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
         .animation(.easeInOut(duration: 0.2), value: look)
     }
 }
