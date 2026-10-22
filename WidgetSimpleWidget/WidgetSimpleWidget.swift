@@ -132,20 +132,28 @@ struct LauncherWidgetView: View {
             SpotCode(key: key)
                 .containerBackground(for: .widget) { SpotCode.marker }
         } else {
-            ZStack {
-                // The piece of wallpaper is content, not the container background.
-                //
-                // Since iOS 26 the system removes a widget's container background on a
-                // Clear or Tinted Home Screen and draws its own themed glass there
-                // instead — the grey box. Content is never replaced, so the piece stays
-                // the wallpaper. Full colour keeps the accent tint from painting it white.
-                if let background = entry.background {
-                    Image(uiImage: background)
-                        .resizable()
-                        .widgetAccentedRenderingMode(.fullColor)
-                        .scaledToFill()
+            // The piece of wallpaper is content, not the container background.
+            //
+            // Since iOS 26 the system removes a widget's container background on a
+            // Clear or Tinted Home Screen and draws its own themed glass there instead
+            // — the grey box. Content is never replaced, so the piece stays the wallpaper.
+            //
+            // The geometry reader pins the piece to the widget's own size. Without it the
+            // image keeps its pixel size (a medium piece is ~1000 pt), the ZStack grows to
+            // that, and the widget shows a corner of the piece with the words pushed out
+            // of view. `.widgetAccentedRenderingMode` is deliberately not used here: it
+            // wraps the image so `resizable()` stops taking effect, which is the same bug.
+            GeometryReader { geo in
+                ZStack {
+                    if let background = entry.background {
+                        Image(uiImage: background)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                    }
+                    face
                 }
-                face
             }
             // No background of our own, so nothing is left for the system to replace.
             .containerBackground(for: .widget) { Color.clear }
