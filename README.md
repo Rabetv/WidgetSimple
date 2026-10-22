@@ -45,7 +45,7 @@ Widgets are clear by default (`.containerBackground(.clear, for: .widget)`, iOS 
 | Show Borders | Off | Off | **On** |
 | Reduce Transparency | Off | Off | Off |
 
-Plus Home Screen › Customize › Default with large icons. Accessibility settings are under Settings › Accessibility › Display & Text Size. This follows what [Blank Spaces](https://help.blankspaces.app/en/articles/5884313-how-to-set-up-the-dark-theme-ios-27) documents for iOS 27. On iOS 26 a faint outline always stays, and photo wallpapers always keep a faint edge. *Hide the edges* in the app saves the wallpaper and makes every widget clear; if a device ever shows a gray box instead, it can switch them to the exact solid color (also from a screenshot).
+Plus Home Screen › Customize › Default with large icons. Accessibility settings are under Settings › Accessibility › Display & Text Size. This follows what [Blank Spaces](https://help.blankspaces.app/en/articles/5884313-how-to-set-up-the-dark-theme-ios-27) documents for iOS 27. On iOS 26 a faint outline always stays, and photo wallpapers always keep a faint edge. The wallpaper only has to be plain behind the widgets: *Hide the edges* can also make a wallpaper from your photo that fades into the plain color at the top or bottom (adjustable share of the screen), so the widgets sit on the plain part and the photo stays. *Hide the edges* saves the wallpaper and makes every widget clear; if a device ever shows a gray box instead, it can switch them to the exact solid color (also from a screenshot).
 
 ## Max widget size (iOS 27)
 
