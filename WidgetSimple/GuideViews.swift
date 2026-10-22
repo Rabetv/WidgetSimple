@@ -4,28 +4,26 @@ struct GlassGuideView: View {
     var body: some View {
         List {
             Section {
-                Text("Since iOS 26, the system draws a thin Liquid Glass outline around every Home Screen widget. iOS 27 keeps it. There is no setting or developer API that turns it off for third-party widgets.")
-                Text("WidgetSimple works around it: it gives the widget a background that is an exact copy of the wallpaper behind it. The outline then sits on identical pixels, so you just see text on your wallpaper.")
+                Text("New layouts use the Transparent background: the widget draws no background at all, so your wallpaper shows straight through and only the words are visible. Nothing has to be lined up, any wallpaper works, and you can keep motion effects on.")
+                Text("This needs iOS 26 or later. Older iOS versions always painted a widget background.")
             } header: {
-                Text("What's going on")
+                Text("How it works")
             }
 
             Section {
-                GuideStep(number: 1, text: "Home Screen style must be Default: long-press the Home Screen › Edit › Customize › Default (Light/Dark/Auto). With Clear or Tinted, iOS replaces every widget background with glass and nothing can prevent that.")
-                GuideStep(number: 2, text: "Edit Wallpaper › turn Blur off.")
-                GuideStep(number: 3, text: "Settings › Accessibility › Motion › Reduce Motion ON. Otherwise the wallpaper shifts slightly when you tilt the phone and the match drifts.")
-                GuideStep(number: 4, text: "Settings › Accessibility › Display & Text Size › Reduce Transparency and Increase Contrast OFF.")
-                GuideStep(number: 5, text: "Open a layout › Background › Match wallpaper and follow the three steps (wallpaper screenshot, magenta screenshot, apply).")
+                GuideStep(number: 1, text: "Default style (Light, Dark or Automatic): your text keeps its exact fonts and colors and sits right on the wallpaper. Start here.")
+                GuideStep(number: 2, text: "Clear style (long-press › Edit › Customize › Clear, then Light): the most see-through look iOS offers; widgets get a very light clear glass. iOS normally turns widget text white here; WidgetSimple keeps your colors (toggle in each layout's Background).")
+                GuideStep(number: 3, text: "Tinted style works too, but tints everything around your words.")
             } header: {
-                Text("Do this once")
+                Text("Which Home Screen style")
             }
 
             Section {
-                Text("Simple, dark or single-color wallpapers hide the outline best. Busy photos work too, but the faint highlight is easier to spot at the top and bottom edge.")
-                Text("With a plain one-color wallpaper you can skip the screenshots: choose Background › Solid color and pick exactly the wallpaper color (or use the eyedropper).")
-                Text("Moved the widget or changed the wallpaper? Repeat the steps for that layout.")
+                Text("iOS 26 and 27 draw a thin glass edge around every widget. It belongs to the system, not to the widget, and no app or setting can switch it off.")
+                Text("With a transparent widget the edge is the only thing left, and it is faint. Calm or darker wallpapers hide it best; on busy photos you may notice a hairline at the top and bottom.")
+                Text("If your iPhone shows a solid box instead of your wallpaper, use Background › Wallpaper copy for that layout as a fallback.")
             } header: {
-                Text("Tips")
+                Text("The glass edge")
             }
 
             Section {
@@ -35,7 +33,7 @@ struct GlassGuideView: View {
                 Text("No name under the widget")
             }
         }
-        .navigationTitle("Glass border")
+        .navigationTitle("Transparent widgets")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -48,7 +46,7 @@ struct AddWidgetGuideView: View {
                 GuideStep(number: 2, text: "Go to the Home Screen, long-press an empty spot until the icons wiggle, tap Edit › Add Widget.")
                 GuideStep(number: 3, text: "Scroll to WidgetSimple (black “Aa” icon), choose Text Launcher, swipe to Medium (or Large) and tap Add Widget.")
                 GuideStep(number: 4, text: "Long-press the new widget › Edit Widget › Layout › pick your layout.")
-                GuideStep(number: 5, text: "To make it look like plain text, follow “Hide the iOS 27 glass border”.")
+                GuideStep(number: 5, text: "New layouts are transparent, so the words sit right on your wallpaper. See “Transparent widgets” for the best Home Screen style.")
             } header: {
                 Text("Add the widget")
             }

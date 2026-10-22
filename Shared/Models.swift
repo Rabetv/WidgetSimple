@@ -317,18 +317,23 @@ enum WidgetSizeOption: String, Codable, CaseIterable, Identifiable {
 }
 
 enum BackgroundMode: String, Codable, CaseIterable, Identifiable {
-    case wallpaper, color
+    /// No background at all: the wallpaper shows through (iOS 26+).
+    case transparent
+    /// A pixel copy of the wallpaper behind the widget (fallback).
+    case wallpaper
+    case color
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .wallpaper: return "Match wallpaper"
-        case .color: return "Solid color"
+        case .transparent: return "Transparent"
+        case .wallpaper: return "Wallpaper copy"
+        case .color: return "Color"
         }
     }
 }
 
 struct BackgroundSettings: Codable, Hashable {
-    var mode: BackgroundMode = .color
+    var mode: BackgroundMode = .transparent
     var color: RGBA = .charcoal
     /// Optional separate color for Dark Mode (solid color mode).
     var darkColor: RGBA? = nil
@@ -347,7 +352,7 @@ struct BackgroundSettings: Codable, Hashable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        mode = (try? c.decodeIfPresent(BackgroundMode.self, forKey: .mode)) ?? .color
+        mode = (try? c.decodeIfPresent(BackgroundMode.self, forKey: .mode)) ?? .transparent
         color = try c.decodeIfPresent(RGBA.self, forKey: .color) ?? .charcoal
         darkColor = try c.decodeIfPresent(RGBA.self, forKey: .darkColor)
         cropRect = try c.decodeIfPresent(PixelRect.self, forKey: .cropRect)
@@ -375,6 +380,9 @@ struct LauncherLayout: Codable, Identifiable, Hashable {
     var style: TextStyle = TextStyle()
     var background: BackgroundSettings = BackgroundSettings()
     var size: WidgetSizeOption = .medium
+    /// In the Clear / Tinted Home Screen styles iOS turns widget text white.
+    /// When true, labels are drawn as full-color images there so fonts and colors stay.
+    var keepColorsInClearMode: Bool = true
 
     init(name: String, items: [LaunchItem] = []) {
         self.name = name
@@ -384,6 +392,7 @@ struct LauncherLayout: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, name, items, arrangement, columns, alignment, verticalPosition
         case rowSpacing, columnSpacing, paddingH, paddingV, style, background, size
+        case keepColorsInClearMode
     }
 
     init(from decoder: Decoder) throws {
@@ -403,6 +412,7 @@ struct LauncherLayout: Codable, Identifiable, Hashable {
         style = try c.decodeIfPresent(TextStyle.self, forKey: .style) ?? d.style
         background = try c.decodeIfPresent(BackgroundSettings.self, forKey: .background) ?? d.background
         size = (try? c.decodeIfPresent(WidgetSizeOption.self, forKey: .size)) ?? d.size
+        keepColorsInClearMode = try c.decodeIfPresent(Bool.self, forKey: .keepColorsInClearMode) ?? d.keepColorsInClearMode
     }
 
     func style(for item: LaunchItem) -> TextStyle {

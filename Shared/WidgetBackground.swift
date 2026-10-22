@@ -16,6 +16,9 @@ struct WidgetBackgroundView: View {
             CalibrationMarker.color
         } else {
             switch layout.background.mode {
+            case .transparent:
+                // Nothing behind the text: iOS 26+ shows the wallpaper through the widget.
+                Color.clear
             case .wallpaper:
                 if let image = currentImage {
                     Image(uiImage: image)

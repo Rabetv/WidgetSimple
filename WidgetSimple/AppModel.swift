@@ -17,6 +17,8 @@ final class AppModel: ObservableObject {
     /// True while the app is only forwarding a widget tap to another app.
     @Published var isForwarding = false
     @Published var launchError: String?
+    /// A wallpaper screenshot shown behind transparent widgets in the in-app preview only.
+    @Published private(set) var previewBackdrop: UIImage?
 
     let store = SharedStore.shared
     private var saveTask: Task<Void, Never>?
@@ -31,6 +33,21 @@ final class AppModel: ObservableObject {
         layouts = loaded
         settings = store.loadSettings()
         metrics = store.loadMetrics()
+        previewBackdrop = (try? Data(contentsOf: backdropURL)).flatMap(UIImage.init(data:))
+    }
+
+    // MARK: Preview backdrop (app only, never used by the widget)
+
+    private var backdropURL: URL { store.rootURL.appendingPathComponent("preview-backdrop.jpg") }
+
+    func setPreviewBackdrop(_ image: UIImage?) {
+        if let image, let data = image.jpegData(compressionQuality: 0.85) {
+            try? data.write(to: backdropURL, options: .atomic)
+            previewBackdrop = image
+        } else {
+            try? FileManager.default.removeItem(at: backdropURL)
+            previewBackdrop = nil
+        }
     }
 
     // MARK: Persistence

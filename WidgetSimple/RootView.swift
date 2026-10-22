@@ -42,7 +42,7 @@ struct RootView: View {
                     NavigationLink {
                         GlassGuideView()
                     } label: {
-                        Label("Hide the iOS 27 glass border", systemImage: "rectangle.dashed")
+                        Label("Transparent widgets & the glass edge", systemImage: "rectangle.dashed")
                     }
                     NavigationLink {
                         LaunchSettingsView()

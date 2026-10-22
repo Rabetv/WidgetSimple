@@ -1,5 +1,6 @@
 import SwiftUI
 import AppIntents
+import WidgetKit
 
 /// Where the canvas is drawn.
 enum CanvasMode {
@@ -14,6 +15,8 @@ enum CanvasMode {
 struct LauncherCanvas: View {
     let layout: LauncherLayout
     let mode: CanvasMode
+    /// Pre-rendered full-color labels, used in the Clear / Tinted Home Screen styles.
+    var labelImages: [UUID: UIImage]? = nil
 
     var body: some View {
         content
@@ -120,21 +123,35 @@ struct LauncherCanvas: View {
             if let url = item.target.url {
                 if LaunchRouter.usesDirect(url, method: method) {
                     Button(intent: OpenTargetIntent(url: url)) {
-                        ItemLabel(item: item, style: layout.style(for: item), alignment: layout.alignment)
+                        label(item)
                     }
                     .buttonStyle(.plain)
                 } else {
                     Link(destination: LaunchRouter.hopURL(for: url)) {
-                        ItemLabel(item: item, style: layout.style(for: item), alignment: layout.alignment)
+                        label(item)
                     }
                 }
             } else {
-                ItemLabel(item: item, style: layout.style(for: item), alignment: layout.alignment)
+                label(item)
             }
         case .preview(let onTap):
-            ItemLabel(item: item, style: layout.style(for: item), alignment: layout.alignment)
+            label(item)
                 .contentShape(Rectangle())
                 .onTapGesture { onTap?(item) }
+        }
+    }
+
+    @ViewBuilder
+    private func label(_ item: LaunchItem) -> some View {
+        if let image = labelImages?[item.id] {
+            Image(uiImage: image)
+                .resizable()
+                .widgetAccentedRenderingMode(.fullColor)
+                .scaledToFit()
+                .frame(maxWidth: image.size.width, maxHeight: image.size.height)
+                .contentShape(Rectangle())
+        } else {
+            ItemLabel(item: item, style: layout.style(for: item), alignment: layout.alignment)
         }
     }
 }

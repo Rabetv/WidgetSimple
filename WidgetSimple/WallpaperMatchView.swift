@@ -77,13 +77,13 @@ struct WallpaperMatchView: View {
         Section {
             ChecklistRow(text: "Home Screen style = Default. Long-press the Home Screen › Edit › Customize › Default (Light, Dark or Automatic). “Clear” and “Tinted” always replace widget backgrounds with glass.")
             ChecklistRow(text: "Wallpaper Blur off: long-press › Edit › Edit Wallpaper › Blur.")
-            ChecklistRow(text: "Settings › Accessibility › Motion › Reduce Motion ON (stops the wallpaper from shifting).")
+            ChecklistRow(text: "Perspective Zoom off: long-press › Edit › Edit Wallpaper › ⋯ › Perspective Zoom (stops the wallpaper from shifting; Reduce Motion is not needed).")
             ChecklistRow(text: "Settings › Accessibility › Display & Text Size: Reduce Transparency and Increase Contrast OFF.")
             ChecklistRow(text: "Optional: Edit › Customize › large icon size hides ALL labels under apps and widgets.")
         } header: {
             Text("Before you start")
         } footer: {
-            Text("iOS 26 and 27 draw a thin glass outline around every widget, and no app can switch it off. When the widget background is an exact copy of the wallpaper, the outline has nothing to contrast with and practically disappears.")
+            Text("Fallback only. Use the Transparent background first; it needs none of this. A wallpaper copy is for iPhones where Transparent shows a solid box.")
         }
     }
 

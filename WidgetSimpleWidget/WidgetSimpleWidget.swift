@@ -9,6 +9,8 @@ struct LauncherEntry: TimelineEntry {
     let launchMethod: LaunchMethod
     let lightImage: UIImage?
     let darkImage: UIImage?
+    /// Full-color label images for the Clear / Tinted Home Screen styles.
+    var labelImages: [UUID: UIImage] = [:]
 
     static var placeholder: LauncherEntry {
         LauncherEntry(date: .now, layout: .starter(), calibrating: false,
@@ -25,7 +27,7 @@ struct Provider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: SelectLayoutIntent, in context: Context) async -> LauncherEntry {
-        makeEntry(for: configuration, in: context)
+        await makeEntry(for: configuration, in: context)
     }
 
     func timeline(for configuration: SelectLayoutIntent, in context: Context) async -> Timeline<LauncherEntry> {
@@ -33,7 +35,7 @@ struct Provider: AppIntentTimelineProvider {
         if let option = sizeOption(for: context.family) {
             SharedStore.shared.recordWidgetSize(context.displaySize, for: option)
         }
-        let entry = makeEntry(for: configuration, in: context)
+        let entry = await makeEntry(for: configuration, in: context)
         // The app reloads the widget whenever something changes, so no periodic refresh is needed.
         return Timeline(entries: [entry], policy: .never)
     }
@@ -46,7 +48,7 @@ struct Provider: AppIntentTimelineProvider {
         }
     }
 
-    private func makeEntry(for configuration: SelectLayoutIntent, in context: Context) -> LauncherEntry {
+    private func makeEntry(for configuration: SelectLayoutIntent, in context: Context) async -> LauncherEntry {
         FontRegistry.registerAllOnce()
         let store = SharedStore.shared
         let selectedID = configuration.layout.flatMap { UUID(uuidString: $0.id) }
@@ -65,13 +67,19 @@ struct Provider: AppIntentTimelineProvider {
             if layout.background.hasLightImage { light = store.loadBackground(layoutID: layout.id, dark: false) }
             if layout.background.hasDarkImage { dark = store.loadBackground(layoutID: layout.id, dark: true) }
         }
+        var labels: [UUID: UIImage] = [:]
+        if layout.keepColorsInClearMode && !calibrating {
+            labels = await MainActor.run { LabelRasterizer.render(layout) }
+        }
         return LauncherEntry(date: .now, layout: layout, calibrating: calibrating,
-                             launchMethod: settings.launchMethod, lightImage: light, darkImage: dark)
+                             launchMethod: settings.launchMethod, lightImage: light, darkImage: dark,
+                             labelImages: labels)
     }
 }
 
 struct WidgetSimpleEntryView: View {
     let entry: LauncherEntry
+    @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
         Group {
@@ -79,7 +87,9 @@ struct WidgetSimpleEntryView: View {
                 // Solid magenta: the app finds this exact rectangle in a screenshot.
                 Color.clear
             } else {
-                LauncherCanvas(layout: entry.layout, mode: .widget(entry.launchMethod))
+                LauncherCanvas(layout: entry.layout,
+                               mode: .widget(entry.launchMethod),
+                               labelImages: keepsColors ? entry.labelImages : nil)
             }
         }
         .containerBackground(for: .widget) {
@@ -88,6 +98,11 @@ struct WidgetSimpleEntryView: View {
                                  darkImage: entry.darkImage,
                                  calibrating: entry.calibrating)
         }
+    }
+
+    /// Clear and Tinted Home Screen styles render widgets in accented mode.
+    private var keepsColors: Bool {
+        renderingMode == .accented && entry.layout.keepColorsInClearMode && !entry.labelImages.isEmpty
     }
 }
 

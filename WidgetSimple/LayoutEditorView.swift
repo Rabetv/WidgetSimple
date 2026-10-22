@@ -8,6 +8,7 @@ struct LayoutEditorView: View {
     @State private var showingPicker = false
     @State private var editingItem: EditingItem?
     @State private var sampleItem: PhotosPickerItem?
+    @State private var backdropItem: PhotosPickerItem?
 
     private struct EditingItem: Identifiable {
         let id: UUID
@@ -145,6 +146,22 @@ struct LayoutEditorView: View {
             .pickerStyle(.segmented)
 
             switch layout.wrappedValue.background.mode {
+            case .transparent:
+                Toggle("Keep my colors in Clear & Tinted style", isOn: layout.keepColorsInClearMode)
+                PhotosPicker(selection: $backdropItem, matching: .images) {
+                    Label(model.previewBackdrop == nil ? "Show my wallpaper in this preview" : "Change preview wallpaper",
+                          systemImage: "photo")
+                }
+                .onChange(of: backdropItem) { _, newItem in
+                    guard let newItem else { return }
+                    Task {
+                        if let data = try? await newItem.loadTransferable(type: Data.self),
+                           let image = UIImage(data: data) {
+                            model.setPreviewBackdrop(image)
+                        }
+                        backdropItem = nil
+                    }
+                }
             case .wallpaper:
                 NavigationLink {
                     WallpaperMatchView(layoutID: layoutID)
@@ -185,7 +202,18 @@ struct LayoutEditorView: View {
         } header: {
             Text("Background")
         } footer: {
-            Text("“Match wallpaper” makes the widget look like plain text on your Home Screen, which hides the iOS 26/27 glass border. With a single-color wallpaper, “Solid color” in exactly that color works too.")
+            Text(backgroundFooter)
+        }
+    }
+
+    private var backgroundFooter: String {
+        switch layout.wrappedValue.background.mode {
+        case .transparent:
+            return "No background: your wallpaper shows straight through the widget, so it reads as plain text. Nothing to line up, works with any wallpaper and with motion effects on. iOS still draws its own thin glass edge around every widget; no app can remove that. In the Clear and Tinted Home Screen styles iOS turns widget text white; the toggle keeps your fonts and colors there."
+        case .wallpaper:
+            return "Fallback if Transparent shows a solid box on your iPhone: the widget gets an exact copy of the wallpaper behind it."
+        case .color:
+            return "A solid color behind the text."
         }
     }
 

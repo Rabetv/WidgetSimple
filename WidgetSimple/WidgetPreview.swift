@@ -15,6 +15,9 @@ struct WidgetPreview: View {
             let target = previewSize(available: geo.size.width)
             let scale = min(1, geo.size.width / max(target.width, 1))
             ZStack {
+                if layout.background.mode == .transparent {
+                    backdrop(size: target)
+                }
                 WidgetBackgroundView(layout: layout, lightImage: lightImage, darkImage: darkImage)
                 LauncherCanvas(layout: layout, mode: .preview(onTap: onTap))
             }
@@ -29,6 +32,21 @@ struct WidgetPreview: View {
         }
         .frame(height: scaledHeight)
         .task(id: imageKey) { loadImages() }
+    }
+
+    /// What sits behind a transparent widget: your wallpaper screenshot if you picked one.
+    @ViewBuilder
+    private func backdrop(size: CGSize) -> some View {
+        if let image = model.previewBackdrop {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: size.width, height: size.height)
+                .clipped()
+        } else {
+            LinearGradient(colors: [Color(red: 0.16, green: 0.20, blue: 0.32), Color(red: 0.36, green: 0.24, blue: 0.38)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
     }
 
     private var scaledHeight: CGFloat {
