@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// File-based storage in the App Group container, shared by the app and the widget.
 final class SharedStore: @unchecked Sendable {
@@ -27,7 +28,7 @@ final class SharedStore: @unchecked Sendable {
             rootURL = docs.appendingPathComponent("WidgetSimple", isDirectory: true)
             isAppGroupAvailable = false
         }
-        for dir in [rootURL, fontsURL] {
+        for dir in [rootURL, fontsURL, spotsURL] {
             try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
     }
@@ -35,6 +36,15 @@ final class SharedStore: @unchecked Sendable {
     // MARK: Locations
 
     var lookURL: URL { rootURL.appendingPathComponent("look.json") }
+    var seeThroughURL: URL { rootURL.appendingPathComponent("see-through.json") }
+    var sizesURL: URL { rootURL.appendingPathComponent("widget-sizes.json") }
+    var wallpaperURL: URL { rootURL.appendingPathComponent("wallpaper.png") }
+    var spotsURL: URL { rootURL.appendingPathComponent("Spots", isDirectory: true) }
+
+    func spotImageURL(key: Int) -> URL {
+        spotsURL.appendingPathComponent("\(key).png")
+    }
+
     var fontsIndexURL: URL { rootURL.appendingPathComponent("fonts.json") }
     var fontsURL: URL { rootURL.appendingPathComponent("Fonts", isDirectory: true) }
 
@@ -58,6 +68,68 @@ final class SharedStore: @unchecked Sendable {
 
     func saveLook(_ look: Look) {
         write(look, to: lookURL)
+    }
+
+    // MARK: See-through
+
+    func loadSeeThrough() -> SeeThroughState {
+        read(SeeThroughState.self, from: seeThroughURL) ?? SeeThroughState()
+    }
+
+    func saveSeeThrough(_ state: SeeThroughState) {
+        write(state, to: seeThroughURL)
+    }
+
+    func saveWallpaper(_ data: Data) {
+        try? data.write(to: wallpaperURL, options: .atomic)
+    }
+
+    func loadWallpaper() -> Data? {
+        try? Data(contentsOf: wallpaperURL)
+    }
+
+    func saveSpotImage(_ png: Data, key: Int) {
+        try? png.write(to: spotImageURL(key: key), options: .atomic)
+    }
+
+    func removeSpotImages() {
+        let fm = FileManager.default
+        for url in (try? fm.contentsOfDirectory(at: spotsURL, includingPropertiesForKeys: nil)) ?? [] {
+            try? fm.removeItem(at: url)
+        }
+    }
+
+    /// The wallpaper piece for a widget: its own, or the only one of its size
+    /// (so it survives picking other apps when there's one widget of that size).
+    func spotImage(key: Int, state: SeeThroughState) -> UIImage? {
+        if let image = UIImage(contentsOfFile: spotImageURL(key: key).path) { return image }
+        let family = SpotKey.family(of: key)
+        let sameSize = state.spots.filter { SpotKey.family(of: $0.key) == family }
+        guard sameSize.count == 1 else { return nil }
+        return UIImage(contentsOfFile: spotImageURL(key: sameSize[0].key).path)
+    }
+
+    // MARK: Widget sizes (written by the widget)
+
+    /// Real on-screen widget sizes in points, by SpotFamily.
+    func loadSizes() -> [SpotFamily: CGSize] {
+        let raw = read([String: [Double]].self, from: sizesURL) ?? [:]
+        var sizes: [SpotFamily: CGSize] = [:]
+        for (name, value) in raw where value.count == 2 {
+            if let index = Int(name), let family = SpotFamily(rawValue: index) {
+                sizes[family] = CGSize(width: value[0], height: value[1])
+            }
+        }
+        return sizes
+    }
+
+    func recordSize(_ size: CGSize, for family: SpotFamily) {
+        guard size.width > 10, size.height > 10 else { return }
+        var raw = read([String: [Double]].self, from: sizesURL) ?? [:]
+        let value = [Double(size.width), Double(size.height)]
+        guard raw["\(family.rawValue)"] != value else { return }
+        raw["\(family.rawValue)"] = value
+        write(raw, to: sizesURL)
     }
 
     // MARK: Custom fonts index

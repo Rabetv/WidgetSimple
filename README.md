@@ -1,22 +1,21 @@
 # WidgetSimple
 
-Your apps as plain words on the iPhone Home Screen, on see-through glass, with a clock if you like.
+Your apps as plain words on the iPhone Home Screen, in widgets that look see-through, with a clock if you like.
 
 ## How it works
 
 - **One widget.** Hold it › *Edit Widget*: pick up to 12 apps (iOS lists every installed app) and a clock (none, time, time and date, or date). A tap opens the app directly (`RunSystemShortcutIntent`, iOS 27). Sizes: Small, Medium, Large, Max.
-- **One look for every widget**, set in the app: background (Glass, Frosted, Clear), font, text size, alignment, white or black words. The clock uses the same font and follows the iPhone's 12/24-hour setting.
-- **The app is one screen with three steps:** add the widget, pick a background, pick letters.
+- **One look for every widget**, set in the app: font, text size, alignment, white or black words. The clock uses the same font and follows the iPhone's 12/24-hour setting.
+- **The app is one screen with three steps:** add the widget, make it see-through, pick letters.
 
 ## See-through background
 
-The widget draws its own see-through background in `containerBackground` (`WidgetBackdrop`), so it works on the normal Home Screen; no Clear Home Screen needed:
+On the normal Home Screen iOS draws its own box behind every widget, and no public API removes it. So each widget shows the piece of wallpaper behind it, which looks see-through:
 
-- **Glass** (default): iOS 26 Liquid Glass, `Color.clear.glassEffect(.clear, in: ContainerRelativeShape())`. The wallpaper shows through, with a glossy edge.
-- **Frosted**: the same with `.regular` glass (more blur).
-- **Clear**: a nearly invisible fill (`Color.black.opacity(0.004)`), since iOS may put its own background behind a fully clear one.
+1. **Wallpaper screenshot:** an empty Home Screen page in jiggle mode (no icons over the wallpaper).
+2. **Find my widgets:** every widget turns pink and shows its key as 4 × 4 black/white squares (`SpotCode`). From one screenshot of the Home Screen, `SeeThroughMaker` finds each pink frame (walking outward from inside the pink, then snapping to the size the widget reported), reads the key and cuts that frame out of the wallpaper screenshot.
 
-On a Clear or Tinted Home Screen iOS replaces the background with its own glass anyway; the widget reads `widgetRenderingMode` and draws white words there.
+The key is the widget's size (2 bits) plus a 14-bit hash of its clock and apps (`SpotKey`), so each widget finds its own piece; if its apps change and it's the only widget of its size, it keeps the piece. A new wallpaper or a moved widget needs both screenshots again. On a Clear or Tinted Home Screen iOS replaces the background with its own glass, which needs no setup.
 
 ## Build without a Mac (GitHub → TestFlight)
 

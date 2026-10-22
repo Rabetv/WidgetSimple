@@ -1,10 +1,16 @@
 import SwiftUI
 import UIKit
+import PhotosUI
 
 /// The whole app: three steps on one screen.
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showingFonts = false
+    @State private var pickingWallpaper = false
+    @State private var wallpaperItem: PhotosPickerItem?
+    @State private var pickingPink = false
+    @State private var pinkItem: PhotosPickerItem?
 
     var body: some View {
         ScrollView {
@@ -19,8 +25,8 @@ struct RootView: View {
                     Hint(symbol: "hand.tap", text: "Hold the Home Screen › Edit › Add Widget › the WidgetSimple icon.")
                     Hint(symbol: "checklist", text: "Hold the widget › Edit Widget. Pick your apps and a clock.")
                 }
-                Step(number: 2, title: "Pick a background") {
-                    backgroundPicker
+                Step(number: 2, title: "Make it see-through") {
+                    seeThroughSteps
                 }
                 Step(number: 3, title: "Pick letters") {
                     fontPicker
@@ -53,39 +59,80 @@ struct RootView: View {
                 FontPickerView(selection: $model.look.fontID)
             }
         }
-    }
-
-    private var backgroundPicker: some View {
-        HStack(spacing: 12) {
-            ForEach(BackgroundStyle.allCases) { style in
-                let selected = style == model.look.background
-                Button {
-                    model.look.background = style
-                } label: {
-                    VStack(spacing: 8) {
-                        WidgetBackdrop(style: style, shape: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay {
-                                Text("Aa")
-                                    .font(model.look.font(size: 22))
-                                    .foregroundStyle(model.look.tone.color)
-                            }
-                            .frame(height: 64)
-                            .padding(10)
-                            .background(LinearGradient.sampleWallpaper, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                    .strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 3)
-                            )
-                        Text(style.title)
-                            .font(.headline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(selected ? .isSelected : [])
+        .photosPicker(isPresented: $pickingWallpaper, selection: $wallpaperItem, matching: .screenshots)
+        .photosPicker(isPresented: $pickingPink, selection: $pinkItem, matching: .screenshots)
+        .onChange(of: wallpaperItem) { _, item in
+            guard let item else { return }
+            wallpaperItem = nil
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+                await model.useWallpaper(data)
             }
         }
+        .onChange(of: pinkItem) { _, item in
+            guard let item else { return }
+            pinkItem = nil
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+                await model.usePinkScreenshot(data)
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Back from taking the pink screenshot: offer it right away.
+            if phase == .active && model.seeThrough.finding && !pickingWallpaper {
+                pickingPink = true
+            }
+        }
+    }
+
+    // MARK: See-through
+
+    @ViewBuilder
+    private var seeThroughSteps: some View {
+        let state = model.seeThrough
+        SubStep(letter: "A", done: state.hasWallpaper,
+                text: "Hold the Home Screen until the apps wiggle. Swipe to an empty page. Take a screenshot.")
+        Button {
+            pickingWallpaper = true
+        } label: {
+            Label(state.hasWallpaper ? "Pick a new wallpaper screenshot" : "Pick that screenshot", systemImage: "photo")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+
+        SubStep(letter: "B", done: !state.spots.isEmpty && !state.finding,
+                text: "Tap Find my widgets. They turn pink. Take a screenshot of the Home Screen, then come back.")
+        if state.finding {
+            Button {
+                pickingPink = true
+            } label: {
+                Label("Pick the pink screenshot", systemImage: "photo")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            Button("Stop", role: .cancel) { model.stopFinding() }
+                .frame(maxWidth: .infinity)
+        } else {
+            Button {
+                model.startFinding()
+            } label: {
+                Label("Find my widgets", systemImage: "viewfinder")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+
+        if model.working {
+            ProgressView().frame(maxWidth: .infinity)
+        } else if state.hasWallpaper && !state.spots.isEmpty && !state.finding {
+            Label(state.spots.count == 1 ? "1 widget is see-through." : "\(state.spots.count) widgets are see-through.",
+                  systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .font(.headline)
+        }
+        Text("New wallpaper, or moved a widget? Do A and B again. With Home Screen › Customize › Clear, iOS makes widgets see-through by itself.")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
     }
 
     private var fontPicker: some View {
@@ -106,7 +153,7 @@ struct RootView: View {
 
 // MARK: - Pieces
 
-/// The widget as it will look on the Home Screen, over a sample wallpaper.
+/// The widget as it will look on the Home Screen: just the words on the wallpaper.
 private struct WidgetPreviewCard: View {
     let look: Look
 
@@ -117,9 +164,6 @@ private struct WidgetPreviewCard: View {
         }
         .frame(maxWidth: .infinity)
         .aspectRatio(338.0 / 158.0, contentMode: .fit)
-        .background {
-            WidgetBackdrop(style: look.background, shape: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        }
         .padding(18)
         .background(LinearGradient.sampleWallpaper, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
         .animation(.easeInOut(duration: 0.2), value: look)
@@ -186,6 +230,26 @@ private struct FontChip: View {
         .buttonStyle(.plain)
         .accessibilityLabel(name)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+private struct SubStep: View {
+    let letter: String
+    let done: Bool
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Group {
+                if done {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                } else {
+                    Text(letter).font(.subheadline.bold()).foregroundStyle(.tint)
+                }
+            }
+            .frame(width: 22)
+            Text(text).font(.callout)
+        }
     }
 }
 

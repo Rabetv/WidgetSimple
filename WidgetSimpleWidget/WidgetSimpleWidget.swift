@@ -4,10 +4,11 @@ import AppIntents
 
 // The only widget. Apps are picked in Edit Widget, where iOS lists every installed
 // app, and a tap opens the app directly (RunSystemShortcutIntent). The look
-// (background, font, size, alignment) comes from the app and is the same for every widget.
+// (font, size, alignment, color) comes from the app and is the same for every widget.
 //
-// The background is see-through Liquid Glass the widget draws itself (WidgetBackdrop),
-// so no Clear Home Screen is needed.
+// The background is the piece of wallpaper behind the widget (see SeeThrough.swift),
+// so it looks see-through on the normal Home Screen. A Clear or Tinted Home Screen
+// replaces it with the system glass.
 
 struct DirectLauncherIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Apps"
@@ -44,6 +45,10 @@ struct LauncherEntry: TimelineEntry {
     let apps: [SystemShortcut]
     /// The words shown; sample names in the widget gallery.
     let names: [String]
+    /// The piece of wallpaper behind the widget.
+    var background: UIImage? = nil
+    /// Set while the app is finding the widgets: show this key on pink.
+    var findingKey: Int? = nil
 
     static func sample(look: Look) -> LauncherEntry {
         LauncherEntry(date: .now, look: look, clock: .time, apps: [],
@@ -64,12 +69,17 @@ struct LauncherProvider: AppIntentTimelineProvider {
     }
 
     func timeline(for configuration: DirectLauncherIntent, in context: Context) async -> Timeline<LauncherEntry> {
+        // The real on-screen size helps the app find the widget's exact frame.
+        if let family = SpotFamily(context.family) {
+            SharedStore.shared.recordSize(context.displaySize, for: family)
+        }
         let entry = makeEntry(for: configuration, in: context)
         // Without a clock nothing changes on its own: the app and Edit Widget reload it.
-        guard entry.clock != .off else { return Timeline(entries: [entry], policy: .never) }
-        // One entry per minute for the next three hours; WidgetKit shows each one on time.
+        guard entry.clock != .off, entry.findingKey == nil else { return Timeline(entries: [entry], policy: .never) }
+        // One entry per minute (one hour with a wallpaper piece, three without);
+        // WidgetKit shows each one on time.
         let start = Calendar.current.dateInterval(of: .minute, for: .now)?.start ?? .now
-        let entries = (0..<180).map { minute in
+        let entries = (0..<(entry.background == nil ? 180 : 60)).map { minute in
             var next = entry
             next.date = start.addingTimeInterval(Double(minute) * 60)
             return next
@@ -86,7 +96,28 @@ struct LauncherProvider: AppIntentTimelineProvider {
             return .sample(look: look)
         }
         let names = apps.map { String(localized: $0.displayRepresentation.title) }
-        return LauncherEntry(date: .now, look: look, clock: configuration.clock, apps: apps, names: names)
+        var entry = LauncherEntry(date: .now, look: look, clock: configuration.clock, apps: apps, names: names)
+        guard !context.isPreview, let family = SpotFamily(context.family) else { return entry }
+        let key = SpotKey.make(family: family, clock: configuration.clock, apps: names)
+        let state = SharedStore.shared.loadSeeThrough()
+        if state.finding {
+            entry.findingKey = key
+        } else {
+            entry.background = SharedStore.shared.spotImage(key: key, state: state)
+        }
+        return entry
+    }
+}
+
+extension SpotFamily {
+    init?(_ family: WidgetFamily) {
+        switch family {
+        case .systemSmall: self = .small
+        case .systemMedium: self = .medium
+        case .systemLarge: self = .large
+        case .systemExtraLargePortrait: self = .max
+        default: return nil
+        }
     }
 }
 
@@ -96,19 +127,31 @@ struct LauncherWidgetView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
-        LauncherFace(look: entry.look, clock: entry.clock, date: entry.date, size: size,
-                     apps: entry.names, color: color, hint: "Hold here › Edit Widget › pick apps") { index, name in
-            if index < entry.apps.count {
-                Button(intent: RunSystemShortcutIntent(shortcut: entry.apps[index])) {
+        if let key = entry.findingKey {
+            // Pink with the widget's key, so the app can find it in a screenshot.
+            SpotCode(key: key)
+                .containerBackground(for: .widget) { SpotCode.marker }
+        } else {
+            LauncherFace(look: entry.look, clock: entry.clock, date: entry.date, size: size,
+                         apps: entry.names, color: color, hint: "Hold here › Edit Widget › pick apps") { index, name in
+                if index < entry.apps.count {
+                    Button(intent: RunSystemShortcutIntent(shortcut: entry.apps[index])) {
+                        name
+                    }
+                    .buttonStyle(.plain)
+                } else {
                     name
                 }
-                .buttonStyle(.plain)
-            } else {
-                name
             }
-        }
-        .containerBackground(for: .widget) {
-            WidgetBackdrop(style: entry.look.background, shape: ContainerRelativeShape())
+            .containerBackground(for: .widget) {
+                if let background = entry.background {
+                    Image(uiImage: background)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Color.clear
+                }
+            }
         }
     }
 

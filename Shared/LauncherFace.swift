@@ -6,26 +6,6 @@ enum FaceSize {
     case small, medium, large
 }
 
-/// The widget's see-through background, in the widget's shape. The widget draws it
-/// itself, so it works on the normal Home Screen; on a Clear or Tinted Home Screen
-/// iOS swaps it for its own glass.
-struct WidgetBackdrop<S: Shape>: View {
-    let style: BackgroundStyle
-    let shape: S
-
-    var body: some View {
-        switch style {
-        case .glass:
-            Color.clear.glassEffect(.clear, in: shape)
-        case .frosted:
-            Color.clear.glassEffect(.regular, in: shape)
-        case .clear:
-            // Nearly clear instead of clear: iOS may put its own background behind a fully clear one.
-            shape.fill(Color.black.opacity(0.004))
-        }
-    }
-}
-
 /// What a widget shows: an optional clock and the app names, text only. Shared by the
 /// widget and the in-app preview, so the preview is exactly what lands on the Home Screen.
 /// `cell` wraps each name; the widget turns it into a button that opens the app.
