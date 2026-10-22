@@ -11,6 +11,7 @@ struct RootView: View {
     @State private var wallpaperItem: PhotosPickerItem?
     @State private var pickingPink = false
     @State private var pinkItem: PhotosPickerItem?
+    @State private var hookLog = ""
 
     var body: some View {
         ScrollView {
@@ -54,6 +55,8 @@ struct RootView: View {
                         .font(.footnote)
                         .foregroundStyle(.orange)
                 }
+
+                diagnostics
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 32)
@@ -83,8 +86,10 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            hookLog = model.store.loadHookLog()
             // Back from taking the pink screenshot: offer it right away.
-            if phase == .active && model.seeThrough.finding && !pickingWallpaper {
+            if model.seeThrough.finding && !pickingWallpaper {
                 pickingPink = true
             }
         }
@@ -138,6 +143,34 @@ struct RootView: View {
         Text("New wallpaper, or moved a widget? Do A and B again. With Home Screen › Customize › Clear, iOS makes widgets see-through by itself.")
             .font(.footnote)
             .foregroundStyle(.secondary)
+    }
+
+    /// What the widget extension's descriptor hook saw. The extension can't show
+    /// anything itself, so it writes a log into the App Group and this reads it.
+    private var diagnostics: some View {
+        DisclosureGroup("Widget hook log") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(hookLog)
+                    .font(.caption2.monospaced())
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack {
+                    Button("Refresh") { hookLog = model.store.loadHookLog() }
+                    Button("Clear", role: .destructive) {
+                        model.store.clearHookLog()
+                        hookLog = ""
+                    }
+                }
+                .buttonStyle(.bordered)
+                .font(.caption)
+            }
+            .padding(.top, 8)
+        }
+        .font(.subheadline.weight(.medium))
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .task { hookLog = model.store.loadHookLog() }
     }
 
     private var fontPicker: some View {

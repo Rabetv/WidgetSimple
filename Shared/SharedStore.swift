@@ -45,6 +45,17 @@ final class SharedStore: @unchecked Sendable {
         spotsURL.appendingPathComponent("\(key).png")
     }
 
+    /// What the widget extension's descriptor hook saw, written by it, read here.
+    var hookLogURL: URL { rootURL.appendingPathComponent("hook.log") }
+
+    func loadHookLog() -> String {
+        (try? String(contentsOf: hookLogURL, encoding: .utf8)) ?? "No log yet. Open the Home Screen with a widget, then come back."
+    }
+
+    func clearHookLog() {
+        try? FileManager.default.removeItem(at: hookLogURL)
+    }
+
     var fontsIndexURL: URL { rootURL.appendingPathComponent("fonts.json") }
     var fontsURL: URL { rootURL.appendingPathComponent("Fonts", isDirectory: true) }
 
