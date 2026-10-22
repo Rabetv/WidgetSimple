@@ -1,4 +1,4 @@
-import WidgetKit
+﻿import WidgetKit
 import SwiftUI
 import AppIntents
 
@@ -136,7 +136,7 @@ struct LauncherWidgetView: View {
             //
             // Since iOS 26 the system removes a widget's container background on a
             // Clear or Tinted Home Screen and draws its own themed glass there instead
-            // — the grey box. Content is never replaced, so the piece stays the wallpaper.
+            // â€” the grey box. Content is never replaced, so the piece stays the wallpaper.
             //
             // The geometry reader pins the piece to the widget's own size. Without it the
             // image keeps its pixel size (a medium piece is ~1000 pt), the ZStack grows to
@@ -163,7 +163,7 @@ struct LauncherWidgetView: View {
     /// The words, laid out over the wallpaper piece, with one button per app.
     private var face: some View {
         LauncherFace(look: entry.look, clock: entry.clock, date: entry.date, size: size,
-                     apps: entry.names, color: color, hint: "Hold here › Edit Widget › pick apps") { index, name in
+                     apps: entry.names, color: color, hint: "Hold here â€º Edit Widget â€º pick apps") { index, name in
             if index < entry.apps.count {
                 Button(intent: RunSystemShortcutIntent(shortcut: entry.apps[index])) {
                     name
@@ -201,6 +201,10 @@ struct LauncherWidget: Widget {
         .description("Your apps as words on clear glass, with a clock if you like.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .systemExtraLargePortrait])
         .contentMarginsDisabled()
+        // Keep our (empty) container background instead of letting iOS swap in its
+        // glass: "If you mark a background as nonremovable, the system always
+        // displays the background container of the widget." Ours draws nothing.
+        .containerBackgroundRemovable(false)
     }
 }
 
@@ -210,3 +214,4 @@ struct WidgetSimpleWidgetBundle: WidgetBundle {
         LauncherWidget()
     }
 }
+
