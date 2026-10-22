@@ -15,6 +15,9 @@ struct WidgetPreview: View {
             let target = previewSize(available: geo.size.width)
             let scale = min(1, geo.size.width / max(target.width, 1))
             ZStack {
+                if layout.background.mode == .clear {
+                    ClearBackdrop()
+                }
                 WidgetBackgroundView(layout: layout, lightImage: lightImage, darkImage: darkImage)
                 LauncherCanvas(layout: layout, mode: .preview(onTap: onTap))
             }
@@ -53,6 +56,14 @@ struct WidgetPreview: View {
         }
         lightImage = layout.background.hasLightImage ? model.store.loadBackground(layoutID: layout.id, dark: false) : nil
         darkImage = layout.background.hasDarkImage ? model.store.loadBackground(layoutID: layout.id, dark: true) : nil
+    }
+}
+
+/// What a clear widget shows in the app: a stand-in for the wallpaper.
+struct ClearBackdrop: View {
+    var body: some View {
+        LinearGradient(colors: [Color(red: 0.16, green: 0.20, blue: 0.32), Color(red: 0.36, green: 0.24, blue: 0.38)],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 }
 

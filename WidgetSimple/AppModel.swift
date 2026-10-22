@@ -57,6 +57,7 @@ final class AppModel: ObservableObject {
             return updated
         }
         var newClock = clock
+        newClock.clear = false
         newClock.background = color
         if abs(newClock.color.luminance - color.luminance) < 0.35 {
             newClock.color = readable
@@ -66,9 +67,33 @@ final class AppModel: ObservableObject {
 
     /// True when every widget already uses `color` as its background.
     func usesBackground(_ color: RGBA) -> Bool {
-        clock.background == color && layouts.allSatisfy {
+        !clock.clear && clock.background == color && layouts.allSatisfy {
             $0.background.mode == .color && $0.background.darkColor == nil && $0.background.color == color
         }
+    }
+
+    /// Makes every widget clear, with text readable on a `wallpaper` colored wallpaper.
+    func applyClear(on wallpaper: RGBA) {
+        let readable: RGBA = wallpaper.luminance >= 0.5 ? .black : .white
+        layouts = layouts.map { layout in
+            var updated = layout
+            updated.background.mode = .clear
+            if abs(updated.style.color.luminance - wallpaper.luminance) < 0.35 {
+                updated.style.color = readable
+            }
+            return updated
+        }
+        var newClock = clock
+        newClock.clear = true
+        if abs(newClock.color.luminance - wallpaper.luminance) < 0.35 {
+            newClock.color = readable
+        }
+        clock = newClock
+    }
+
+    /// True when every widget is clear.
+    var allClear: Bool {
+        clock.clear && layouts.allSatisfy { $0.background.mode == .clear }
     }
 
     // MARK: Persistence

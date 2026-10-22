@@ -4,13 +4,14 @@ A text-only app launcher for the iPhone Home Screen. Your apps are just words in
 
 ## Features
 
-- **Text launcher widget** (Small, Medium, Large). Grid/list or flowing text, 1–6 columns, alignment, spacing.
-- **Clock widget** (Small, Medium, Large): day, time, date and the current week (month on Large), in your font and colors. Tap opens Calendar.
+- **Text launcher widget** (Small, Medium, Large; Max on iOS 27, see below). Grid/list or flowing text, 1–6 columns, alignment, spacing.
+- **Clear widgets** (iOS 26+): no background, the wallpaper shows through. Default for new widgets and the clock.
+- **Clock widget** (same sizes): day, time, date and the current week (month on Large/Max), clear or colored, in your font. Tap opens Calendar.
 - **Pick from your apps**: a checklist of ~100 apps; the ones detected on your iPhone come first. Websites and URL schemes for anything else.
-- **Hide the edges**: a flat wallpaper, the same color on every widget and four iPhone settings (below).
+- **Hide the edges**: a flat wallpaper, clear widgets and four iPhone settings (below).
 - **Typography**: system fonts, 40 font families built into iOS, or your own `.ttf`/`.otf`.
 - **No name under the widget**: the Home Screen name is an invisible character.
-- Backgrounds: a color, or an exact copy of the wallpaper behind the widget (magenta calibration screenshot).
+- Backgrounds: clear, a color, or an exact copy of the wallpaper behind the widget (magenta calibration screenshot).
 - A 4-page tutorial on first launch (**?** brings it back).
 
 ## Build without a Mac (GitHub → TestFlight)
@@ -33,17 +34,21 @@ Xcode 26 or newer. `Config/Base.xcconfig` holds the team (`DEVELOPMENT_TEAM`), b
 
 ## Hiding the widget edges
 
-iOS can't show a widget without a background: a clear background becomes a gray box. iOS also draws a glass edge on top of every widget, which no widget can paint over. The edge only shows what is behind it, so on iOS 27 it disappears when:
+Widgets are clear by default (`.containerBackground(.clear, for: .widget)`, iOS 26+), so the wallpaper shows through. iOS draws a glass edge on top of every widget, which no widget can paint over. The edge only shows what is behind it, so on iOS 27 it disappears when:
 
 | | Black | Gray | White |
 |---|---|---|---|
-| Wallpaper (Blur off) and widget color | same flat black | same flat gray | same flat white |
+| Wallpaper (Blur off), widgets clear | flat black | flat gray | flat white |
 | Display & Brightness | Dark | Dark | Light |
 | Increase Contrast | **On** | Off | Off |
 | Show Borders | Off | Off | **On** |
 | Reduce Transparency | Off | Off | Off |
 
-Plus Home Screen › Customize › Default with large icons. Accessibility settings are under Settings › Accessibility › Display & Text Size. This follows what [Blank Spaces](https://help.blankspaces.app/en/articles/5884313-how-to-set-up-the-dark-theme-ios-27) documents for iOS 27. On iOS 26 a faint outline always stays, and photo wallpapers always keep a faint edge. *Hide the edges* in the app saves the wallpaper, applies the color to every widget and can copy the exact on-screen color from a screenshot.
+Plus Home Screen › Customize › Default with large icons. Accessibility settings are under Settings › Accessibility › Display & Text Size. This follows what [Blank Spaces](https://help.blankspaces.app/en/articles/5884313-how-to-set-up-the-dark-theme-ios-27) documents for iOS 27. On iOS 26 a faint outline always stays, and photo wallpapers always keep a faint edge. *Hide the edges* in the app saves the wallpaper and makes every widget clear; if a device ever shows a gray box instead, it can switch them to the exact solid color (also from a screenshot).
+
+## Max widget size (iOS 27)
+
+iOS 27 adds an Extra Large widget (`WidgetFamily.systemExtraLargePortrait`, a whole Home Screen page). It only exists in the iOS 27 SDK (Xcode 27). Both workflows check the Xcode version and, from Xcode 27 on, build with the `SDK27` compilation condition, which adds the Max size to both widgets and to the app. With older Xcode (GitHub's runners had 26.6 in October 2026) the app builds without it.
 
 ## Which apps are detected
 

@@ -26,7 +26,7 @@ struct LayoutEditorView: View {
             Section {
                 TextField("Name", text: layout.name)
                 Picker("Size", selection: layout.size) {
-                    ForEach(WidgetSizeOption.allCases) { Text($0.title).tag($0) }
+                    ForEach(WidgetSizeOption.available) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
             } footer: {
@@ -128,6 +128,8 @@ struct LayoutEditorView: View {
             .pickerStyle(.segmented)
 
             switch layout.wrappedValue.background.mode {
+            case .clear:
+                Toggle("Keep colors in Clear & Tinted style", isOn: layout.keepColorsInClearMode)
             case .color:
                 ColorSwatches(selection: Binding(
                     get: { layout.wrappedValue.background.color },

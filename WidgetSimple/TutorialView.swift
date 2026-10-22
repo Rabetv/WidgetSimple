@@ -15,7 +15,7 @@ struct TutorialView: View {
     private let pages = [
         Page(symbol: "checklist", title: "Pick your apps", text: "Tick the apps you want. They show up as words."),
         Page(symbol: "plus.square.on.square", title: "Add the widget", text: "Hold the Home Screen › Edit › Add Widget › WidgetSimple."),
-        Page(symbol: "square.dashed", title: "Hide the edges", text: "Plain wallpaper, same widget color, 4 settings. The app shows you."),
+        Page(symbol: "square.dashed", title: "Hide the edges", text: "Plain wallpaper, clear widgets, 4 settings. The app shows you."),
         Page(symbol: "clock", title: "Clock widget", text: "Day, time and week, in your font."),
     ]
 

@@ -12,7 +12,7 @@ struct ClockFace: View {
             switch size {
             case .small: small
             case .medium: medium
-            case .large: large
+            case .large, .max: large
             }
         }
         .foregroundStyle(style.color.color)

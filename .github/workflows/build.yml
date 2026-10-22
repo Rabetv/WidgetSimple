@@ -18,6 +18,11 @@ jobs:
           XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
           sudo xcode-select -s "$XCODE"
           xcodebuild -version
+          # Xcode 27+ has the iOS 27 SDK: compile in the Max widget size (see WidgetSizes).
+          if [ "$(xcodebuild -version | awk 'NR==1 {split($2, v, "."); print v[1]}')" -ge 27 ]; then
+            echo 'SDK_FLAG=SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) SDK27' >> "$GITHUB_ENV"
+            echo "iOS 27 SDK: Max widget size included."
+          fi
 
       - name: Build app + widget (unsigned, device SDK)
         run: |
@@ -30,6 +35,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
+            ${SDK_FLAG:+"$SDK_FLAG"} \
             build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
 

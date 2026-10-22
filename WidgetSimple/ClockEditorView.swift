@@ -12,7 +12,7 @@ struct ClockEditorView: View {
                     .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 12, trailing: 0))
                     .listRowBackground(Color.clear)
                 Picker("Size", selection: $size) {
-                    ForEach(WidgetSizeOption.allCases) { Text($0.title).tag($0) }
+                    ForEach(WidgetSizeOption.available) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
             } footer: {
@@ -42,7 +42,14 @@ struct ClockEditorView: View {
             }
 
             Section("Background") {
-                ColorSwatches(selection: $model.clock.background)
+                Picker("Background", selection: $model.clock.clear) {
+                    Text("Clear").tag(true)
+                    Text("Color").tag(false)
+                }
+                .pickerStyle(.segmented)
+                if !model.clock.clear {
+                    ColorSwatches(selection: $model.clock.background)
+                }
                 NavigationLink {
                     NoEdgesView()
                 } label: {
@@ -67,7 +74,9 @@ private struct ClockPreview: View {
         TimelineView(.everyMinute) { context in
             ClockFace(date: context.date, style: style, size: size)
                 .frame(width: target.width, height: target.height)
-                .background(style.background.color)
+                .background {
+                    if style.clear { ClearBackdrop() } else { style.background.color }
+                }
                 .clipShape(RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous)

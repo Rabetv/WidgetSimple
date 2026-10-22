@@ -311,23 +311,39 @@ enum VAlignOption: String, Codable, CaseIterable, Identifiable {
 
 enum WidgetSizeOption: String, Codable, CaseIterable, Identifiable {
     case small, medium, large
+    /// iOS 27 Extra Large (a whole Home Screen page). Only in builds made with the iOS 27 SDK.
+    case max
     var id: String { rawValue }
     var title: String {
         switch self {
         case .small: return "Small"
         case .medium: return "Medium"
         case .large: return "Large"
+        case .max: return "Max"
         }
+    }
+
+    /// The sizes this build can put on this iPhone.
+    static var available: [WidgetSizeOption] {
+        var sizes: [WidgetSizeOption] = [.small, .medium, .large]
+        #if SDK27
+        if #available(iOS 27.0, *) { sizes.append(.max) }
+        #endif
+        return sizes
     }
 }
 
 enum BackgroundMode: String, Codable, CaseIterable, Identifiable {
+    /// No background: the wallpaper shows through (iOS 26+).
+    /// Stored as "transparent" so layouts from older builds keep it.
+    case clear = "transparent"
     case color
     /// A pixel copy of the wallpaper behind the widget.
     case wallpaper
     var id: String { rawValue }
     var title: String {
         switch self {
+        case .clear: return "Clear"
         case .color: return "Color"
         case .wallpaper: return "Wallpaper"
         }
@@ -335,7 +351,7 @@ enum BackgroundMode: String, Codable, CaseIterable, Identifiable {
 }
 
 struct BackgroundSettings: Codable, Hashable {
-    var mode: BackgroundMode = .color
+    var mode: BackgroundMode = .clear
     var color: RGBA = .black
     /// Optional separate color for Dark Mode (solid color mode).
     var darkColor: RGBA? = nil
@@ -354,16 +370,8 @@ struct BackgroundSettings: Codable, Hashable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        let rawMode = try? c.decodeIfPresent(String.self, forKey: .mode)
+        mode = (try? c.decodeIfPresent(BackgroundMode.self, forKey: .mode)) ?? .clear
         color = try c.decodeIfPresent(RGBA.self, forKey: .color) ?? .black
-        if rawMode == "transparent" {
-            // Older builds offered "Transparent", but iOS draws its own gray box behind
-            // a clear widget. Those layouts become black.
-            mode = .color
-            color = .black
-        } else {
-            mode = rawMode.flatMap { BackgroundMode(rawValue: $0) } ?? .color
-        }
         darkColor = try c.decodeIfPresent(RGBA.self, forKey: .darkColor)
         cropRect = try c.decodeIfPresent(PixelRect.self, forKey: .cropRect)
         screenshotSize = try c.decodeIfPresent(PixelSize.self, forKey: .screenshotSize)
@@ -461,11 +469,13 @@ struct ClockStyle: Codable, Hashable {
     var fontID: String = "sys:mono"
     var weight: FontWeightOption = .regular
     var color: RGBA = .white
+    /// No background: the wallpaper shows through. Otherwise `background` is used.
+    var clear: Bool = true
     var background: RGBA = .black
 
     init() {}
 
-    enum CodingKeys: String, CodingKey { case fontID, weight, color, background }
+    enum CodingKeys: String, CodingKey { case fontID, weight, color, clear, background }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -473,6 +483,7 @@ struct ClockStyle: Codable, Hashable {
         fontID = try c.decodeIfPresent(String.self, forKey: .fontID) ?? d.fontID
         weight = (try? c.decodeIfPresent(FontWeightOption.self, forKey: .weight)) ?? d.weight
         color = try c.decodeIfPresent(RGBA.self, forKey: .color) ?? d.color
+        clear = try c.decodeIfPresent(Bool.self, forKey: .clear) ?? d.clear
         background = try c.decodeIfPresent(RGBA.self, forKey: .background) ?? d.background
     }
 }

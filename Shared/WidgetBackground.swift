@@ -1,8 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// The widget background: a solid color (matching a flat wallpaper) or a cropped
-/// copy of the wallpaper behind the widget.
+/// The widget background: none (the widget uses `.containerBackground(.clear, …)`),
+/// a solid color, or a cropped copy of the wallpaper behind the widget.
 struct WidgetBackgroundView: View {
     let layout: LauncherLayout
     let lightImage: UIImage?
@@ -16,6 +16,8 @@ struct WidgetBackgroundView: View {
             CalibrationMarker.color
         } else {
             switch layout.background.mode {
+            case .clear:
+                Color.clear
             case .wallpaper:
                 if let image = currentImage {
                     Image(uiImage: image)
@@ -50,6 +52,7 @@ enum WidgetSizing {
         case .small: return CGSize(width: height, height: height)
         case .medium: return CGSize(width: width, height: height)
         case .large: return CGSize(width: width, height: (width * 1.05).rounded())
+        case .max: return CGSize(width: width, height: (width * 1.62).rounded())
         }
     }
 

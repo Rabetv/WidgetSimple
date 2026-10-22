@@ -44,7 +44,11 @@ struct Provider: AppIntentTimelineProvider {
         case .systemSmall: return .small
         case .systemMedium: return .medium
         case .systemLarge: return .large
-        default: return nil
+        default:
+            #if SDK27
+            if #available(iOS 27.0, *), family == .systemExtraLargePortrait { return .max }
+            #endif
+            return nil
         }
     }
 
@@ -82,6 +86,21 @@ struct WidgetSimpleEntryView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
+        if entry.layout.background.mode == .clear && !entry.calibrating {
+            // No background at all: iOS 26+ shows the wallpaper through the widget.
+            content.containerBackground(.clear, for: .widget)
+        } else {
+            content.containerBackground(for: .widget) {
+                WidgetBackgroundView(layout: entry.layout,
+                                     lightImage: entry.lightImage,
+                                     darkImage: entry.darkImage,
+                                     calibrating: entry.calibrating)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         Group {
             if entry.calibrating {
                 // Solid magenta: the app finds this exact rectangle in a screenshot.
@@ -91,12 +110,6 @@ struct WidgetSimpleEntryView: View {
                                mode: .widget,
                                labelImages: keepsColors ? entry.labelImages : nil)
             }
-        }
-        .containerBackground(for: .widget) {
-            WidgetBackgroundView(layout: entry.layout,
-                                 lightImage: entry.lightImage,
-                                 darkImage: entry.darkImage,
-                                 calibrating: entry.calibrating)
         }
     }
 
@@ -115,7 +128,7 @@ struct WidgetSimpleWidget: Widget {
         }
         .configurationDisplayName("Text Launcher")
         .description("Your apps as plain text. Tap a word to open the app.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .supportedFamilies(WidgetSizes.families)
         .contentMarginsDisabled()
     }
 }

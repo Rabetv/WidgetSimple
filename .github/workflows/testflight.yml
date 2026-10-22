@@ -76,6 +76,11 @@ jobs:
           XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
           sudo xcode-select -s "$XCODE"
           xcodebuild -version
+          # Xcode 27+ has the iOS 27 SDK: compile in the Max widget size (see WidgetSizes).
+          if [ "$(xcodebuild -version | awk 'NR==1 {split($2, v, "."); print v[1]}')" -ge 27 ]; then
+            echo 'SDK_FLAG=SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) SDK27' >> "$GITHUB_ENV"
+            echo "iOS 27 SDK: Max widget size included."
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -175,6 +180,7 @@ jobs:
             WIDGET_PROFILE_SPECIFIER="$WIDGET_PROFILE" \
             OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
             CURRENT_PROJECT_VERSION="$BUILD" \
+            ${SDK_FLAG:+"$SDK_FLAG"} \
             archive
 
       - name: Export ipa

@@ -5,9 +5,9 @@ import Photos
 /// A flat wallpaper color plus the iPhone settings that hide the widget glass edges.
 ///
 /// iOS draws the edge on top of every widget. On iOS 27 it disappears when the
-/// wallpaper is one flat color, the widget has exactly that color, and these
-/// settings are set (Dark: Increase Contrast on, Show Borders off; Gray: both off;
-/// White: Show Borders on). On iOS 26 a faint outline always stays.
+/// wallpaper is one flat color, the widgets are clear (or exactly that color), and
+/// these settings are set (Dark: Increase Contrast on, Show Borders off; Gray: both
+/// off; White: Show Borders on). On iOS 26 a faint outline always stays.
 enum EdgeTheme: String, CaseIterable, Identifiable {
     case black, gray, white
     var id: String { rawValue }
@@ -64,9 +64,9 @@ struct NoEdgesView: View {
                 .disabled(saving)
 
                 Button {
-                    model.applyBackground(theme.color)
+                    model.applyClear(on: theme.color)
                 } label: {
-                    StepRow(number: 2, title: "Use this color on all widgets", detail: nil, done: model.usesBackground(theme.color))
+                    StepRow(number: 2, title: "Make all widgets clear", detail: nil, done: model.allClear)
                 }
 
                 StepRow(number: 3, title: "Home Screen", detail: "Hold › Edit › Customize › Default, large icons.", done: false)
@@ -86,12 +86,25 @@ struct NoEdgesView: View {
             }
 
             Section {
+                Button {
+                    model.applyBackground(theme.color)
+                } label: {
+                    HStack {
+                        Text("Use solid \(theme.title.lowercased()) instead")
+                        Spacer()
+                        if model.usesBackground(theme.color) {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        }
+                    }
+                }
                 PhotosPicker(selection: $screenshotItem, matching: .screenshots) {
-                    Label("Widget a different shade? Pick a Home Screen screenshot", systemImage: "camera.viewfinder")
+                    Label("Match the color from a screenshot", systemImage: "camera.viewfinder")
                 }
                 if let message {
                     Text(message).font(.footnote).foregroundStyle(.secondary)
                 }
+            } header: {
+                Text("Gray box instead of clear?")
             }
 
             if !isIOS27 {
@@ -105,7 +118,7 @@ struct NoEdgesView: View {
         .navigationTitle("Hide the edges")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            if let match = EdgeTheme.allCases.first(where: { $0.color == model.clock.background }) {
+            if !model.clock.clear, let match = EdgeTheme.allCases.first(where: { $0.color == model.clock.background }) {
                 theme = match
             }
         }
