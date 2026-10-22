@@ -30,6 +30,9 @@
 - (void)setBackgroundRemovable:(BOOL)removable;
 - (void)setTransparent:(BOOL)transparent;
 - (void)setPreferredBackgroundStyle:(NSUInteger)style;
+- (BOOL)backgroundRemovable;
+- (BOOL)transparent;
+- (NSUInteger)preferredBackgroundStyle;
 @end
 
 typedef void (^DescriptorsCompletion)(id result);
@@ -140,6 +143,51 @@ static NSSet *AllowedClasses(void)
 
 #pragma mark - Flags
 
+static BOOL DidDumpDescriptorShape;
+
+/// Properties, ivars and setters of the descriptor that could control the container.
+static void DumpDescriptorShape(id descriptor)
+{
+    Class cls = object_getClass(descriptor);
+
+    NSMutableArray<NSString *> *properties = [NSMutableArray array];
+    unsigned int propertyCount = 0;
+    objc_property_t *propertyList = class_copyPropertyList(cls, &propertyCount);
+    for (unsigned int i = 0; i < propertyCount; i++) {
+        [properties addObject:@(property_getName(propertyList[i]))];
+    }
+    free(propertyList);
+
+    NSMutableArray<NSString *> *ivars = [NSMutableArray array];
+    unsigned int ivarCount = 0;
+    Ivar *ivarList = class_copyIvarList(cls, &ivarCount);
+    for (unsigned int i = 0; i < ivarCount; i++) {
+        const char *name = ivar_getName(ivarList[i]);
+        if (name) { [ivars addObject:@(name)]; }
+    }
+    free(ivarList);
+
+    NSMutableArray<NSString *> *methods = [NSMutableArray array];
+    unsigned int methodCount = 0;
+    Method *methodList = class_copyMethodList(cls, &methodCount);
+    for (unsigned int i = 0; i < methodCount; i++) {
+        NSString *name = NSStringFromSelector(method_getName(methodList[i]));
+        NSArray *needles = @[@"ackground", @"ransparent", @"tyle", @"lass", @"order", @"ontainer"];
+        for (NSString *needle in needles) {
+            if ([name rangeOfString:needle options:NSCaseInsensitiveSearch].location != NSNotFound) {
+                [methods addObject:name];
+                break;
+            }
+        }
+    }
+    free(methodList);
+
+    HookLog(@"shape %s", class_getName(cls));
+    HookLog(@"  properties: %@", properties.count ? [properties componentsJoinedByString:@","] : @"(none)");
+    HookLog(@"  ivars: %@", ivars.count ? [ivars componentsJoinedByString:@","] : @"(none)");
+    HookLog(@"  methods: %@", methods.count ? [methods componentsJoinedByString:@" "] : @"(none)");
+}
+
 static NSArray *DescriptorsWithFlags(NSArray *descriptors)
 {
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:descriptors.count];
@@ -152,6 +200,11 @@ static NSArray *DescriptorsWithFlags(NSArray *descriptors)
             }
         } @catch (NSException *exception) {
             HookLog(@"mutableCopy threw: %@", exception.reason);
+        }
+
+        if (!DidDumpDescriptorShape) {
+            DidDumpDescriptorShape = YES;
+            DumpDescriptorShape(target);
         }
 
         BOOL background = [target respondsToSelector:@selector(setBackgroundRemovable:)];
@@ -167,6 +220,22 @@ static NSArray *DescriptorsWithFlags(NSArray *descriptors)
             if (style) { [target setPreferredBackgroundStyle:kClearBackgroundStyle]; }
         } @catch (NSException *exception) {
             HookLog(@"mutation threw: %@", exception.reason);
+        }
+
+        // Did the setters take? A setter that answers but ignores the value is the
+        // difference between "flag ignored by the host" and "nothing was written".
+        @try {
+            if (background && [target respondsToSelector:@selector(backgroundRemovable)]) {
+                HookLog(@"  readback bg=%d", (int)[target backgroundRemovable]);
+            }
+            if (transparent && [target respondsToSelector:@selector(transparent)]) {
+                HookLog(@"  readback tr=%d", (int)[target transparent]);
+            }
+            if (style && [target respondsToSelector:@selector(preferredBackgroundStyle)]) {
+                HookLog(@"  readback st=%lu", (unsigned long)[target preferredBackgroundStyle]);
+            }
+        } @catch (NSException *exception) {
+            HookLog(@"readback threw: %@", exception.reason);
         }
         [result addObject:target];
     }
