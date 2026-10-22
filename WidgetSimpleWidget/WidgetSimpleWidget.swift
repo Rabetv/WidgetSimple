@@ -132,25 +132,37 @@ struct LauncherWidgetView: View {
             SpotCode(key: key)
                 .containerBackground(for: .widget) { SpotCode.marker }
         } else {
-            LauncherFace(look: entry.look, clock: entry.clock, date: entry.date, size: size,
-                         apps: entry.names, color: color, hint: "Hold here › Edit Widget › pick apps") { index, name in
-                if index < entry.apps.count {
-                    Button(intent: RunSystemShortcutIntent(shortcut: entry.apps[index])) {
-                        name
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    name
-                }
-            }
-            .containerBackground(for: .widget) {
+            ZStack {
+                // The piece of wallpaper is content, not the container background.
+                //
+                // Since iOS 26 the system removes a widget's container background on a
+                // Clear or Tinted Home Screen and draws its own themed glass there
+                // instead — the grey box. Content is never replaced, so the piece stays
+                // the wallpaper. Full colour keeps the accent tint from painting it white.
                 if let background = entry.background {
                     Image(uiImage: background)
                         .resizable()
                         .scaledToFill()
-                } else {
-                    Color.clear
+                        .widgetAccentedRenderingMode(.fullColor)
                 }
+                face
+            }
+            // No background of our own, so nothing is left for the system to replace.
+            .containerBackground(for: .widget) { Color.clear }
+        }
+    }
+
+    /// The words, laid out over the wallpaper piece, with one button per app.
+    private var face: some View {
+        LauncherFace(look: entry.look, clock: entry.clock, date: entry.date, size: size,
+                     apps: entry.names, color: color, hint: "Hold here › Edit Widget › pick apps") { index, name in
+            if index < entry.apps.count {
+                Button(intent: RunSystemShortcutIntent(shortcut: entry.apps[index])) {
+                    name
+                }
+                .buttonStyle(.plain)
+            } else {
+                name
             }
         }
     }
