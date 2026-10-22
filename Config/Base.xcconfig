@@ -5,7 +5,7 @@
 // Your Apple Developer Team ID (10 characters, e.g. AB12CD34EF).
 // You can also leave this empty and pick your team in Xcode under
 // Target > Signing & Capabilities.
-DEVELOPMENT_TEAM =
+DEVELOPMENT_TEAM = HN6QY3V757
 
 // Reverse-domain prefix for the bundle identifiers. Must be unique to you.
 BUNDLE_ID_PREFIX = com.rabetv
