@@ -3,9 +3,8 @@ import Foundation
 /// A known app and the URL that opens it.
 ///
 /// iOS does not let apps list what is installed, so WidgetSimple ships a
-/// catalog of well-known URL schemes. Anything missing can be added as a
-/// custom URL scheme, a website, or a Shortcut (the Shortcuts "Open App"
-/// action can open any installed app).
+/// catalog of well-known URL schemes and checks which of them are on the
+/// iPhone. Anything missing can be added as a custom URL scheme or a website.
 struct CatalogApp: Identifiable, Hashable {
     let id: String
     let name: String

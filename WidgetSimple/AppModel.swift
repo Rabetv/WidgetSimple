@@ -165,11 +165,20 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func isInstalled(_ app: CatalogApp) -> Bool? {
-        guard let url = app.openURL else { return nil }
+    /// The schemes iOS actually checks. Apps built with the iOS 27 SDK get only the first
+    /// 25 LSApplicationQueriesSchemes entries (50 before). Entry 26 is our own scheme:
+    /// it always resolves, so a "no" means the list was cut at 25.
+    private lazy var checkableSchemes: Set<String> = {
         let declared = (Bundle.main.object(forInfoDictionaryKey: "LSApplicationQueriesSchemes") as? [String]) ?? []
-        if app.category == .apple { return nil }
-        guard declared.contains(app.scheme) else { return nil }
+        let probe = URL(string: "\(LaunchRouter.scheme)://")
+        let limit = probe.map { UIApplication.shared.canOpenURL($0) } == true ? 50 : 25
+        return Set(declared.prefix(limit).map { $0.lowercased() })
+    }()
+
+    /// nil when iOS doesn't let WidgetSimple check this app.
+    func isInstalled(_ app: CatalogApp) -> Bool? {
+        guard let url = app.openURL, app.category != .apple else { return nil }
+        guard checkableSchemes.contains(app.scheme.lowercased()) else { return nil }
         return UIApplication.shared.canOpenURL(url)
     }
 }

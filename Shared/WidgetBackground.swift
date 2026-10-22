@@ -15,21 +15,40 @@ struct WidgetBackgroundView: View {
         if calibrating {
             CalibrationMarker.color
         } else {
-            switch layout.background.mode {
-            case .transparent:
-                // Nothing behind the text: iOS 26+ shows the wallpaper through the widget.
-                Color.clear
-            case .wallpaper:
-                if let image = currentImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    solidColor
-                }
-            case .color:
+            fill.overlay { edgeBand }
+        }
+    }
+
+    @ViewBuilder
+    private var fill: some View {
+        switch layout.background.mode {
+        case .transparent:
+            // Nothing behind the text: iOS 26+ shows the wallpaper through the widget.
+            Color.clear
+        case .wallpaper:
+            if let image = currentImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
                 solidColor
             }
+        case .color:
+            solidColor
+        }
+    }
+
+    /// iOS draws its glass outline on top of the widget, so it can't be painted over.
+    /// A soft darker (or lighter) band underneath can cancel it out; tuned by eye on the device.
+    @ViewBuilder
+    private var edgeBand: some View {
+        let bg = layout.background
+        if bg.edgeCorrection, bg.edgeTone != 0 {
+            let width = CGFloat(max(1, bg.edgeWidth))
+            ContainerRelativeShape()
+                .strokeBorder(bg.edgeTone < 0 ? Color.black : Color.white, lineWidth: width)
+                .blur(radius: width / 2)
+                .opacity(min(abs(bg.edgeTone), 100) / 100)
         }
     }
 

@@ -58,9 +58,7 @@ struct LayoutEditorView: View {
             EditButton()
         }
         .sheet(isPresented: $showingPicker) {
-            AppPickerView { newItem in
-                layout.wrappedValue.items.append(newItem)
-            }
+            AppPickerView(mode: .checklist(layoutID: layoutID))
         }
         .sheet(item: $editingItem) { editing in
             NavigationStack {
@@ -103,12 +101,12 @@ struct LayoutEditorView: View {
             Button {
                 showingPicker = true
             } label: {
-                Label("Add app, website or shortcut", systemImage: "plus")
+                Label("Choose apps", systemImage: "checklist")
             }
         } header: {
             Text("Apps (\(layout.wrappedValue.items.count))")
         } footer: {
-            Text("Drag to reorder (Edit), swipe to delete.")
+            Text("Tick the apps from your iPhone that this widget shows. Drag to reorder (Edit), swipe to delete.")
         }
     }
 
@@ -140,6 +138,12 @@ struct LayoutEditorView: View {
 
     private var backgroundSection: some View {
         Section {
+            NavigationLink {
+                BorderlessSetupView(layoutID: layoutID)
+            } label: {
+                Label("Hide the glass edge", systemImage: "square.dashed")
+            }
+
             Picker("Background", selection: layout.background.mode) {
                 ForEach(BackgroundMode.allCases) { Text($0.title).tag($0) }
             }
@@ -209,7 +213,7 @@ struct LayoutEditorView: View {
     private var backgroundFooter: String {
         switch layout.wrappedValue.background.mode {
         case .transparent:
-            return "No background: your wallpaper shows straight through the widget, so it reads as plain text. Nothing to line up, works with any wallpaper and with motion effects on. iOS still draws its own thin glass edge around every widget; no app can remove that. In the Clear and Tinted Home Screen styles iOS turns widget text white; the toggle keeps your fonts and colors there."
+            return "No background: your wallpaper shows straight through the widget, so it reads as plain text. iOS still draws its thin glass edge on top; “Hide the glass edge” makes it disappear with a matching flat wallpaper. In the Clear and Tinted Home Screen styles iOS turns widget text white; the toggle keeps your fonts and colors there."
         case .wallpaper:
             return "Fallback if Transparent shows a solid box on your iPhone: the widget gets an exact copy of the wallpaper behind it."
         case .color:

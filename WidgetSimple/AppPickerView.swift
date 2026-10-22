@@ -1,70 +1,109 @@
 import SwiftUI
 
-/// Pick an app from the catalog, or add a website / URL scheme / shortcut.
+/// The apps on your iPhone as a checklist: tick the ones a widget shows.
+/// Also picks a single app for an existing item.
+///
+/// iOS has no public way to list every installed app, so WidgetSimple checks its
+/// catalog of well-known apps and lists the ones it finds on this iPhone first.
 struct AppPickerView: View {
+    enum Mode {
+        /// Tick apps on and off for a layout.
+        case checklist(layoutID: UUID)
+        /// Pick one app, then close.
+        case single((LaunchItem) -> Void)
+    }
+
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
 
-    var appsOnly: Bool = false
-    let onPick: (LaunchItem) -> Void
+    let mode: Mode
 
     @State private var search = ""
     @State private var custom: CustomEntry?
     @State private var installed: [String: Bool] = [:]
+    @State private var showUndetected = false
 
     private struct CustomEntry: Identifiable {
         let kind: TargetKind
         var id: String { kind.rawValue }
     }
 
+    private var layoutID: UUID? {
+        if case .checklist(let id) = mode { return id }
+        return nil
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                if !appsOnly && search.isEmpty {
+                let apps = filteredApps
+                let onPhone = apps.filter { installed[$0.id] == true }
+                let builtIn = apps.filter { $0.category == .apple }
+                let undetected = apps.filter { $0.category != .apple && installed[$0.id] == nil }
+
+                if !onPhone.isEmpty {
+                    Section {
+                        ForEach(onPhone) { row($0) }
+                    } header: {
+                        Text("On this iPhone (\(onPhone.count))")
+                    }
+                }
+
+                if !builtIn.isEmpty {
+                    Section("Built-in apps") {
+                        ForEach(builtIn) { row($0) }
+                    }
+                }
+
+                if !undetected.isEmpty {
+                    Section {
+                        if showUndetected || !search.isEmpty {
+                            ForEach(undetected) { row($0) }
+                        } else {
+                            Button("Show \(undetected.count) more apps") { showUndetected = true }
+                        }
+                    } header: {
+                        Text("More apps")
+                    } footer: {
+                        Text("iOS lets an app check only a limited number of other apps, so WidgetSimple can't tell whether these are installed. Tick the ones you have.")
+                    }
+                }
+
+                if layoutID != nil && search.isEmpty {
                     Section {
                         Button { custom = CustomEntry(kind: .website) } label: {
                             Label("Website or universal link", systemImage: "globe")
                         }
                         Button { custom = CustomEntry(kind: .urlScheme) } label: {
-                            Label("Custom URL scheme", systemImage: "link")
+                            Label("App by URL scheme", systemImage: "link")
                         }
-                        Button { custom = CustomEntry(kind: .shortcut) } label: {
-                            Label("Any app via Shortcut", systemImage: "square.stack.3d.up")
-                        }
+                    } header: {
+                        Text("Not in the list?")
                     } footer: {
-                        Text("iOS doesn't let apps see everything you have installed. For apps not listed below, use a URL scheme or a Shortcut with the “Open App” action.")
-                    }
-                }
-
-                let detected = filteredApps.filter { installed[$0.id] == true }
-                if !detected.isEmpty {
-                    Section("Installed") {
-                        ForEach(detected) { app in appRow(app) }
-                    }
-                }
-
-                ForEach(CatalogApp.Category.allCases, id: \.self) { category in
-                    let apps = filteredApps.filter { $0.category == category && installed[$0.id] != true }
-                    if !apps.isEmpty {
-                        Section(category.rawValue) {
-                            ForEach(apps) { app in appRow(app) }
-                        }
+                        Text("Most apps also open through a link, e.g. spotify:// or https://youtube.com.")
                     }
                 }
             }
             .searchable(text: $search, prompt: "Search apps")
-            .navigationTitle("Add")
+            .navigationTitle(layoutID == nil ? "Choose App" : "Choose Apps")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                if layoutID == nil {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                } else {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
                 }
             }
             .sheet(item: $custom) { entry in
                 CustomTargetSheet(kind: entry.kind) { item in
-                    onPick(item)
+                    if let layoutID {
+                        model.binding(for: layoutID).wrappedValue.items.append(item)
+                    }
                     custom = nil
-                    dismiss()
                 }
             }
             .onAppear(perform: detectInstalled)
@@ -73,36 +112,49 @@ struct AppPickerView: View {
 
     private var filteredApps: [CatalogApp] {
         let q = search.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return AppCatalog.apps }
-        return AppCatalog.apps.filter { $0.name.localizedCaseInsensitiveContains(q) }
+        let apps = q.isEmpty ? AppCatalog.apps : AppCatalog.apps.filter { $0.name.localizedCaseInsensitiveContains(q) }
+        return apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    private func appRow(_ app: CatalogApp) -> some View {
+    private func row(_ app: CatalogApp) -> some View {
         Button {
-            onPick(LaunchItem.from(app: app))
-            dismiss()
+            tap(app)
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(app.name).foregroundStyle(.primary)
-                    Text(app.url).font(.caption).foregroundStyle(.secondary)
+                    if installed[app.id] == nil && !app.wellKnown {
+                        Text("Test after adding").font(.caption2).foregroundStyle(.orange)
+                    }
                 }
                 Spacer()
-                status(for: app)
+                if layoutID != nil {
+                    let selected = isSelected(app)
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                }
             }
+            .contentShape(Rectangle())
         }
     }
 
-    @ViewBuilder
-    private func status(for app: CatalogApp) -> some View {
-        switch installed[app.id] {
-        case .some(true):
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-        case .some(false):
-            Text("Not installed").font(.caption).foregroundStyle(.secondary)
-        case .none:
-            if !app.wellKnown {
-                Text("Test after adding").font(.caption2).foregroundStyle(.orange)
+    private func isSelected(_ app: CatalogApp) -> Bool {
+        guard let layoutID, let layout = model.layout(id: layoutID) else { return false }
+        return layout.items.contains { $0.target.catalogID == app.id }
+    }
+
+    private func tap(_ app: CatalogApp) {
+        switch mode {
+        case .single(let onPick):
+            onPick(LaunchItem.from(app: app))
+            dismiss()
+        case .checklist(let layoutID):
+            let layout = model.binding(for: layoutID)
+            if isSelected(app) {
+                layout.wrappedValue.items.removeAll { $0.target.catalogID == app.id }
+            } else {
+                layout.wrappedValue.items.append(LaunchItem.from(app: app))
             }
         }
     }
@@ -180,7 +232,7 @@ private struct CustomTargetSheet: View {
         case .urlScheme:
             return "Many apps publish a URL scheme. Examples: tel://123456, sms://, mailto:you@example.com, spotify://"
         case .shortcut:
-            return "1. Open Shortcuts › + › Add Action › “Open App”.\n2. Choose the app (works for every installed app, e.g. Camera, Settings, Calculator).\n3. Rename the shortcut, e.g. “Cam”.\n4. Type that exact name here."
+            return "Runs the Shortcut with exactly this name."
         case .app:
             return ""
         }

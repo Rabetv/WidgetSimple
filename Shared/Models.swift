@@ -35,6 +35,8 @@ struct RGBA: Codable, Hashable {
 
     var color: Color { Color(.sRGB, red: r, green: g, blue: b, opacity: a) }
     var uiColor: UIColor { UIColor(red: r, green: g, blue: b, alpha: a) }
+    /// Perceived brightness, 0 (black) to 1 (white).
+    var luminance: Double { 0.2126 * r + 0.7152 * g + 0.0722 * b }
 
     static let white = RGBA(r: 1, g: 1, b: 1)
     static let black = RGBA(r: 0, g: 0, b: 0)
@@ -343,11 +345,18 @@ struct BackgroundSettings: Codable, Hashable {
     var hasLightImage: Bool = false
     var hasDarkImage: Bool = false
     var imageVersion: Int = 0
+    /// Soft band just inside the widget edge, under the iOS glass outline, to cancel it out.
+    var edgeCorrection: Bool = false
+    /// Band width in points.
+    var edgeWidth: Double = 3
+    /// Percent: negative darkens the edge, positive lightens it.
+    var edgeTone: Double = -20
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case mode, color, darkColor, cropRect, screenshotSize, hasLightImage, hasDarkImage, imageVersion
+        case edgeCorrection, edgeWidth, edgeTone
     }
 
     init(from decoder: Decoder) throws {
@@ -360,6 +369,10 @@ struct BackgroundSettings: Codable, Hashable {
         hasLightImage = try c.decodeIfPresent(Bool.self, forKey: .hasLightImage) ?? false
         hasDarkImage = try c.decodeIfPresent(Bool.self, forKey: .hasDarkImage) ?? false
         imageVersion = try c.decodeIfPresent(Int.self, forKey: .imageVersion) ?? 0
+        let d = BackgroundSettings()
+        edgeCorrection = try c.decodeIfPresent(Bool.self, forKey: .edgeCorrection) ?? d.edgeCorrection
+        edgeWidth = try c.decodeIfPresent(Double.self, forKey: .edgeWidth) ?? d.edgeWidth
+        edgeTone = try c.decodeIfPresent(Double.self, forKey: .edgeTone) ?? d.edgeTone
     }
 
     var isWallpaperReady: Bool { mode == .wallpaper && hasLightImage }

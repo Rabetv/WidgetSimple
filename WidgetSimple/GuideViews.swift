@@ -19,8 +19,9 @@ struct GlassGuideView: View {
             }
 
             Section {
-                Text("iOS 26 and 27 draw a thin glass edge around every widget. It belongs to the system, not to the widget, and no app or setting can switch it off.")
-                Text("With a transparent widget the edge is the only thing left, and it is faint. Calm or darker wallpapers hide it best; on busy photos you may notice a hairline at the top and bottom.")
+                Text("iOS 26 and 27 draw a thin glass edge on top of every widget. A widget can't paint over it, but the edge only shows the wallpaper behind it, bent and highlighted.")
+                Text("To make it disappear: open a layout › Background › Hide the glass edge. WidgetSimple saves a flat wallpaper and fills the widget with exactly the same color, so the glass has nothing to show. It also walks you through the iPhone settings that matter and can fine-tune the color from a screenshot.")
+                Text("With a transparent widget on a photo wallpaper the edge stays faint; calm or darker wallpapers hide it best.")
                 Text("If your iPhone shows a solid box instead of your wallpaper, use Background › Wallpaper copy for that layout as a fallback.")
             } header: {
                 Text("The glass edge")

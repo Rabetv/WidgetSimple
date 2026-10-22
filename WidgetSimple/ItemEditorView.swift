@@ -44,7 +44,10 @@ struct ItemEditorView: View {
 
             Section {
                 Picker("Opens", selection: item.target.kind) {
-                    ForEach(TargetKind.allCases) { Text($0.title).tag($0) }
+                    // Shortcuts are no longer offered; items that already use one keep working.
+                    ForEach(TargetKind.allCases.filter { $0 != .shortcut || item.wrappedValue.target.kind == .shortcut }) {
+                        Text($0.title).tag($0)
+                    }
                 }
                 targetFields
                 Button {
@@ -79,12 +82,12 @@ struct ItemEditorView: View {
         .navigationTitle(item.wrappedValue.label.isEmpty ? "Item" : item.wrappedValue.label)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingAppPicker) {
-            AppPickerView(appsOnly: true) { picked in
+            AppPickerView(mode: .single({ picked in
                 var updated = item.wrappedValue
                 updated.target = picked.target
                 if updated.label.isEmpty { updated.label = picked.label }
                 item.wrappedValue = updated
-            }
+            }))
         }
     }
 
@@ -127,13 +130,13 @@ struct ItemEditorView: View {
     private var targetFooter: String {
         switch item.wrappedValue.target.kind {
         case .app:
-            return "Pick from the built-in list. If an app is missing, use “URL scheme” (many apps document theirs) or “Shortcut”."
+            return "Pick from your apps. If an app is missing, use “URL scheme” (many apps document theirs)."
         case .urlScheme:
             return "Any link an app understands, e.g. spotify://, tel://123, sms://, mailto:me@example.com."
         case .website:
             return "Opens in Safari, or in the matching app if it supports universal links (YouTube, Instagram, …)."
         case .shortcut:
-            return "Opens ANY installed app: in the Shortcuts app create a shortcut with the action “Open App”, choose the app, give it a name, and type that name here. Shortcuts shows briefly before the app opens."
+            return "Runs the Shortcut with exactly this name."
         }
     }
 }

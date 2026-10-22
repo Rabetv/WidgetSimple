@@ -148,4 +148,24 @@ enum WallpaperMatcher {
         guard n > 0 else { return nil }
         return RGBA(r: Double(r) / Double(n) / 255, g: Double(g) / Double(n) / 255, b: Double(b) / Double(n) / 255)
     }
+
+    /// The most common color in an image. In a Home Screen screenshot with a flat
+    /// wallpaper that is the wallpaper as iOS actually shows it (icons cover far less).
+    static func dominantColor(in image: UIImage) -> RGBA? {
+        guard let bmp = Bitmap(normalized(image)) else { return nil }
+        struct Bucket { var n = 0, r = 0, g = 0, b = 0 }
+        var buckets: [Int: Bucket] = [:]
+        for y in stride(from: 0, to: bmp.height, by: 3) {
+            for x in stride(from: 0, to: bmp.width, by: 3) {
+                let (r, g, b) = bmp.rgb(x, y)
+                let key = (r >> 3) << 10 | (g >> 3) << 5 | (b >> 3)
+                var bucket = buckets[key] ?? Bucket()
+                bucket.n += 1; bucket.r += r; bucket.g += g; bucket.b += b
+                buckets[key] = bucket
+            }
+        }
+        guard let best = buckets.values.max(by: { $0.n < $1.n }), best.n > 0 else { return nil }
+        let n = Double(best.n) * 255
+        return RGBA(r: Double(best.r) / n, g: Double(best.g) / n, b: Double(best.b) / n)
+    }
 }

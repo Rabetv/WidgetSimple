@@ -8,7 +8,8 @@ A text-only app launcher for the iPhone Home Screen. Design a medium (or large) 
 - **Fully transparent widgets** (iOS 26+): no background at all, the wallpaper shows straight through. Nothing to line up, works with any wallpaper and with motion effects on.
 - **Your colors in every Home Screen style**: in Clear/Tinted style iOS turns widget text white; WidgetSimple draws the words as full-color images there so fonts and colors stay.
 - **Full typography control**: SF Pro / Rounded / New York / Mono, 40 font families built into iOS, or import your own `.ttf`/`.otf` (works in the widget too). Size, weight, italic, underline, color + opacity, letter spacing, case, shadow. Per-item overrides.
-- **Opens any app**: built-in catalog of ~100 apps (installed ones are detected), custom URL schemes, websites/universal links, and *any* installed app through a Shortcut with the “Open App” action.
+- **Pick from your apps**: a checklist of ~100 well-known apps; the ones on your iPhone are detected and listed first, tick the ones the widget shows. Custom URL schemes and websites/universal links for anything else. No Shortcuts needed.
+- **No glass edge**: *Hide the glass edge* saves a flat wallpaper and fills the widget with exactly that color, so the iOS 26+ glass outline has nothing to show. Optional edge correction draws a soft band under the outline to cancel what's left.
 - **No name under the widget**: the Home Screen name is an invisible character (configurable).
 - Several layouts → several widgets (choose per widget via *Edit Widget*).
 - Fallback backgrounds: solid color, or an exact wallpaper copy (found automatically via a magenta calibration screenshot).
@@ -30,7 +31,9 @@ Xcode 26 or newer. `Config/Base.xcconfig` holds the team (`DEVELOPMENT_TEAM`), b
 
 ## Transparent widgets and the glass edge
 
-Since iOS 26 a widget may have no background, so the wallpaper shows through. WidgetSimple layouts default to that (`containerBackground` = clear). iOS still draws its own thin glass edge around every widget; that belongs to the system and no app can remove it. With a transparent widget it is the only thing left and it is faint.
+Since iOS 26 a widget may have no background, so the wallpaper shows through. WidgetSimple layouts default to that (`containerBackground` = clear). iOS still draws its own thin glass edge on top of every widget, outside the widget's control, so the widget can't paint over it.
+
+The edge only shows the wallpaper behind it (refracted and highlighted). **Layout › Background › Hide the glass edge** removes what it has to show: it saves a flat wallpaper (white, gray, black or any color) to Photos, fills the widget with exactly that color, lists the iPhone settings that matter (Home Screen style *Default*, matching Light/Dark appearance, Reduce Motion, Reduce Transparency / Increase Contrast) and can copy the exact on-screen color from a Home Screen screenshot. If a faint line is left, *Edge correction* draws a soft darker or lighter band just inside the edge, tuned by eye on the device.
 
 | Home Screen style | Result |
 |---|---|
@@ -39,6 +42,10 @@ Since iOS 26 a widget may have no background, so the wallpaper shows through. Wi
 | Tinted | Works, but iOS tints around the words |
 
 If a device ever shows a solid box, switch that layout's background to *Wallpaper copy*: take a wallpaper screenshot and a screenshot with the widget turned magenta, and the app crops an exact copy. For that fallback turn off *Perspective Zoom* (Edit Wallpaper › ⋯); Reduce Motion is not needed.
+
+## Which apps are detected
+
+iOS has no public API that lists installed apps. WidgetSimple checks its catalog with `canOpenURL`, which only works for schemes in `LSApplicationQueriesSchemes`: at most 50, and only the first 25 for apps built with the iOS 27 SDK. The list in `WidgetSimple/Info.plist` is ordered by popularity; entry 26 is WidgetSimple's own scheme, which tells the app at runtime whether iOS checks 25 or 50. Apps that can't be checked are listed under *More apps*.
 
 ## How taps open other apps
 

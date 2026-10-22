@@ -23,35 +23,38 @@
 	<array>
 		<string>whatsapp</string>
 		<string>instagram</string>
+		<string>youtube</string>
+		<string>spotify</string>
+		<string>snssdk1233</string>
+		<string>snapchat</string>
 		<string>fb</string>
 		<string>fb-messenger</string>
 		<string>twitter</string>
-		<string>barcelona</string>
 		<string>tg</string>
-		<string>sgnl</string>
-		<string>snapchat</string>
-		<string>snssdk1233</string>
 		<string>reddit</string>
-		<string>pinterest</string>
-		<string>linkedin</string>
 		<string>discord</string>
-		<string>viber</string>
-		<string>youtube</string>
-		<string>youtubemusic</string>
-		<string>spotify</string>
 		<string>nflx</string>
-		<string>aiv</string>
-		<string>disneyplus</string>
-		<string>twitch</string>
-		<string>shazam</string>
-		<string>google</string>
 		<string>googlegmail</string>
 		<string>comgooglemaps</string>
 		<string>googlechrome</string>
+		<string>chatgpt</string>
+		<string>ms-outlook</string>
+		<string>linkedin</string>
+		<string>barcelona</string>
+		<string>com.amazon.mobile.shopping</string>
+		<string>paypal</string>
+		<string>uber</string>
+		<string>pinterest</string>
+		<string>disneyplus</string>
+		<string>widgetsimple</string>
+		<string>aiv</string>
+		<string>twitch</string>
+		<string>shazam</string>
+		<string>google</string>
 		<string>googledrive</string>
 		<string>googlephotos</string>
 		<string>googlecalendar</string>
-		<string>ms-outlook</string>
+		<string>youtubemusic</string>
 		<string>msteams</string>
 		<string>slack</string>
 		<string>zoomus</string>
@@ -60,18 +63,17 @@
 		<string>todoist</string>
 		<string>obsidian</string>
 		<string>onepassword</string>
-		<string>chatgpt</string>
 		<string>claude</string>
 		<string>waze</string>
-		<string>uber</string>
 		<string>airbnb</string>
 		<string>booking</string>
-		<string>com.amazon.mobile.shopping</string>
-		<string>paypal</string>
 		<string>revolut</string>
 		<string>firefox</string>
 		<string>brave</string>
+		<string>sgnl</string>
 	</array>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Saves the flat wallpaper that hides the widget's glass edge.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

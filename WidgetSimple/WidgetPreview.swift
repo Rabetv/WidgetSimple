@@ -22,11 +22,15 @@ struct WidgetPreview: View {
                 LauncherCanvas(layout: layout, mode: .preview(onTap: onTap))
             }
             .frame(width: target.width, height: target.height)
+            .containerShape(RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous))
             .clipShape(RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-            )
+            .overlay {
+                // Only a transparent widget needs an outline to show where it is.
+                if layout.background.mode == .transparent {
+                    RoundedRectangle(cornerRadius: WidgetSizing.cornerRadius, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                }
+            }
             .scaleEffect(scale, anchor: .top)
             .frame(width: geo.size.width, height: target.height * scale, alignment: .top)
         }
