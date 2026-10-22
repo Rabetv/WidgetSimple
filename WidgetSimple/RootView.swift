@@ -19,12 +19,8 @@ struct RootView: View {
                     Hint(symbol: "hand.tap", text: "Hold the Home Screen › Edit › Add Widget › the WidgetSimple icon.")
                     Hint(symbol: "checklist", text: "Hold the widget › Edit Widget. Pick your apps and a clock.")
                 }
-                Step(number: 2, title: "Make it see-through") {
-                    Hint(symbol: "hand.tap", text: "Hold the Home Screen › Edit › Customize.")
-                    Hint(symbol: "sparkles", text: "Tap Clear. iOS turns every widget into see-through glass.")
-                    Text("Tinted works too. The words turn white on the glass.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                Step(number: 2, title: "Pick a background") {
+                    backgroundPicker
                 }
                 Step(number: 3, title: "Pick letters") {
                     fontPicker
@@ -34,6 +30,10 @@ struct RootView: View {
                     .pickerStyle(.segmented)
                     Picker("Align", selection: $model.look.align) {
                         ForEach(TextAlign.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    Picker("Color", selection: $model.look.tone) {
+                        ForEach(TextTone.allCases) { Text($0.title).tag($0) }
                     }
                     .pickerStyle(.segmented)
                 }
@@ -51,6 +51,39 @@ struct RootView: View {
         .sheet(isPresented: $showingFonts) {
             NavigationStack {
                 FontPickerView(selection: $model.look.fontID)
+            }
+        }
+    }
+
+    private var backgroundPicker: some View {
+        HStack(spacing: 12) {
+            ForEach(BackgroundStyle.allCases) { style in
+                let selected = style == model.look.background
+                Button {
+                    model.look.background = style
+                } label: {
+                    VStack(spacing: 8) {
+                        WidgetBackdrop(style: style, shape: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay {
+                                Text("Aa")
+                                    .font(model.look.font(size: 22))
+                                    .foregroundStyle(model.look.tone.color)
+                            }
+                            .frame(height: 64)
+                            .padding(10)
+                            .background(LinearGradient.sampleWallpaper, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 3)
+                            )
+                        Text(style.title)
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
     }
@@ -73,26 +106,31 @@ struct RootView: View {
 
 // MARK: - Pieces
 
-/// The widget as it will look on a Clear Home Screen: white words on see-through glass.
+/// The widget as it will look on the Home Screen, over a sample wallpaper.
 private struct WidgetPreviewCard: View {
     let look: Look
 
     var body: some View {
         TimelineView(.everyMinute) { context in
             LauncherFace(look: look, clock: .timeAndDate, date: context.date, size: .medium,
-                         apps: ["Phone", "Messages", "Music"], color: .white)
+                         apps: ["Phone", "Messages", "Music"], color: look.tone.color)
         }
         .frame(maxWidth: .infinity)
         .aspectRatio(338.0 / 158.0, contentMode: .fit)
-        .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background {
+            WidgetBackdrop(style: look.background, shape: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        }
         .padding(18)
-        .background(
-            LinearGradient(colors: [Color(red: 0.98, green: 0.55, blue: 0.45), Color(red: 0.45, green: 0.35, blue: 0.85)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: 34, style: .continuous)
-        )
+        .background(LinearGradient.sampleWallpaper, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
         .animation(.easeInOut(duration: 0.2), value: look)
     }
+}
+
+private extension LinearGradient {
+    /// Stands in for the wallpaper in the app.
+    static let sampleWallpaper = LinearGradient(
+        colors: [Color(red: 0.98, green: 0.55, blue: 0.45), Color(red: 0.45, green: 0.35, blue: 0.85)],
+        startPoint: .topLeading, endPoint: .bottomTrailing)
 }
 
 private struct Step<Content: View>: View {

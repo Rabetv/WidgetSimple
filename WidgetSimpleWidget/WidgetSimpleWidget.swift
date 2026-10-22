@@ -3,11 +3,11 @@ import SwiftUI
 import AppIntents
 
 // The only widget. Apps are picked in Edit Widget, where iOS lists every installed
-// app, and a tap opens the app directly (RunSystemShortcutIntent). The look (font,
-// size, alignment) comes from the app and is the same for every widget.
+// app, and a tap opens the app directly (RunSystemShortcutIntent). The look
+// (background, font, size, alignment) comes from the app and is the same for every widget.
 //
-// The background is left to iOS: `Color.clear` in the container background, which a
-// Clear or Tinted Home Screen replaces with live see-through glass.
+// The background is see-through Liquid Glass the widget draws itself (WidgetBackdrop),
+// so no Clear Home Screen is needed.
 
 struct DirectLauncherIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Apps"
@@ -108,14 +108,13 @@ struct LauncherWidgetView: View {
             }
         }
         .containerBackground(for: .widget) {
-            // iOS swaps this for its see-through glass on a Clear or Tinted Home Screen.
-            Color.clear
+            WidgetBackdrop(style: entry.look.background, shape: ContainerRelativeShape())
         }
     }
 
-    /// Clean white text on the system glass; the system text color on the Default Home Screen.
+    /// The chosen color; white when a Clear or Tinted Home Screen tints the widget.
     private var color: Color {
-        renderingMode == .fullColor ? .primary : .white
+        renderingMode == .fullColor ? entry.look.tone.color : .white
     }
 
     private var size: FaceSize {

@@ -5,14 +5,18 @@ Your apps as plain words on the iPhone Home Screen, on see-through glass, with a
 ## How it works
 
 - **One widget.** Hold it › *Edit Widget*: pick up to 12 apps (iOS lists every installed app) and a clock (none, time, time and date, or date). A tap opens the app directly (`RunSystemShortcutIntent`, iOS 27). Sizes: Small, Medium, Large, Max.
-- **One look for every widget**, set in the app: font, text size, alignment. The clock uses the same font and follows the iPhone's 12/24-hour setting.
-- **The app is one screen with three steps:** add the widget, make it see-through, pick letters.
+- **One look for every widget**, set in the app: background (Glass, Frosted, Clear), font, text size, alignment, white or black words. The clock uses the same font and follows the iPhone's 12/24-hour setting.
+- **The app is one screen with three steps:** add the widget, pick a background, pick letters.
 
 ## See-through background
 
-The widget hands its background to iOS: `.containerBackground(for: .widget) { Color.clear }`. On a **Clear** (or Tinted) Home Screen, iOS replaces it with its live Liquid Glass, so the wallpaper shows through and follows wallpaper changes by itself (no screenshots). The widget reads `widgetRenderingMode`: in `.accented` (Clear / Tinted) it draws white text only, with the clock as the accent that Tinted colors; in `.fullColor` (Default Home Screen) it uses the system text color, since iOS doesn't show the wallpaper through a widget there.
+The widget draws its own see-through background in `containerBackground` (`WidgetBackdrop`), so it works on the normal Home Screen; no Clear Home Screen needed:
 
-To turn it on: hold the Home Screen › Edit › Customize › **Clear**.
+- **Glass** (default): iOS 26 Liquid Glass, `Color.clear.glassEffect(.clear, in: ContainerRelativeShape())`. The wallpaper shows through, with a glossy edge.
+- **Frosted**: the same with `.regular` glass (more blur).
+- **Clear**: a nearly invisible fill (`Color.black.opacity(0.004)`), since iOS may put its own background behind a fully clear one.
+
+On a Clear or Tinted Home Screen iOS replaces the background with its own glass anyway; the widget reads `widgetRenderingMode` and draws white words there.
 
 ## Build without a Mac (GitHub → TestFlight)
 

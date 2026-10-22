@@ -54,20 +54,56 @@ enum TextAlign: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// The widget's own see-through background, drawn on the normal Home Screen.
+enum BackgroundStyle: String, Codable, CaseIterable, Identifiable {
+    /// iOS 26 Liquid Glass, clear variant: the wallpaper shows through, with a glossy edge.
+    case glass
+    /// Liquid Glass, regular variant: a little more blur.
+    case frosted
+    /// No glass, just a nearly invisible fill.
+    case clear
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .glass: return "Glass"
+        case .frosted: return "Frosted"
+        case .clear: return "Clear"
+        }
+    }
+}
+
+enum TextTone: String, Codable, CaseIterable, Identifiable {
+    case white, black
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .white: return "White"
+        case .black: return "Black"
+        }
+    }
+
+    var color: Color { self == .white ? .white : .black }
+}
+
 /// How every widget looks. Set in the app; the apps and the clock are picked per widget.
-/// The background is always the system's: clear glass on a Clear or Tinted Home Screen.
 struct Look: Codable, Hashable {
+    var background: BackgroundStyle = .glass
+    var tone: TextTone = .white
     var fontID: String = FontCatalog.systemID
     var textSize: TextSize = .medium
     var align: TextAlign = .left
 
     init() {}
 
-    enum CodingKeys: String, CodingKey { case fontID, textSize, align }
+    enum CodingKeys: String, CodingKey { case background, tone, fontID, textSize, align }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = Look()
+        background = (try? c.decodeIfPresent(BackgroundStyle.self, forKey: .background)) ?? d.background
+        tone = (try? c.decodeIfPresent(TextTone.self, forKey: .tone)) ?? d.tone
         fontID = try c.decodeIfPresent(String.self, forKey: .fontID) ?? d.fontID
         textSize = (try? c.decodeIfPresent(TextSize.self, forKey: .textSize)) ?? d.textSize
         align = (try? c.decodeIfPresent(TextAlign.self, forKey: .align)) ?? d.align
