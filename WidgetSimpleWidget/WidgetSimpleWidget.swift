@@ -49,6 +49,8 @@ struct LauncherEntry: TimelineEntry {
     var background: UIImage? = nil
     /// Set while the app is finding the widgets: show this key on pink.
     var findingKey: Int? = nil
+    /// The piece of wallpaper behind the widget is dark, so `.auto` words go white.
+    var isDarkBackground = true
 
     static func sample(look: Look) -> LauncherEntry {
         LauncherEntry(date: .now, look: look, clock: .time, apps: [],
@@ -104,6 +106,7 @@ struct LauncherProvider: AppIntentTimelineProvider {
             entry.findingKey = key
         } else {
             entry.background = SharedStore.shared.spotImage(key: key, state: state)
+            entry.isDarkBackground = SharedStore.shared.spotIsDark(key: key, state: state) ?? true
         }
         return entry
     }
@@ -156,8 +159,11 @@ struct LauncherWidgetView: View {
     }
 
     /// The chosen color; white when a Clear or Tinted Home Screen tints the widget.
+    /// With Auto, the piece of wallpaper behind the widget decides.
     private var color: Color {
-        renderingMode == .fullColor ? entry.look.tone.color : .white
+        renderingMode == .fullColor
+            ? entry.look.tone.color(isDarkBackground: entry.isDarkBackground)
+            : .white
     }
 
     private var size: FaceSize {

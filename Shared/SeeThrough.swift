@@ -36,9 +36,13 @@ struct Spot: Codable, Hashable {
     var y: Double
     var width: Double
     var height: Double
+    /// Measured from this piece of wallpaper: white words read better on a dark one.
+    /// Optional so state written by earlier versions still decodes.
+    var isDark: Bool?
 
-    init(key: Int, rect: CGRect) {
+    init(key: Int, rect: CGRect, isDark: Bool? = nil) {
         self.key = key
+        self.isDark = isDark
         x = Double(rect.minX)
         y = Double(rect.minY)
         width = Double(rect.width)
@@ -56,10 +60,14 @@ struct SeeThroughState: Codable, Hashable {
     var spotsWidth: Double = 0
     var spotsHeight: Double = 0
     var hasWallpaper = false
+    /// The wallpaper that ships with the app the user started from, if any.
+    var wallpaperName: String?
 
     init() {}
 
-    enum CodingKeys: String, CodingKey { case finding, spots, spotsWidth, spotsHeight, hasWallpaper }
+    enum CodingKeys: String, CodingKey {
+        case finding, spots, spotsWidth, spotsHeight, hasWallpaper, wallpaperName
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -68,6 +76,7 @@ struct SeeThroughState: Codable, Hashable {
         spotsWidth = try c.decodeIfPresent(Double.self, forKey: .spotsWidth) ?? 0
         spotsHeight = try c.decodeIfPresent(Double.self, forKey: .spotsHeight) ?? 0
         hasWallpaper = try c.decodeIfPresent(Bool.self, forKey: .hasWallpaper) ?? false
+        wallpaperName = try c.decodeIfPresent(String.self, forKey: .wallpaperName)
     }
 }
 

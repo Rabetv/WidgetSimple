@@ -55,17 +55,30 @@ enum TextAlign: String, Codable, CaseIterable, Identifiable {
 }
 
 enum TextTone: String, Codable, CaseIterable, Identifiable {
-    case white, black
+    case auto, white, black
     var id: String { rawValue }
 
     var title: String {
         switch self {
+        case .auto: return "Auto"
         case .white: return "White"
         case .black: return "Black"
         }
     }
 
-    var color: Color { self == .white ? .white : .black }
+    /// The fallback for `.auto` when there is no wallpaper piece to look at.
+    var color: Color { self == .black ? .black : .white }
+
+    /// White words on a dark piece of wallpaper, black ones on a light piece. The widget
+    /// apps that ship wallpapers store this per Home Screen slot (`sectionsIsDark`);
+    /// here it is measured from the piece of wallpaper behind each widget.
+    func color(isDarkBackground: Bool) -> Color {
+        switch self {
+        case .auto: return isDarkBackground ? .white : .black
+        case .white: return .white
+        case .black: return .black
+        }
+    }
 }
 
 /// How every widget looks. Set in the app; the apps and the clock are picked per widget.

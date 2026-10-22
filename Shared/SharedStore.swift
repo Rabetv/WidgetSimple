@@ -109,6 +109,14 @@ final class SharedStore: @unchecked Sendable {
         return UIImage(contentsOfFile: spotImageURL(key: sameSize[0].key).path)
     }
 
+    /// Whether the wallpaper behind a widget is dark, measured when its piece was cut.
+    func spotIsDark(key: Int, state: SeeThroughState) -> Bool? {
+        if let spot = state.spots.first(where: { $0.key == key }) { return spot.isDark }
+        let family = SpotKey.family(of: key)
+        let sameSize = state.spots.filter { SpotKey.family(of: $0.key) == family }
+        return sameSize.count == 1 ? sameSize[0].isDark : nil
+    }
+
     // MARK: Widget sizes (written by the widget)
 
     /// Real on-screen widget sizes in points, by SpotFamily.

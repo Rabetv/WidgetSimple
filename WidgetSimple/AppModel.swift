@@ -37,6 +37,24 @@ final class AppModel: ObservableObject {
         }
         store.saveWallpaper(data)
         seeThrough.hasWallpaper = true
+        seeThrough.wallpaperName = nil
+        await makePieces()
+    }
+
+    /// Step 1, the other way: a wallpaper that ships with the app. The user sets it as
+    /// their iPhone wallpaper, so no empty Home Screen screenshot is needed.
+    func useCatalogWallpaper(_ wallpaper: CatalogWallpaper) async {
+        // Match the pink screenshot's pixels when there is one, so its pieces line up.
+        let screen = seeThrough.spotsWidth > 1 && seeThrough.spotsHeight > 1
+            ? CGSize(width: seeThrough.spotsWidth, height: seeThrough.spotsHeight)
+            : Self.screenPixelSize
+        guard let image = wallpaper.wallpaper(fitting: screen), let data = image.pngData() else {
+            message = "Couldn't read the \(wallpaper.name) wallpaper."
+            return
+        }
+        store.saveWallpaper(data)
+        seeThrough.hasWallpaper = true
+        seeThrough.wallpaperName = wallpaper.id
         await makePieces()
     }
 
@@ -75,26 +93,36 @@ final class AppModel: ObservableObject {
         await makePieces()
     }
 
-    /// Cuts the piece of wallpaper behind every widget found.
+    /// Cuts the piece of wallpaper behind every widget found, and measures how dark it
+    /// is so the words can switch between white and black on their own.
     private func makePieces() async {
         let state = seeThrough
         guard state.hasWallpaper, !state.spots.isEmpty,
-              let data = store.loadWallpaper(), let wallpaper = UIImage(data: data)?.cgImage else { return }
-        guard Double(wallpaper.width) == state.spotsWidth, Double(wallpaper.height) == state.spotsHeight else {
-            message = "The two screenshots have different sizes. Take both on this iPhone, held upright."
+              let data = store.loadWallpaper(), let stored = UIImage(data: data)?.cgImage else { return }
+        // A bundled wallpaper is already screen sized; a screenshot from another iPhone
+        // (or an older one) is not, so bring the wallpaper to the spots' pixels.
+        guard let wallpaper = SeeThroughMaker.scaled(stored, to: CGSize(width: state.spotsWidth,
+                                                                       height: state.spotsHeight)) else {
+            message = "Couldn't read that wallpaper. Pick it again."
             return
         }
         working = true
         defer { working = false }
         let store = self.store
-        await Task.detached(priority: .userInitiated) {
+        let spots = state.spots
+        let pieces = await Task.detached(priority: .userInitiated) { () -> [Spot] in
             store.removeSpotImages()
-            for spot in state.spots {
-                if let png = SeeThroughMaker.crop(wallpaper, to: spot.rect) {
-                    store.saveSpotImage(png, key: spot.key)
-                }
+            var result: [Spot] = []
+            for spot in spots {
+                guard let png = SeeThroughMaker.crop(wallpaper, to: spot.rect) else { continue }
+                store.saveSpotImage(png, key: spot.key)
+                var piece = spot
+                piece.isDark = SeeThroughMaker.isDark(wallpaper, in: spot.rect)
+                result.append(piece)
             }
+            return result
         }.value
+        seeThrough.spots = pieces
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -103,5 +131,15 @@ final class AppModel: ObservableObject {
             .compactMap { ($0 as? UIWindowScene)?.screen }
             .first
         return screen?.bounds.width ?? 393
+    }
+
+    /// The screen in pixels, the size a Home Screen screenshot has on this iPhone.
+    private static var screenPixelSize: CGSize {
+        let screen = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.screen }
+            .first
+        let points = screen?.bounds.size ?? CGSize(width: 393, height: 852)
+        let scale = screen?.scale ?? 3
+        return CGSize(width: (points.width * scale).rounded(), height: (points.height * scale).rounded())
     }
 }

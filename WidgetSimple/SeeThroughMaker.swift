@@ -82,6 +82,48 @@ enum SeeThroughMaker {
         return UIImage(cgImage: piece).pngData()
     }
 
+    /// The wallpaper redrawn at `size`, so a piece can be cut when the wallpaper and
+    /// the pink screenshot don't share a pixel size (a bundled wallpaper, another device).
+    static func scaled(_ image: CGImage, to size: CGSize) -> CGImage? {
+        let width = Int(size.width.rounded()), height = Int(size.height.rounded())
+        guard width > 10, height > 10 else { return nil }
+        if image.width == width, image.height == height { return image }
+        guard let context = CGContext(data: nil, width: width, height: height,
+                                      bitsPerComponent: 8, bytesPerRow: 0,
+                                      space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return context.makeImage()
+    }
+
+    /// Whether the piece of wallpaper under a widget is dark, so its words should be
+    /// white. The wallpaper apps that do the see-through look store this per Home Screen
+    /// slot; measuring the piece gives the same answer without knowing the slot.
+    static func isDark(_ wallpaper: CGImage, in rect: CGRect) -> Bool {
+        guard let bmp = Bitmap(wallpaper) else { return true }
+        let bounds = CGRect(x: 0, y: 0, width: bmp.width, height: bmp.height)
+        let r = rect.integral.intersection(bounds)
+        guard r.width > 2, r.height > 2 else { return true }
+        // 16 × 16 samples are plenty, and cheap enough for every widget on every change.
+        let stepX = max(1, Int(r.width / 16)), stepY = max(1, Int(r.height / 16))
+        var sum = 0.0
+        var count = 0.0
+        var y = Int(r.minY)
+        while y < Int(r.maxY) {
+            var x = Int(r.minX)
+            while x < Int(r.maxX) {
+                let (red, green, blue) = bmp.rgb(x, y)
+                sum += 0.2126 * Double(red) + 0.7152 * Double(green) + 0.0722 * Double(blue)
+                count += 1
+                x += stepX
+            }
+            y += stepY
+        }
+        guard count > 0 else { return true }
+        return sum / count < 140
+    }
+
     // MARK: Helpers
 
     /// Reads the 4 × 4 squares SpotCode draws in the middle of the widget.
