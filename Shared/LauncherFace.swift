@@ -1,12 +1,13 @@
 import SwiftUI
+import WidgetKit
 
 /// Widget size, as far as the layout cares.
 enum FaceSize {
     case small, medium, large
 }
 
-/// What a widget shows: an optional clock and the app names. Shared by the widget
-/// and the in-app preview, so the preview is exactly what lands on the Home Screen.
+/// What a widget shows: an optional clock and the app names, text only. Shared by the
+/// widget and the in-app preview, so the preview is exactly what lands on the Home Screen.
 /// `cell` wraps each name; the widget turns it into a button that opens the app.
 struct LauncherFace<Cell: View>: View {
     let look: Look
@@ -14,15 +15,19 @@ struct LauncherFace<Cell: View>: View {
     let date: Date
     let size: FaceSize
     let apps: [String]
+    /// White on the system glass (Clear / Tinted Home Screen), the system text color otherwise.
+    let color: Color
     /// Shown when there is nothing else to show.
     var hint: String = ""
     @ViewBuilder let cell: (Int, AppName) -> Cell
 
+    private var align: HorizontalAlignment { look.align.horizontal }
+
     var body: some View {
         content
-            .foregroundStyle(look.theme.text.color)
+            .foregroundStyle(color)
             .padding(size == .small ? 16 : 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: Alignment(horizontal: align, vertical: .top))
     }
 
     @ViewBuilder
@@ -30,7 +35,8 @@ struct LauncherFace<Cell: View>: View {
         if apps.isEmpty && clock == .off {
             Text(hint)
                 .font(.system(size: 14, weight: .medium))
-                .opacity(0.6)
+                .multilineTextAlignment(look.align.text)
+                .opacity(0.7)
         } else if clock != .off && !apps.isEmpty && size == .medium {
             // Medium is wide and short: clock on the left, apps on the right.
             HStack(alignment: .top, spacing: 20) {
@@ -38,7 +44,7 @@ struct LauncherFace<Cell: View>: View {
                 appList
             }
         } else {
-            VStack(alignment: .leading, spacing: look.textSize.points * 0.8) {
+            VStack(alignment: align, spacing: look.textSize.points * 0.8) {
                 if clock != .off {
                     ClockText(date: date, option: clock, look: look, size: size)
                 }
@@ -65,12 +71,12 @@ struct LauncherFace<Cell: View>: View {
             ForEach(0..<count, id: \.self) { column in
                 let start = min(column * perColumn, apps.count)
                 let end = min(start + perColumn, apps.count)
-                VStack(alignment: .leading, spacing: look.textSize.points * 0.45) {
+                VStack(alignment: align, spacing: look.textSize.points * 0.45) {
                     ForEach(start..<end, id: \.self) { index in
                         cell(index, AppName(name: apps[index], look: look))
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: Alignment(horizontal: align, vertical: .top))
             }
         }
     }
@@ -78,8 +84,8 @@ struct LauncherFace<Cell: View>: View {
 
 extension LauncherFace where Cell == AppName {
     /// Names only, no buttons (in-app preview, widget gallery).
-    init(look: Look, clock: ClockOption, date: Date, size: FaceSize, apps: [String]) {
-        self.init(look: look, clock: clock, date: date, size: size, apps: apps) { _, name in name }
+    init(look: Look, clock: ClockOption, date: Date, size: FaceSize, apps: [String], color: Color) {
+        self.init(look: look, clock: clock, date: date, size: size, apps: apps, color: color) { _, name in name }
     }
 }
 
@@ -93,12 +99,13 @@ struct AppName: View {
             .font(look.font(size: look.textSize.points))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: Alignment(horizontal: look.align.horizontal, vertical: .center))
             .contentShape(Rectangle())
     }
 }
 
-/// The built-in clock: a big time, optionally with the date under it.
+/// The built-in clock in the chosen font. The big line is the widget's accent, so a
+/// Tinted Home Screen colors it. 12 or 24 hours follows the iPhone setting.
 struct ClockText: View {
     let date: Date
     let option: ClockOption
@@ -106,13 +113,18 @@ struct ClockText: View {
     let size: FaceSize
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(date.formatted(.dateTime.hour().minute()))
-                .font(look.font(size: timeSize, weight: .light))
-            if option == .timeAndDate {
-                Text(date.formatted(dateFormat))
-                    .font(look.font(size: look.textSize.points * 0.8))
-                    .opacity(0.75)
+        VStack(alignment: look.align.horizontal, spacing: 0) {
+            switch option {
+            case .off:
+                EmptyView()
+            case .time:
+                big(date.formatted(.dateTime.hour().minute()))
+            case .timeAndDate:
+                big(date.formatted(.dateTime.hour().minute()))
+                small(date.formatted(dateFormat))
+            case .date:
+                big(date.formatted(.dateTime.weekday(.wide)), scale: 0.6)
+                small(date.formatted(.dateTime.month(.wide).day()))
             }
         }
         .lineLimit(1)
@@ -120,7 +132,19 @@ struct ClockText: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    private var timeSize: Double {
+    private func big(_ text: String, scale: Double = 1) -> some View {
+        Text(text)
+            .font(look.font(size: bigSize * scale, weight: .light))
+            .widgetAccentable()
+    }
+
+    private func small(_ text: String) -> some View {
+        Text(text)
+            .font(look.font(size: look.textSize.points * 0.8))
+            .opacity(0.75)
+    }
+
+    private var bigSize: Double {
         let base = look.textSize.points
         switch size {
         case .small: return base * 1.8

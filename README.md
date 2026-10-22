@@ -1,25 +1,18 @@
 # WidgetSimple
 
-Your apps as plain words on the iPhone Home Screen, with a clock if you like. The widgets have the exact color of the wallpaper, so only the words show.
+Your apps as plain words on the iPhone Home Screen, on see-through glass, with a clock if you like.
 
 ## How it works
 
-- **One widget.** Hold it › *Edit Widget*: pick up to 12 apps (iOS lists every installed app) and a clock (none, time, or time and date). A tap opens the app directly (`RunSystemShortcutIntent`, iOS 27). Sizes: Small, Medium, Large, Max.
-- **One look for every widget**, set in the app: color (black, gray, white), font, text size.
-- **The app is one screen with five steps:** pick a color, pick letters, save the wallpaper, change four iPhone settings, add the widget.
+- **One widget.** Hold it › *Edit Widget*: pick up to 12 apps (iOS lists every installed app) and a clock (none, time, time and date, or date). A tap opens the app directly (`RunSystemShortcutIntent`, iOS 27). Sizes: Small, Medium, Large, Max.
+- **One look for every widget**, set in the app: font, text size, alignment. The clock uses the same font and follows the iPhone's 12/24-hour setting.
+- **The app is one screen with three steps:** add the widget, make it see-through, pick letters.
 
-## Why the widgets are invisible
+## See-through background
 
-A clear widget is not reliably see-through on iOS 26/27 (in the normal Home Screen style iOS can keep its own widget background behind it). So each widget is filled with exactly the color of the wallpaper the app saves to Photos. iOS also draws a glass edge on every widget; it disappears on a plain wallpaper with these settings (iOS 27, as [Blank Spaces](https://help.blankspaces.app/en/help/articles/3537637-how-to-hide-the-dock-and-widget-borders-ios-27) documents):
+The widget hands its background to iOS: `.containerBackground(for: .widget) { Color.clear }`. On a **Clear** (or Tinted) Home Screen, iOS replaces it with its live Liquid Glass, so the wallpaper shows through and follows wallpaper changes by itself (no screenshots). The widget reads `widgetRenderingMode`: in `.accented` (Clear / Tinted) it draws white text only, with the clock as the accent that Tinted colors; in `.fullColor` (Default Home Screen) it uses the system text color, since iOS doesn't show the wallpaper through a widget there.
 
-| | Black | Gray | White |
-|---|---|---|---|
-| Appearance | Dark | Dark | Light |
-| Increase Contrast | **On** | Off | Off |
-| Show Borders | Off | Off | **On** |
-| Reduce Transparency | Off | Off | Off |
-
-Plus: the app's wallpaper with Blur off, and Home Screen › Edit › Customize › **Default** with large icons (Clear and Tinted replace every widget background with glass). A photo wallpaper always keeps a visible edge.
+To turn it on: hold the Home Screen › Edit › Customize › **Clear**.
 
 ## Build without a Mac (GitHub → TestFlight)
 
@@ -47,7 +40,7 @@ The label under a Home Screen widget is the app's Home Screen name (`CFBundleDis
 
 ```
 Config/Base.xcconfig        team, bundle ids, app group, home screen name
-Shared/                     app + widget: look, fonts, storage, the widget face
+Shared/                     app + widget: look, clock option, fonts, storage, the widget face
 WidgetSimple/               the app (one screen, font list)
 WidgetSimpleWidget/         the widget
 ```

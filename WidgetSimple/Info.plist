@@ -6,8 +6,6 @@
 	<string>$(APP_GROUP_ID)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Saves a plain wallpaper in your widget color.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

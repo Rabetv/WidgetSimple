@@ -3,8 +3,11 @@ import SwiftUI
 import AppIntents
 
 // The only widget. Apps are picked in Edit Widget, where iOS lists every installed
-// app, and a tap opens the app directly (RunSystemShortcutIntent). The look (color,
-// font, size) comes from the app and is the same for every widget.
+// app, and a tap opens the app directly (RunSystemShortcutIntent). The look (font,
+// size, alignment) comes from the app and is the same for every widget.
+//
+// The background is left to iOS: `Color.clear` in the container background, which a
+// Clear or Tinted Home Screen replaces with live see-through glass.
 
 struct DirectLauncherIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Apps"
@@ -90,10 +93,11 @@ struct LauncherProvider: AppIntentTimelineProvider {
 struct LauncherWidgetView: View {
     let entry: LauncherEntry
     @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
         LauncherFace(look: entry.look, clock: entry.clock, date: entry.date, size: size,
-                     apps: entry.names, hint: "Hold here › Edit Widget › pick apps") { index, name in
+                     apps: entry.names, color: color, hint: "Hold here › Edit Widget › pick apps") { index, name in
             if index < entry.apps.count {
                 Button(intent: RunSystemShortcutIntent(shortcut: entry.apps[index])) {
                     name
@@ -103,8 +107,15 @@ struct LauncherWidgetView: View {
                 name
             }
         }
-        // Exactly the wallpaper color, so the widget blends into the wallpaper.
-        .containerBackground(entry.look.theme.background.color, for: .widget)
+        .containerBackground(for: .widget) {
+            // iOS swaps this for its see-through glass on a Clear or Tinted Home Screen.
+            Color.clear
+        }
+    }
+
+    /// Clean white text on the system glass; the system text color on the Default Home Screen.
+    private var color: Color {
+        renderingMode == .fullColor ? .primary : .white
     }
 
     private var size: FaceSize {
@@ -125,7 +136,7 @@ struct LauncherWidget: Widget {
             LauncherWidgetView(entry: entry)
         }
         .configurationDisplayName("Apps")
-        .description("Your apps as words, with a clock if you like.")
+        .description("Your apps as words on clear glass, with a clock if you like.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .systemExtraLargePortrait])
         .contentMarginsDisabled()
     }

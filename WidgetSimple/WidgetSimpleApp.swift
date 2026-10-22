@@ -8,14 +8,6 @@ struct WidgetSimpleApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(model)
-                .alert("Oops", isPresented: Binding(
-                    get: { model.message != nil },
-                    set: { if !$0 { model.message = nil } }
-                )) {
-                    Button("OK", role: .cancel) { model.message = nil }
-                } message: {
-                    Text(model.message ?? "")
-                }
         }
     }
 }
