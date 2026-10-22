@@ -5,14 +5,22 @@
 // — background removable, transparent, clear style — is the only channel from
 // inside the extension that changes how the Home Screen draws the container.
 //
-// PRIVATE API. Internal TestFlight only: App Store review rejects this under
-// guideline 2.5.1, and the descriptor class names are not covered by any contract.
+// PRIVATE API. Internal TestFlight only. App Store review rejects this under
+// guideline 2.5.1, and none of these class names are covered by a contract.
 //
-// What build 13 established: the swizzle installs and the fetch runs, but
-// `DescriptorFetchResult` is a Swift class with no Objective-C `widgetDescriptors`,
-// so KVC throws. The descriptors therefore have to be read from the instance
-// variable directly, which is what this version does, and it logs the shape it
-// finds so the next step is chosen from data instead of guesswork.
+// What the earlier builds established:
+//   * the swizzle installs and the descriptor fetch runs;
+//   * `DescriptorFetchResult` has no Objective-C accessor and no KVC, only Swift
+//     stored properties `widgetDescriptors`, `controlDescriptors`,
+//     `activityDescriptors` with empty type encodings;
+//   * so the arrays can be reached neither by selector nor by KVC, and poking the
+//     ivar of a Swift array is a raw storage pointer, not an NSArray.
+//
+// Hence the archive round-trip: encode the result, decode it into a plain shim,
+// mutate the descriptors as ordinary Objective-C objects there, encode the shim and
+// let `DescriptorFetchResult.init(coder:)` rebuild itself from those bytes. Any
+// failure falls back to the original object, so the widget can only ever be as
+// broken as before — never worse.
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
@@ -28,14 +36,13 @@ typedef void (^DescriptorsCompletion)(id result);
 typedef void (*GetAllDescriptorsIMP)(id self, SEL _cmd, DescriptorsCompletion completion);
 
 static GetAllDescriptorsIMP OriginalGetAllDescriptors;
-static BOOL DidDumpShape;
+static BOOL DidRewrite;
 
 /// Clear. 0 is the default style, so only a non-zero value can change anything.
 static const NSUInteger kClearBackgroundStyle = 1;
 
 #pragma mark - Log
 
-/// Appends one line to the App Group log the app reads.
 static void HookLog(NSString *format, ...)
 {
     NSString *group = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"AppGroupID"];
@@ -77,118 +84,188 @@ static void HookLog(NSString *format, ...)
     }
 }
 
-#pragma mark - Shape
+#pragma mark - Shim
 
-static NSString *DescribeIvars(Class cls)
+/// Everything a descriptor can contain while it is being decoded. A missing class
+/// here makes the unarchive throw, so the list is deliberately generous.
+static NSSet *AllowedClasses(void)
 {
-    NSMutableArray<NSString *> *names = [NSMutableArray array];
-    unsigned int count = 0;
-    Ivar *ivars = class_copyIvarList(cls, &count);
-    for (unsigned int i = 0; i < count; i++) {
-        const char *name = ivar_getName(ivars[i]);
-        if (name) { [names addObject:@(name)]; }
+    NSMutableSet *classes = [NSMutableSet setWithObjects:
+        [NSArray class], [NSMutableDictionary class], [NSDictionary class],
+        [NSString class], [NSNumber class], [NSData class], [NSDate class],
+        [NSUUID class], [NSNull class], nil];
+    NSArray<NSString *> *names = @[
+        @"CHSBaseDescriptor", @"CHSWidgetDescriptor", @"CHSControlDescriptor",
+        @"CHSActivityDescriptor", @"CHSWidget", @"CHSWidgetConfiguration",
+        @"CHSExtensionIdentity", @"CHSIntentReference", @"CHSWidgetMetrics",
+        @"CHSWidgetRenderScheme", @"CHSWidgetVisibility", @"INIntent",
+    ];
+    for (NSString *name in names) {
+        Class cls = objc_lookUpClass(name.UTF8String);
+        if (cls) { [classes addObject:cls]; }
     }
-    free(ivars);
-    return names.count ? [names componentsJoinedByString:@","] : @"(none)";
+    return classes;
 }
 
-static NSString *DescribeDescriptorsAPI(Class cls)
+/// A plain Objective-C stand-in for the Swift result object.
+@interface WSDescriptorShim : NSObject <NSSecureCoding>
+@property (nonatomic, strong) NSArray *widgetDescriptors;
+@property (nonatomic, strong) NSArray *controlDescriptors;
+@property (nonatomic, strong) NSArray *activityDescriptors;
+@end
+
+@implementation WSDescriptorShim
+
++ (BOOL)supportsSecureCoding { return YES; }
+
+- (instancetype)initWithCoder:(NSCoder *)coder
 {
-    NSMutableArray<NSString *> *names = [NSMutableArray array];
-    unsigned int count = 0;
-    Method *methods = class_copyMethodList(cls, &count);
-    for (unsigned int i = 0; i < count; i++) {
-        NSString *name = NSStringFromSelector(method_getName(methods[i]));
-        if ([name rangeOfString:@"descriptor" options:NSCaseInsensitiveSearch].location != NSNotFound) {
-            [names addObject:name];
-        }
+    if ((self = [super init])) {
+        NSSet *allowed = AllowedClasses();
+        _widgetDescriptors = [coder decodeObjectOfClasses:allowed forKey:@"widgetDescriptors"];
+        _controlDescriptors = [coder decodeObjectOfClasses:allowed forKey:@"controlDescriptors"];
+        _activityDescriptors = [coder decodeObjectOfClasses:allowed forKey:@"activityDescriptors"];
     }
-    free(methods);
-    return names.count ? [names componentsJoinedByString:@" "] : @"(none)";
+    return self;
 }
 
-/// True only when the class really descends from NSArray. Checked through the C
-/// runtime: messaging an ivar that turns out to be Swift storage would crash.
-static BOOL IsNSArrayClass(Class cls)
+- (void)encodeWithCoder:(NSCoder *)coder
 {
-    Class array = (Class)objc_getClass("NSArray");
-    for (Class current = cls; current != Nil; current = class_getSuperclass(current)) {
-        if (current == array) { return YES; }
-    }
-    return NO;
+    [coder encodeObject:_widgetDescriptors forKey:@"widgetDescriptors"];
+    [coder encodeObject:_controlDescriptors forKey:@"controlDescriptors"];
+    [coder encodeObject:_activityDescriptors forKey:@"activityDescriptors"];
 }
 
-/// The widget descriptors, read from whichever object-type ivar carries them.
-/// Inspection only: nothing is messaged unless the class check says it is safe.
-static NSArray *DescriptorsFromResult(id result)
+@end
+
+#pragma mark - Flags
+
+static NSArray *DescriptorsWithFlags(NSArray *descriptors)
 {
-    Class cls = object_getClass(result);
-    unsigned int count = 0;
-    Ivar *ivars = class_copyIvarList(cls, &count);
-    NSArray *found = nil;
-    for (unsigned int i = 0; i < count; i++) {
-        const char *rawName = ivar_getName(ivars[i]);
-        const char *type = ivar_getTypeEncoding(ivars[i]);
-        if (rawName == NULL || type == NULL) { continue; }
-
-        id value = (type[0] == '@') ? object_getIvar(result, ivars[i]) : nil;
-        const char *valueClass = value ? object_getClassName(value) : "nil";
-        HookLog(@"ivar %s type=%s value=%s", rawName, type, valueClass);
-
-        NSString *name = @(rawName);
-        if (value != nil &&
-            [name rangeOfString:@"widget" options:NSCaseInsensitiveSearch].location != NSNotFound &&
-            IsNSArrayClass(object_getClass(value))) {
-            found = value;
-        }
-    }
-    free(ivars);
-    return found;
-}
-
-static void ApplyTransparentFlags(NSArray *descriptors)
-{
-    HookLog(@"applying to %lu descriptor(s)", (unsigned long)descriptors.count);
+    NSMutableArray *result = [NSMutableArray arrayWithCapacity:descriptors.count];
     for (id descriptor in descriptors) {
-        Class cls = object_getClass(descriptor);
-        BOOL background = [descriptor respondsToSelector:@selector(setBackgroundRemovable:)];
-        BOOL transparent = [descriptor respondsToSelector:@selector(setTransparent:)];
-        BOOL style = [descriptor respondsToSelector:@selector(setPreferredBackgroundStyle:)];
-        HookLog(@"descriptor %s background=%@ transparent=%@ style=%@",
-                class_getName(cls),
+        id target = descriptor;
+        @try {
+            if ([descriptor respondsToSelector:@selector(mutableCopyWithZone:)]) {
+                id copy = [descriptor mutableCopy];
+                if (copy) { target = copy; }
+            }
+        } @catch (NSException *exception) {
+            HookLog(@"mutableCopy threw: %@", exception.reason);
+        }
+
+        BOOL background = [target respondsToSelector:@selector(setBackgroundRemovable:)];
+        BOOL transparent = [target respondsToSelector:@selector(setTransparent:)];
+        BOOL style = [target respondsToSelector:@selector(setPreferredBackgroundStyle:)];
+        HookLog(@"descriptor %s bg=%@ tr=%@ st=%@",
+                object_getClassName(target),
                 background ? @"y" : @"n", transparent ? @"y" : @"n", style ? @"y" : @"n");
 
         @try {
-            if (background) { [descriptor setBackgroundRemovable:YES]; }
-            if (transparent) { [descriptor setTransparent:YES]; }
-            if (style) { [descriptor setPreferredBackgroundStyle:kClearBackgroundStyle]; }
+            if (background) { [target setBackgroundRemovable:YES]; }
+            if (transparent) { [target setTransparent:YES]; }
+            if (style) { [target setPreferredBackgroundStyle:kClearBackgroundStyle]; }
         } @catch (NSException *exception) {
             HookLog(@"mutation threw: %@", exception.reason);
         }
+        [result addObject:target];
+    }
+    return result;
+}
+
+#pragma mark - Round-trip
+
+static id RewrittenResult(id original)
+{
+    if (![original respondsToSelector:@selector(encodeWithCoder:)]) {
+        HookLog(@"result does not encode");
+        return nil;
+    }
+
+    NSData *data = nil;
+    @try {
+        NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initRequiringSecureCoding:YES];
+        [original encodeWithCoder:archiver];
+        [archiver finishEncoding];
+        data = archiver.encodedData;
+    } @catch (NSException *exception) {
+        HookLog(@"encode threw: %@", exception.reason);
+        return nil;
+    }
+    if (data.length == 0) {
+        HookLog(@"encode produced no data");
+        return nil;
+    }
+
+    WSDescriptorShim *shim = nil;
+    @try {
+        NSError *error = nil;
+        NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:&error];
+        if (unarchiver == nil) {
+            HookLog(@"unarchive setup failed: %@", error.localizedDescription);
+            return nil;
+        }
+        unarchiver.requiresSecureCoding = NO;
+        shim = [[WSDescriptorShim alloc] initWithCoder:unarchiver];
+        [unarchiver finishDecoding];
+    } @catch (NSException *exception) {
+        HookLog(@"decode threw: %@", exception.reason);
+        return nil;
+    }
+
+    HookLog(@"decoded widgets=%lu controls=%lu activities=%lu",
+            (unsigned long)shim.widgetDescriptors.count,
+            (unsigned long)shim.controlDescriptors.count,
+            (unsigned long)shim.activityDescriptors.count);
+    if (shim.widgetDescriptors.count == 0) {
+        return nil;
+    }
+
+    shim.widgetDescriptors = DescriptorsWithFlags(shim.widgetDescriptors);
+
+    Class resultClass = NSClassFromString(@"WidgetKit.DescriptorFetchResult")
+        ?: NSClassFromString(@"_TtC9WidgetKit21DescriptorFetchResult");
+    if (resultClass == Nil) {
+        HookLog(@"result class not found by name");
+        return nil;
+    }
+
+    @try {
+        NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initRequiringSecureCoding:YES];
+        [shim encodeWithCoder:archiver];
+        [archiver finishEncoding];
+
+        NSError *error = nil;
+        NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingFromData:archiver.encodedData error:&error];
+        if (unarchiver == nil) {
+            HookLog(@"rebuild setup failed: %@", error.localizedDescription);
+            return nil;
+        }
+        unarchiver.requiresSecureCoding = NO;
+        id rebuilt = [[resultClass alloc] initWithCoder:unarchiver];
+        [unarchiver finishDecoding];
+        HookLog(@"rebuilt result: %@", rebuilt ? NSStringFromClass([rebuilt class]) : @"nil");
+        return rebuilt;
+    } @catch (NSException *exception) {
+        HookLog(@"rebuild threw: %@", exception.reason);
+        return nil;
     }
 }
 
 static void HookedGetAllDescriptors(id self, SEL _cmd, DescriptorsCompletion completion)
 {
     OriginalGetAllDescriptors(self, _cmd, ^(id result) {
-        @try {
-            Class cls = object_getClass(result);
-            if (!DidDumpShape) {
-                DidDumpShape = YES;
-                HookLog(@"result class %s", class_getName(cls));
-                HookLog(@"result ivars: %@", DescribeIvars(cls));
-                HookLog(@"result descriptor API: %@", DescribeDescriptorsAPI(cls));
+        id replacement = result;
+        if (!DidRewrite) {
+            DidRewrite = YES;
+            @try {
+                id rewritten = RewrittenResult(result);
+                if (rewritten) { replacement = rewritten; }
+            } @catch (NSException *exception) {
+                HookLog(@"rewrite threw: %@", exception.reason);
             }
-            NSArray *descriptors = DescriptorsFromResult(result);
-            if (descriptors.count == 0) {
-                HookLog(@"no widget descriptors found");
-            } else {
-                ApplyTransparentFlags(descriptors);
-            }
-        } @catch (NSException *exception) {
-            HookLog(@"inspection threw: %@", exception.reason);
         }
-        completion(result);
+        completion(replacement);
     });
 }
 
