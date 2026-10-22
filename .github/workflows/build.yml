@@ -7,16 +7,15 @@ on:
 
 jobs:
   build:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select newest Xcode
+      # The image's default Xcode is a release; the newest installed one can be a
+      # beta, and App Store Connect rejects builds made with a beta.
+      - name: Xcode version
         run: |
-          ls -d /Applications/Xcode*.app
-          XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
-          sudo xcode-select -s "$XCODE"
           xcodebuild -version
           # Xcode 27+ has the iOS 27 SDK: compile in the Max widget size (see WidgetSizes).
           if [ "$(xcodebuild -version | awk 'NR==1 {split($2, v, "."); print v[1]}')" -ge 27 ]; then

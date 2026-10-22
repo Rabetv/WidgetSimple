@@ -12,9 +12,22 @@ struct TutorialView: View {
         let text: String
     }
 
-    private let pages = [
+    private var pages: [Page] {
+        Features.directLaunch ? directPages + commonPages : classicPages + commonPages
+    }
+
+    /// iOS 27: apps are picked in Edit Widget and open directly.
+    private let directPages = [
+        Page(symbol: "plus.square.on.square", title: "Add the widget", text: "Hold the Home Screen › Edit › Add Widget › WidgetSimple › Direct Launcher."),
+        Page(symbol: "checklist", title: "Pick your apps", text: "Hold the widget › Edit Widget › pick apps. A tap opens them directly."),
+    ]
+
+    private let classicPages = [
         Page(symbol: "checklist", title: "Pick your apps", text: "Tick the apps you want. They show up as words."),
         Page(symbol: "plus.square.on.square", title: "Add the widget", text: "Hold the Home Screen › Edit › Add Widget › WidgetSimple."),
+    ]
+
+    private let commonPages = [
         Page(symbol: "square.dashed", title: "Hide the edges", text: "Plain wallpaper, clear widgets, 4 settings. The app shows you."),
         Page(symbol: "clock", title: "Clock widget", text: "Day, time and week, in your font."),
     ]

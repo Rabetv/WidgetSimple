@@ -4,7 +4,8 @@ A text-only app launcher for the iPhone Home Screen. Your apps are just words in
 
 ## Features
 
-- **Text launcher widget** (Small, Medium, Large; Max on iOS 27, see below). Grid/list or flowing text, 1–6 columns, alignment, spacing.
+- **Direct Launcher widget** (iOS 27): pick apps in *Edit Widget* (iOS lists every installed app); a tap opens the app directly. A WidgetSimple layout sets the look.
+- **Text launcher widget** (Small, Medium, Large; Max on iOS 27). Apps from the in-app checklist, websites, URL schemes. Grid/list or flowing text, 1–6 columns, alignment, spacing.
 - **Clear widgets** (iOS 26+): no background, the wallpaper shows through. Default for new widgets and the clock.
 - **Clock widget** (same sizes): day, time, date and the current week (month on Large/Max), clear or colored, in your font. Tap opens Calendar.
 - **Pick from your apps**: a checklist of ~100 apps; the ones detected on your iPhone come first. Websites and URL schemes for anything else.
@@ -48,7 +49,7 @@ Plus Home Screen › Customize › Default with large icons. Accessibility setti
 
 ## Max widget size (iOS 27)
 
-iOS 27 adds an Extra Large widget (`WidgetFamily.systemExtraLargePortrait`, a whole Home Screen page). It only exists in the iOS 27 SDK (Xcode 27). Both workflows check the Xcode version and, from Xcode 27 on, build with the `SDK27` compilation condition, which adds the Max size to both widgets and to the app. With older Xcode (GitHub's runners had 26.6 in October 2026) the app builds without it.
+iOS 27 adds an Extra Large widget (`WidgetFamily.systemExtraLargePortrait`, a whole Home Screen page) and `RunSystemShortcutIntent` (the Direct Launcher). Both exist only in the iOS 27 SDK. The workflows run on GitHub's `xcode-27` runner (its default Xcode, a release) and, from Xcode 27 on, build with the `SDK27` compilation condition. Built with older Xcode, the app simply leaves both out.
 
 ## Which apps are detected
 
@@ -56,7 +57,9 @@ iOS has no public API that lists installed apps. WidgetSimple checks its catalog
 
 ## How taps open other apps
 
-iOS sends every widget tap to the widget's own app; a widget can't open another app by itself (`OpenURLIntent` only opens the widget app's own links). So each word links to `widgetsimple://open?u=…`, and WidgetSimple forwards it at once on a black screen. Catalog items always use the catalog's current link, so a fixed link (e.g. Messages → `ichat://`, which opens the app instead of a new message; Wolt → `https://wolt.com/discovery`) reaches existing widgets too.
+**Direct Launcher (iOS 27):** each word is a `Button(intent: RunSystemShortcutIntent(shortcut:))` for an app picked in Edit Widget, so iOS opens that app directly.
+
+**Text Launcher:** before iOS 27 a widget can't open another app by itself (`OpenURLIntent` only opens the widget app's own links). So each word links to `widgetsimple://open?u=…`, and WidgetSimple forwards it at once on a black screen. Catalog items always use the catalog's current link, so a fixed link (e.g. Messages → `ichat://`, which opens the app instead of a new message; Wolt → `https://wolt.com/discovery`) reaches existing widgets too.
 
 ## No name under the widget
 

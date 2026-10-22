@@ -63,8 +63,16 @@ struct Provider: AppIntentTimelineProvider {
             return LauncherEntry(date: .now, layout: empty, calibrating: false,
                                  lightImage: nil, darkImage: nil)
         }
+        return await LauncherEntry.make(layout: layout, isPreview: context.isPreview)
+    }
+}
+
+extension LauncherEntry {
+    /// The entry for `layout`: calibration state, wallpaper copy and full-color labels.
+    static func make(layout: LauncherLayout, isPreview: Bool) async -> LauncherEntry {
+        let store = SharedStore.shared
         let settings = store.loadSettings()
-        let calibrating = settings.calibratingLayoutID == layout.id && !context.isPreview
+        let calibrating = settings.calibratingLayoutID == layout.id && !isPreview
         var light: UIImage?
         var dark: UIImage?
         if layout.background.mode == .wallpaper {
@@ -83,6 +91,7 @@ struct Provider: AppIntentTimelineProvider {
 
 struct WidgetSimpleEntryView: View {
     let entry: LauncherEntry
+    var mode: CanvasMode = .widget
     @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
@@ -107,7 +116,7 @@ struct WidgetSimpleEntryView: View {
                 Color.clear
             } else {
                 LauncherCanvas(layout: entry.layout,
-                               mode: .widget,
+                               mode: mode,
                                labelImages: keepsColors ? entry.labelImages : nil)
             }
         }
@@ -138,5 +147,10 @@ struct WidgetSimpleWidgetBundle: WidgetBundle {
     var body: some Widget {
         WidgetSimpleWidget()
         ClockWidget()
+        #if SDK27
+        if #available(iOS 27.0, *) {
+            DirectLauncherWidget()
+        }
+        #endif
     }
 }

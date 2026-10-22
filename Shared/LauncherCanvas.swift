@@ -5,6 +5,8 @@ import WidgetKit
 enum CanvasMode {
     /// On the Home Screen: every item is a tap target that launches its app.
     case widget
+    /// On the Home Screen: the widget wraps each word itself (iOS 27 direct-launch buttons).
+    case wrapped((LaunchItem, AnyView) -> AnyView)
     /// Inside the app: taps call back into the editor.
     case preview(onTap: ((LaunchItem) -> Void)?)
 }
@@ -49,6 +51,7 @@ struct LauncherCanvas: View {
 
     private var emptyText: String {
         if case .widget = mode { return "Open WidgetSimple to add apps" }
+        if case .wrapped = mode { return "Hold › Edit Widget › pick apps" }
         return "Add apps below"
     }
 
@@ -126,6 +129,8 @@ struct LauncherCanvas: View {
             } else {
                 label(item)
             }
+        case .wrapped(let wrap):
+            wrap(item, AnyView(label(item)))
         case .preview(let onTap):
             label(item)
                 .contentShape(Rectangle())

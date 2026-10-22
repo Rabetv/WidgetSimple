@@ -89,6 +89,10 @@ struct LayoutEditorView: View {
             }
         } header: {
             Text("Apps (\(layout.wrappedValue.items.count))")
+        } footer: {
+            if Features.directLaunch {
+                Text("Direct Launcher: pick its apps in Edit Widget. This layout sets the look.")
+            }
         }
     }
 
