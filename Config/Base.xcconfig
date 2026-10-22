@@ -1,0 +1,31 @@
+// =====================================================================
+//  WidgetSimple – project settings. Edit the first block, then build.
+// =====================================================================
+
+// Your Apple Developer Team ID (10 characters, e.g. AB12CD34EF).
+// You can also leave this empty and pick your team in Xcode under
+// Target > Signing & Capabilities.
+DEVELOPMENT_TEAM =
+
+// Reverse-domain prefix for the bundle identifiers. Must be unique to you.
+BUNDLE_ID_PREFIX = com.rabetv
+
+// Name shown under the app icon AND under every WidgetSimple widget on the
+// Home Screen. The default is U+2800 (an invisible "blank" character) so the
+// widget has no label. If App Review rejects the app under Guideline 2.3.8
+// (name on device differs from App Store name), change it to:
+//     HOME_SCREEN_NAME = WidgetSimple
+HOME_SCREEN_NAME = ⠀
+
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+
+// ---------------------------------------------------------------------
+//  Derived values – normally no need to touch these.
+// ---------------------------------------------------------------------
+APP_BUNDLE_ID = $(BUNDLE_ID_PREFIX).widgetsimple
+WIDGET_BUNDLE_ID = $(APP_BUNDLE_ID).widget
+APP_GROUP_ID = group.$(APP_BUNDLE_ID)
+
+IPHONEOS_DEPLOYMENT_TARGET = 18.0
+SWIFT_VERSION = 5.0
