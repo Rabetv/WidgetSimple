@@ -51,9 +51,16 @@ enum FontCatalog {
         return "System"
     }
 
-    static func font(for style: TextStyle) -> Font {
-        font(id: style.fontID, size: style.size, weight: style.weight.weight, italic: style.italic)
-    }
+    /// A few good-looking fonts, offered first in the app.
+    static let quickPicks: [FontChoice] = [
+        FontChoice(id: "sys:default", name: "Simple"),
+        FontChoice(id: "sys:rounded", name: "Round"),
+        FontChoice(id: "sys:serif", name: "Book"),
+        FontChoice(id: "sys:mono", name: "Typewriter"),
+        FontChoice(id: "fam:Futura", name: "Futura"),
+        FontChoice(id: "fam:Didot", name: "Didot"),
+        FontChoice(id: "fam:Chalkboard SE", name: "Chalk"),
+    ]
 
     static func font(id: String, size: Double, weight: Font.Weight = .regular, italic: Bool = false) -> Font {
         let s = CGFloat(max(4, size))

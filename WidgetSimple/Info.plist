@@ -4,76 +4,10 @@
 <dict>
 	<key>AppGroupID</key>
 	<string>$(APP_GROUP_ID)</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>CFBundleURLName</key>
-			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>widgetsimple</string>
-			</array>
-		</dict>
-	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>whatsapp</string>
-		<string>instagram</string>
-		<string>youtube</string>
-		<string>spotify</string>
-		<string>snssdk1233</string>
-		<string>snapchat</string>
-		<string>fb</string>
-		<string>fb-messenger</string>
-		<string>twitter</string>
-		<string>tg</string>
-		<string>reddit</string>
-		<string>discord</string>
-		<string>nflx</string>
-		<string>googlegmail</string>
-		<string>comgooglemaps</string>
-		<string>googlechrome</string>
-		<string>chatgpt</string>
-		<string>ms-outlook</string>
-		<string>linkedin</string>
-		<string>barcelona</string>
-		<string>com.amazon.mobile.shopping</string>
-		<string>paypal</string>
-		<string>uber</string>
-		<string>pinterest</string>
-		<string>disneyplus</string>
-		<string>widgetsimple</string>
-		<string>aiv</string>
-		<string>twitch</string>
-		<string>shazam</string>
-		<string>google</string>
-		<string>googledrive</string>
-		<string>googlephotos</string>
-		<string>googlecalendar</string>
-		<string>youtubemusic</string>
-		<string>msteams</string>
-		<string>slack</string>
-		<string>zoomus</string>
-		<string>notion</string>
-		<string>things</string>
-		<string>todoist</string>
-		<string>obsidian</string>
-		<string>onepassword</string>
-		<string>claude</string>
-		<string>waze</string>
-		<string>airbnb</string>
-		<string>booking</string>
-		<string>revolut</string>
-		<string>firefox</string>
-		<string>brave</string>
-		<string>sgnl</string>
-	</array>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Saves the flat wallpaper that hides the widget's glass edge.</string>
+	<string>Saves a plain wallpaper in your widget color.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

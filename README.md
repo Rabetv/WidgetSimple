@@ -1,19 +1,25 @@
 # WidgetSimple
 
-A text-only app launcher for the iPhone Home Screen. Your apps are just words in the font, size and color you choose. Tap a word, the app opens. Plus a clock widget. No icons, no label under the widget.
+Your apps as plain words on the iPhone Home Screen, with a clock if you like. The widgets have the exact color of the wallpaper, so only the words show.
 
-## Features
+## How it works
 
-- **Direct Launcher widget** (iOS 27): pick apps in *Edit Widget* (iOS lists every installed app); a tap opens the app directly. A WidgetSimple layout sets the look.
-- **Text launcher widget** (Small, Medium, Large; Max on iOS 27). Apps from the in-app checklist, websites, URL schemes. Grid/list or flowing text, 1–6 columns, alignment, spacing.
-- **Clear widgets** (iOS 26+): no background, the wallpaper shows through. Default for new widgets and the clock.
-- **Clock widget** (same sizes): day, time, date and the current week (month on Large/Max), clear or colored, in your font. Tap opens Calendar.
-- **Pick from your apps**: a checklist of ~100 apps; the ones detected on your iPhone come first. Websites and URL schemes for anything else.
-- **Hide the edges**: a flat wallpaper, clear widgets and four iPhone settings (below).
-- **Typography**: system fonts, 40 font families built into iOS, or your own `.ttf`/`.otf`.
-- **No name under the widget**: the Home Screen name is an invisible character.
-- Backgrounds: clear, a color, or an exact copy of the wallpaper behind the widget (magenta calibration screenshot).
-- A 4-page tutorial on first launch (**?** brings it back).
+- **One widget.** Hold it › *Edit Widget*: pick up to 12 apps (iOS lists every installed app) and a clock (none, time, or time and date). A tap opens the app directly (`RunSystemShortcutIntent`, iOS 27). Sizes: Small, Medium, Large, Max.
+- **One look for every widget**, set in the app: color (black, gray, white), font, text size.
+- **The app is one screen with five steps:** pick a color, pick letters, save the wallpaper, change four iPhone settings, add the widget.
+
+## Why the widgets are invisible
+
+A clear widget is not reliably see-through on iOS 26/27 (in the normal Home Screen style iOS can keep its own widget background behind it). So each widget is filled with exactly the color of the wallpaper the app saves to Photos. iOS also draws a glass edge on every widget; it disappears on a plain wallpaper with these settings (iOS 27, as [Blank Spaces](https://help.blankspaces.app/en/help/articles/3537637-how-to-hide-the-dock-and-widget-borders-ios-27) documents):
+
+| | Black | Gray | White |
+|---|---|---|---|
+| Appearance | Dark | Dark | Light |
+| Increase Contrast | **On** | Off | Off |
+| Show Borders | Off | Off | **On** |
+| Reduce Transparency | Off | Off | Off |
+
+Plus: the app's wallpaper with Blur off, and Home Screen › Edit › Customize › **Default** with large icons (Clear and Tinted replace every widget background with glass). A photo wallpaper always keeps a visible edge.
 
 ## Build without a Mac (GitHub → TestFlight)
 
@@ -31,45 +37,17 @@ The **TestFlight** workflow (`.github/workflows/testflight.yml`) archives, signs
 
 ## Build with a Mac
 
-Xcode 26 or newer. `Config/Base.xcconfig` holds the team (`DEVELOPMENT_TEAM`), bundle prefix and Home Screen name. Open `WidgetSimple.xcodeproj`, enable automatic signing for both targets, run. The **Build** workflow compiles every push unsigned.
-
-## Hiding the widget edges
-
-Widgets are clear by default (`.containerBackground(.clear, for: .widget)`, iOS 26+), so the wallpaper shows through. iOS draws a glass edge on top of every widget, which no widget can paint over. The edge only shows what is behind it, so on iOS 27 it disappears when:
-
-| | Black | Gray | White |
-|---|---|---|---|
-| Wallpaper (Blur off), widgets clear | flat black | flat gray | flat white |
-| Display & Brightness | Dark | Dark | Light |
-| Increase Contrast | **On** | Off | Off |
-| Show Borders | Off | Off | **On** |
-| Reduce Transparency | Off | Off | Off |
-
-Plus Home Screen › Customize › Default with large icons. Accessibility settings are under Settings › Accessibility › Display & Text Size. This follows what [Blank Spaces](https://help.blankspaces.app/en/articles/5884313-how-to-set-up-the-dark-theme-ios-27) documents for iOS 27. On iOS 26 a faint outline always stays, and photo wallpapers always keep a faint edge. The wallpaper only has to be plain behind the widgets: *Hide the edges* can also make a wallpaper from your photo that fades into the plain color at the top or bottom (adjustable share of the screen), so the widgets sit on the plain part and the photo stays. *Hide the edges* saves the wallpaper and makes every widget clear; if a device ever shows a gray box instead, it can switch them to the exact solid color (also from a screenshot).
-
-## Max widget size (iOS 27)
-
-iOS 27 adds an Extra Large widget (`WidgetFamily.systemExtraLargePortrait`, a whole Home Screen page) and `RunSystemShortcutIntent` (the Direct Launcher). Both exist only in the iOS 27 SDK. The workflows run on GitHub's `xcode-27` runner (its default Xcode, a release) and, from Xcode 27 on, build with the `SDK27` compilation condition. Built with older Xcode, the app simply leaves both out.
-
-## Which apps are detected
-
-iOS has no public API that lists installed apps. WidgetSimple checks its catalog with `canOpenURL`, which only works for schemes in `LSApplicationQueriesSchemes`: at most 50, and only the first 25 for apps built with the iOS 27 SDK. The list in `WidgetSimple/Info.plist` is ordered by popularity; entry 26 is WidgetSimple's own scheme, which tells the app at runtime whether iOS checks 25 or 50. Apps that can't be checked are listed under *More apps*.
-
-## How taps open other apps
-
-**Direct Launcher (iOS 27):** each word is a `Button(intent: RunSystemShortcutIntent(shortcut:))` for an app picked in Edit Widget, so iOS opens that app directly.
-
-**Text Launcher:** before iOS 27 a widget can't open another app by itself (`OpenURLIntent` only opens the widget app's own links). So each word links to `widgetsimple://open?u=…`, and WidgetSimple forwards it at once on a black screen. Catalog items always use the catalog's current link, so a fixed link (e.g. Messages → `ichat://`, which opens the app instead of a new message; Wolt → `https://wolt.com/discovery`) reaches existing widgets too.
+Xcode 27 or newer (iOS 27 SDK; the app needs iOS 27). `Config/Base.xcconfig` holds the team (`DEVELOPMENT_TEAM`), bundle prefix and Home Screen name. Open `WidgetSimple.xcodeproj`, enable automatic signing for both targets, run. The **Build** workflow compiles every push unsigned.
 
 ## No name under the widget
 
-The label under a Home Screen widget is the app's Home Screen name (`CFBundleDisplayName`). `HOME_SCREEN_NAME` in `Config/Base.xcconfig` is set to U+2800 (invisible). If App Review rejects the app under Guideline 2.3.8, set it to `WidgetSimple` and use *Edit › Customize › large icons* on the iPhone, which hides all labels.
+The label under a Home Screen widget is the app's Home Screen name (`CFBundleDisplayName`). `HOME_SCREEN_NAME` in `Config/Base.xcconfig` is set to U+2800 (invisible). If App Review rejects the app under Guideline 2.3.8, set it to `WidgetSimple`; large icons hide all labels anyway.
 
 ## Project layout
 
 ```
 Config/Base.xcconfig        team, bundle ids, app group, home screen name
-Shared/                     compiled into app + widget (models, storage, renderer, intents)
-WidgetSimple/               the app (editor, wallpaper matching, guides)
-WidgetSimpleWidget/         the widget extension
+Shared/                     app + widget: look, fonts, storage, the widget face
+WidgetSimple/               the app (one screen, font list)
+WidgetSimpleWidget/         the widget
 ```

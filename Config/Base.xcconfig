@@ -27,5 +27,6 @@ APP_BUNDLE_ID = $(BUNDLE_ID_PREFIX).widgetsimple
 WIDGET_BUNDLE_ID = $(APP_BUNDLE_ID).widget
 APP_GROUP_ID = group.$(APP_BUNDLE_ID)
 
-IPHONEOS_DEPLOYMENT_TARGET = 18.0
+// iOS 27: apps open straight from the widget (RunSystemShortcutIntent).
+IPHONEOS_DEPLOYMENT_TARGET = 27.0
 SWIFT_VERSION = 5.0
