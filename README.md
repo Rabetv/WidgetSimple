@@ -1,37 +1,44 @@
 # WidgetSimple
 
-A text-only app launcher for the iPhone Home Screen. Design a medium (or large) widget whose apps are just words in the font, size and color you choose. Tap a word, the app opens. No icons, no label under the widget, and a built-in workaround that makes the iOS 26/27 glass widget border disappear.
+A text-only app launcher for the iPhone Home Screen. Design a medium (or large) widget whose apps are just words in the font, size and color you choose, floating on your wallpaper with no widget background. Tap a word, the app opens. No icons, no label under the widget.
 
 ## Features
 
 - **Text launcher widget** (Medium and Large). Grid/list or flowing-text layouts, 1–6 columns, alignment, spacing and margins.
+- **Fully transparent widgets** (iOS 26+): no background at all, the wallpaper shows straight through. Nothing to line up, works with any wallpaper and with motion effects on.
+- **Your colors in every Home Screen style**: in Clear/Tinted style iOS turns widget text white; WidgetSimple draws the words as full-color images there so fonts and colors stay.
 - **Full typography control**: SF Pro / Rounded / New York / Mono, 40 font families built into iOS, or import your own `.ttf`/`.otf` (works in the widget too). Size, weight, italic, underline, color + opacity, letter spacing, case, shadow. Per-item overrides.
 - **Opens any app**: built-in catalog of ~100 apps (installed ones are detected), custom URL schemes, websites/universal links, and *any* installed app through a Shortcut with the “Open App” action.
-- **Glass-border workaround**: the widget background becomes a pixel-exact crop of your wallpaper. The app finds the widget's exact position by turning it magenta and analysing one screenshot.
 - **No name under the widget**: the Home Screen name is an invisible character (configurable).
 - Several layouts → several widgets (choose per widget via *Edit Widget*).
+- Fallback backgrounds: solid color, or an exact wallpaper copy (found automatically via a magenta calibration screenshot).
 
-## Build & run
+## Build without a Mac (GitHub → TestFlight)
 
-Requirements: Xcode 26 or newer (Xcode 27 recommended for iOS 27), an Apple Developer account, an iPhone on iOS 18+.
+The **TestFlight** workflow (`.github/workflows/testflight.yml`) archives, signs and uploads the app on a GitHub-hosted Mac.
 
-1. Open `Config/Base.xcconfig` and set:
-   - `DEVELOPMENT_TEAM` = your Team ID (developer.apple.com › Account › Membership), or leave empty and pick the team in Xcode.
-   - `BUNDLE_ID_PREFIX` if `com.rabetv` isn't yours.
-2. Open `WidgetSimple.xcodeproj`.
-3. For **both** targets (WidgetSimple and WidgetSimpleWidgetExtension) open *Signing & Capabilities*, tick *Automatically manage signing*, choose your team. The App Group `group.<prefix>.widgetsimple` comes from the entitlements file and is registered automatically.
-4. Select your iPhone and press Run.
+1. Register the App IDs `com.rabetv.widgetsimple` and `com.rabetv.widgetsimple.widget` with the App Group `group.com.rabetv.widgetsimple` (developer.apple.com › Identifiers).
+2. Create the app record in App Store Connect with bundle ID `com.rabetv.widgetsimple`.
+3. App Store Connect › Users and Access › Integrations › App Store Connect API: create a key with the **Admin** role.
+4. Repository secrets (Settings › Secrets and variables › Actions): `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (whole .p8 file), and `GH_SECRETS_TOKEN` (fine-grained token with *Secrets: Read and write* on this repo).
+5. Actions › TestFlight › Run workflow. The first run creates an Apple Distribution certificate via the API and stores it as `SIGNING_P12_BASE64` / `SIGNING_P12_PASSWORD`; later runs reuse it. Provisioning profiles are recreated on every run (`ci/asc_signing.py`).
+6. Install from the TestFlight app on your iPhone.
 
-The GitHub Action in `.github/workflows/build.yml` compiles the project (unsigned) on every push.
+## Build with a Mac
 
-## How the glass-border workaround works
+Xcode 26 or newer. `Config/Base.xcconfig` holds the team (`DEVELOPMENT_TEAM`), bundle prefix and Home Screen name. Open `WidgetSimple.xcodeproj`, enable automatic signing for both targets, run. The **Build** workflow compiles every push unsigned.
 
-Since iOS 26, iOS draws a thin Liquid Glass outline around every widget and no API turns it off. WidgetSimple makes the widget's background an exact copy of the wallpaper behind it, so the outline sits on identical pixels:
+## Transparent widgets and the glass edge
 
-1. Home Screen style **Default** (not Clear/Tinted), wallpaper **Blur off**, **Reduce Motion on**.
-2. Screenshot an empty Home Screen page (wallpaper only).
-3. Tap *Turn my widget magenta*, screenshot the Home Screen, pick it in the app. The widget's exact frame is detected automatically (and refined with the size the widget reports about itself).
-4. *Create background*. Done. Optional second wallpaper screenshot for Dark Mode.
+Since iOS 26 a widget may have no background, so the wallpaper shows through. WidgetSimple layouts default to that (`containerBackground` = clear). iOS still draws its own thin glass edge around every widget; that belongs to the system and no app can remove it. With a transparent widget it is the only thing left and it is faint.
+
+| Home Screen style | Result |
+|---|---|
+| Default (Light/Dark/Auto) | See-through, your exact fonts and colors |
+| Clear | Most see-through, very light clear glass; colors kept via full-color label images |
+| Tinted | Works, but iOS tints around the words |
+
+If a device ever shows a solid box, switch that layout's background to *Wallpaper copy*: take a wallpaper screenshot and a screenshot with the widget turned magenta, and the app crops an exact copy. For that fallback turn off *Perspective Zoom* (Edit Wallpaper › ⋯); Reduce Motion is not needed.
 
 ## How taps open other apps
 
