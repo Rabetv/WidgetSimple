@@ -1,0 +1,203 @@
+# Builds, signs and uploads WidgetSimple to App Store Connect / TestFlight
+# on a GitHub-hosted Mac. Start it from the Actions tab (no Mac needed).
+#
+# Repository secrets (Settings › Secrets and variables › Actions):
+#   ASC_KEY_ID        App Store Connect API key ID
+#   ASC_ISSUER_ID     Issuer ID shown above the key list
+#   ASC_KEY_P8        Full contents of the downloaded AuthKey_XXXX.p8 file
+#   GH_SECRETS_TOKEN  Fine-grained GitHub token with "Secrets: Read and write"
+#                     on this repository. Needed on the first run, which creates
+#                     the signing certificate and stores it as two more secrets:
+#   SIGNING_P12_BASE64, SIGNING_P12_PASSWORD   (created automatically)
+
+name: TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Build number (leave empty to use the run number)"
+        required: false
+        default: ""
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APP_PROFILE: WidgetSimple CI App
+      WIDGET_PROFILE: WidgetSimple CI Widget
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check repository secrets
+        env:
+          HAS_P12: ${{ secrets.SIGNING_P12_BASE64 != '' }}
+          HAS_TOKEN: ${{ secrets.GH_SECRETS_TOKEN != '' }}
+        run: |
+          missing=""
+          [ -n "$ASC_KEY_ID" ] || missing="$missing ASC_KEY_ID"
+          [ -n "$ASC_ISSUER_ID" ] || missing="$missing ASC_ISSUER_ID"
+          [ -n "$ASC_KEY_P8" ] || missing="$missing ASC_KEY_P8"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing (Settings › Secrets and variables › Actions)."
+            exit 1
+          fi
+          if [ "$HAS_P12" != "true" ] && [ "$HAS_TOKEN" != "true" ]; then
+            echo "::error::First run: add the GH_SECRETS_TOKEN secret so the signing certificate can be stored for later runs."
+            exit 1
+          fi
+
+      - name: Read project settings
+        run: |
+          read_setting() { sed -n "s/^$1 *= *//p" Config/Base.xcconfig | tr -d '[:space:]'; }
+          TEAM_ID=$(read_setting DEVELOPMENT_TEAM)
+          PREFIX=$(read_setting BUNDLE_ID_PREFIX)
+          if [ -z "$TEAM_ID" ] || [ -z "$PREFIX" ]; then
+            echo "::error::Set DEVELOPMENT_TEAM and BUNDLE_ID_PREFIX in Config/Base.xcconfig."
+            exit 1
+          fi
+          {
+            echo "TEAM_ID=$TEAM_ID"
+            echo "APP_ID=$PREFIX.widgetsimple"
+            echo "WIDGET_ID=$PREFIX.widgetsimple.widget"
+            echo "APP_GROUP=group.$PREFIX.widgetsimple"
+          } >> "$GITHUB_ENV"
+          echo "Team $TEAM_ID · app $PREFIX.widgetsimple · widget $PREFIX.widgetsimple.widget"
+
+      - name: Select newest Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Install helper dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check pyjwt cryptography
+          echo "PY=$RUNNER_TEMP/venv/bin/python" >> "$GITHUB_ENV"
+
+      - name: Signing certificate
+        env:
+          SIGNING_P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
+          SIGNING_P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GH_SECRETS_TOKEN }}
+        run: |
+          P12="$RUNNER_TEMP/dist.p12"
+          if [ -n "$SIGNING_P12_BASE64" ]; then
+            printf '%s' "$SIGNING_P12_BASE64" | base64 --decode > "$P12"
+            PW="$SIGNING_P12_PASSWORD"
+            echo "Using the stored signing certificate."
+          else
+            # Make sure the token can store secrets BEFORE creating a certificate.
+            if ! gh api "repos/$GITHUB_REPOSITORY/actions/secrets/public-key" --silent; then
+              echo "::error::GH_SECRETS_TOKEN can't manage secrets here. It needs access to $GITHUB_REPOSITORY with permission Secrets: Read and write."
+              exit 1
+            fi
+            PW=$(openssl rand -hex 24)
+            echo "::add-mask::$PW"
+            "$PY" ci/asc_signing.py create-cert --out "$P12" --password "$PW"
+            base64 -i "$P12" | tr -d '\n' | gh secret set SIGNING_P12_BASE64 --repo "$GITHUB_REPOSITORY"
+            printf '%s' "$PW" | gh secret set SIGNING_P12_PASSWORD --repo "$GITHUB_REPOSITORY"
+            echo "Stored the new certificate as repository secrets for future runs."
+          fi
+          echo "P12_PATH=$P12" >> "$GITHUB_ENV"
+          echo "P12_PASSWORD=$PW" >> "$GITHUB_ENV"
+
+      - name: Keychain
+        run: |
+          KC="$RUNNER_TEMP/signing.keychain-db"
+          KCPW=$(openssl rand -hex 16)
+          echo "::add-mask::$KCPW"
+          security create-keychain -p "$KCPW" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KCPW" "$KC"
+          curl -fsSL -o "$RUNNER_TEMP/AppleWWDRCAG3.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+          security import "$RUNNER_TEMP/AppleWWDRCAG3.cer" -k "$KC" -T /usr/bin/codesign || true
+          security import "$P12_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KCPW" "$KC" > /dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$KC"
+          echo "KEYCHAIN=$KC" >> "$GITHUB_ENV"
+
+      - name: Provisioning profiles
+        run: |
+          "$PY" ci/asc_signing.py profiles \
+            --p12 "$P12_PATH" --password "$P12_PASSWORD" \
+            --app "$APP_ID" --widget "$WIDGET_ID" --group "$APP_GROUP" \
+            --app-profile "$APP_PROFILE" --widget-profile "$WIDGET_PROFILE" \
+            --outdir "$RUNNER_TEMP/profiles"
+
+      - name: Archive
+        env:
+          BUILD_INPUT: ${{ github.event.inputs.build_number }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          BUILD="${BUILD_INPUT:-$RUN_NUMBER}"
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          echo "Archiving build $BUILD"
+          xcodebuild -quiet \
+            -project WidgetSimple.xcodeproj -scheme WidgetSimple -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/WidgetSimple.xcarchive" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            APP_PROFILE_SPECIFIER="$APP_PROFILE" \
+            WIDGET_PROFILE_SPECIFIER="$WIDGET_PROFILE" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            archive
+
+      - name: Upload to App Store Connect
+        run: |
+          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          "$PY" ci/asc_signing.py write-key --out "$KEY"
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>$APP_ID</key><string>$APP_PROFILE</string>
+              <key>$WIDGET_ID</key><string>$WIDGET_PROFILE</string>
+            </dict>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/WidgetSimple.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          {
+            echo "### Uploaded build $BUILD"
+            echo "It appears in App Store Connect › TestFlight after Apple finishes processing (usually 5–30 minutes)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clean up
+        if: always()
+        run: |
+          if [ -n "${KEYCHAIN:-}" ]; then security delete-keychain "$KEYCHAIN" || true; fi
+          rm -f "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP"/AuthKey_*.p8
