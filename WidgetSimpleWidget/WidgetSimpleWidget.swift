@@ -141,8 +141,8 @@ struct LauncherWidgetView: View {
                 // the wallpaper. Full colour keeps the accent tint from painting it white.
                 if let background = entry.background {
                     Image(uiImage: background)
-                        .widgetAccentedRenderingMode(.fullColor)
                         .resizable()
+                        .widgetAccentedRenderingMode(.fullColor)
                         .scaledToFill()
                 }
                 face
