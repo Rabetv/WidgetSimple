@@ -15,7 +15,13 @@ On the normal Home Screen iOS draws its own box behind every widget, and no publ
 1. **Wallpaper screenshot:** an empty Home Screen page in jiggle mode (no icons over the wallpaper).
 2. **Find my widgets:** every widget turns pink and shows its key as 4 × 4 black/white squares (`SpotCode`). From one screenshot of the Home Screen, `SeeThroughMaker` finds each pink frame (walking outward from inside the pink, then snapping to the size the widget reported), reads the key and cuts that frame out of the wallpaper screenshot.
 
-The key is the widget's size (2 bits) plus a 14-bit hash of its clock and apps (`SpotKey`), so each widget finds its own piece; if its apps change and it's the only widget of its size, it keeps the piece. A new wallpaper or a moved widget needs both screenshots again. On a Clear or Tinted Home Screen iOS replaces the background with its own glass, which needs no setup.
+The key is the widget's size (2 bits) plus a 14-bit hash of its clock and apps (`SpotKey`), so each widget finds its own piece; if its apps change and it's the only widget of its size, it keeps the piece. A new wallpaper needs step 1 again, a moved widget needs step 2.
+
+### The piece is content, not the background
+
+From iOS 26 the system removes a widget's container background on a Clear or Tinted Home Screen and draws its own themed glass in its place — "Removes the background and replaces it with a themed glass or tinted color effect" ([Apple](https://developer.apple.com/documentation/widgetkit/optimizing-your-widget-for-accented-rendering-mode-and-liquid-glass)). A wallpaper piece passed to `.containerBackground(for: .widget)` is therefore the one thing that gets deleted, and what is left is the system's grey box.
+
+So `LauncherWidgetView` draws the piece inside the widget's **content**, full bleed, and leaves the container background empty: content is never removed. `.widgetAccentedRenderingMode(.fullColor)` stops the accent tint from painting the piece white, and the words stay on top of it with their buttons unchanged. `contentMarginsDisabled()` is what lets the piece reach the widget's edges.
 
 ## Build without a Mac (GitHub → TestFlight)
 
