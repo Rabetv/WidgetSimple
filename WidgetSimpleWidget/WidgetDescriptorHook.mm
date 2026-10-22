@@ -107,7 +107,19 @@ static NSString *DescribeDescriptorsAPI(Class cls)
     return names.count ? [names componentsJoinedByString:@" "] : @"(none)";
 }
 
+/// True only when the class really descends from NSArray. Checked through the C
+/// runtime: messaging an ivar that turns out to be Swift storage would crash.
+static BOOL IsNSArrayClass(Class cls)
+{
+    Class array = (Class)objc_getClass("NSArray");
+    for (Class current = cls; current != Nil; current = class_getSuperclass(current)) {
+        if (current == array) { return YES; }
+    }
+    return NO;
+}
+
 /// The widget descriptors, read from whichever object-type ivar carries them.
+/// Inspection only: nothing is messaged unless the class check says it is safe.
 static NSArray *DescriptorsFromResult(id result)
 {
     Class cls = object_getClass(result);
@@ -117,14 +129,16 @@ static NSArray *DescriptorsFromResult(id result)
     for (unsigned int i = 0; i < count; i++) {
         const char *rawName = ivar_getName(ivars[i]);
         const char *type = ivar_getTypeEncoding(ivars[i]);
-        if (rawName == NULL || type == NULL || type[0] != '@') { continue; }
+        if (rawName == NULL || type == NULL) { continue; }
+
+        id value = (type[0] == '@') ? object_getIvar(result, ivars[i]) : nil;
+        const char *valueClass = value ? object_getClassName(value) : "nil";
+        HookLog(@"ivar %s type=%s value=%s", rawName, type, valueClass);
 
         NSString *name = @(rawName);
-        id value = object_getIvar(result, ivars[i]);
-        HookLog(@"ivar %@ = %@", name, value ? NSStringFromClass([value class]) : @"nil");
-
-        if ([value isKindOfClass:[NSArray class]] &&
-            [name rangeOfString:@"widget" options:NSCaseInsensitiveSearch].location != NSNotFound) {
+        if (value != nil &&
+            [name rangeOfString:@"widget" options:NSCaseInsensitiveSearch].location != NSNotFound &&
+            IsNSArrayClass(object_getClass(value))) {
             found = value;
         }
     }
