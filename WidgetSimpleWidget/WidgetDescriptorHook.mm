@@ -1,25 +1,24 @@
 // Ask the system to draw our widget without its glass container.
 //
-// The extension cannot reach the host's layers, but it does hand Chrono one
-// descriptor per widget, and the host renders from that descriptor. Flipping its
-// private flags — background removable, transparent, clear style — is the only
-// channel from inside the extension that changes how the Home Screen draws the
-// container. That container is what still shows as a rounded rim.
+// The extension cannot reach the host's layers, but it hands Chrono one descriptor
+// per widget, and the host renders from that descriptor. Flipping its private flags
+// — background removable, transparent, clear style — is the only channel from
+// inside the extension that changes how the Home Screen draws the container.
 //
 // PRIVATE API. Internal TestFlight only: App Store review rejects this under
-// guideline 2.5.1, and the descriptor class names are not covered by any contract,
-// so they can change in any iOS release.
+// guideline 2.5.1, and the descriptor class names are not covered by any contract.
 //
-// Everything this file does is written to <App Group>/WidgetSimple/hook.log, which
-// the app shows under Diagnostics. Without that the extension is a black box: a
-// missing class and a flag the system ignores look exactly the same from outside.
+// What build 13 established: the swizzle installs and the fetch runs, but
+// `DescriptorFetchResult` is a Swift class with no Objective-C `widgetDescriptors`,
+// so KVC throws. The descriptors therefore have to be read from the instance
+// variable directly, which is what this version does, and it logs the shape it
+// finds so the next step is chosen from data instead of guesswork.
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 
-/// The private descriptor API, declared locally so the calls type-check.
+/// The private descriptor API, declared locally so calls type-check where it exists.
 @interface NSObject (WidgetDescriptorFlags)
-- (NSArray *)widgetDescriptors;
 - (void)setBackgroundRemovable:(BOOL)removable;
 - (void)setTransparent:(BOOL)transparent;
 - (void)setPreferredBackgroundStyle:(NSUInteger)style;
@@ -29,16 +28,14 @@ typedef void (^DescriptorsCompletion)(id result);
 typedef void (*GetAllDescriptorsIMP)(id self, SEL _cmd, DescriptorsCompletion completion);
 
 static GetAllDescriptorsIMP OriginalGetAllDescriptors;
-static BOOL DidDumpDescriptorShape;
+static BOOL DidDumpShape;
 
-/// Clear. The values are guesses from the reference app's behaviour; 0 is the
-/// default style, so only a non-zero value can change anything.
+/// Clear. 0 is the default style, so only a non-zero value can change anything.
 static const NSUInteger kClearBackgroundStyle = 1;
 
 #pragma mark - Log
 
-/// Appends one line to the App Group log the app reads. Silently does nothing
-/// when the App Group is unavailable.
+/// Appends one line to the App Group log the app reads.
 static void HookLog(NSString *format, ...)
 {
     NSString *group = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"AppGroupID"];
@@ -80,55 +77,77 @@ static void HookLog(NSString *format, ...)
     }
 }
 
-#pragma mark - Descriptor shape
+#pragma mark - Shape
 
-/// The descriptor's own properties that could matter, so the log says what this
-/// iOS version actually offers instead of what the reference app used.
-static NSString *DescribeDescriptor(id descriptor)
+static NSString *DescribeIvars(Class cls)
 {
-    Class cls = object_getClass(descriptor);
-    NSMutableArray<NSString *> *interesting = [NSMutableArray array];
-
+    NSMutableArray<NSString *> *names = [NSMutableArray array];
     unsigned int count = 0;
-    objc_property_t *properties = class_copyPropertyList(cls, &count);
+    Ivar *ivars = class_copyIvarList(cls, &count);
     for (unsigned int i = 0; i < count; i++) {
-        NSString *name = @(property_getName(properties[i]));
-        NSArray<NSString *> *needles = @[@"background", @"transparent", @"style", @"glass", @"corner", @"vibran"];
-        for (NSString *needle in needles) {
-            if ([name rangeOfString:needle options:NSCaseInsensitiveSearch].location != NSNotFound) {
-                [interesting addObject:name];
-                break;
-            }
+        const char *name = ivar_getName(ivars[i]);
+        if (name) { [names addObject:@(name)]; }
+    }
+    free(ivars);
+    return names.count ? [names componentsJoinedByString:@","] : @"(none)";
+}
+
+static NSString *DescribeDescriptorsAPI(Class cls)
+{
+    NSMutableArray<NSString *> *names = [NSMutableArray array];
+    unsigned int count = 0;
+    Method *methods = class_copyMethodList(cls, &count);
+    for (unsigned int i = 0; i < count; i++) {
+        NSString *name = NSStringFromSelector(method_getName(methods[i]));
+        if ([name rangeOfString:@"descriptor" options:NSCaseInsensitiveSearch].location != NSNotFound) {
+            [names addObject:name];
         }
     }
-    free(properties);
+    free(methods);
+    return names.count ? [names componentsJoinedByString:@" "] : @"(none)";
+}
 
-    return [NSString stringWithFormat:@"%s %@", class_getName(cls),
-            interesting.count ? [interesting componentsJoinedByString:@","] : @"(no matching properties)"];
+/// The widget descriptors, read from whichever object-type ivar carries them.
+static NSArray *DescriptorsFromResult(id result)
+{
+    Class cls = object_getClass(result);
+    unsigned int count = 0;
+    Ivar *ivars = class_copyIvarList(cls, &count);
+    NSArray *found = nil;
+    for (unsigned int i = 0; i < count; i++) {
+        const char *rawName = ivar_getName(ivars[i]);
+        const char *type = ivar_getTypeEncoding(ivars[i]);
+        if (rawName == NULL || type == NULL || type[0] != '@') { continue; }
+
+        NSString *name = @(rawName);
+        id value = object_getIvar(result, ivars[i]);
+        HookLog(@"ivar %@ = %@", name, value ? NSStringFromClass([value class]) : @"nil");
+
+        if ([value isKindOfClass:[NSArray class]] &&
+            [name rangeOfString:@"widget" options:NSCaseInsensitiveSearch].location != NSNotFound) {
+            found = value;
+        }
+    }
+    free(ivars);
+    return found;
 }
 
 static void ApplyTransparentFlags(NSArray *descriptors)
 {
+    HookLog(@"applying to %lu descriptor(s)", (unsigned long)descriptors.count);
     for (id descriptor in descriptors) {
-        if (!DidDumpDescriptorShape) {
-            DidDumpDescriptorShape = YES;
-            HookLog(@"descriptor shape: %@", DescribeDescriptor(descriptor));
-            HookLog(@"responds background=%@ transparent=%@ style=%@",
-                    [descriptor respondsToSelector:@selector(setBackgroundRemovable:)] ? @"yes" : @"no",
-                    [descriptor respondsToSelector:@selector(setTransparent:)] ? @"yes" : @"no",
-                    [descriptor respondsToSelector:@selector(setPreferredBackgroundStyle:)] ? @"yes" : @"no");
-        }
+        Class cls = object_getClass(descriptor);
+        BOOL background = [descriptor respondsToSelector:@selector(setBackgroundRemovable:)];
+        BOOL transparent = [descriptor respondsToSelector:@selector(setTransparent:)];
+        BOOL style = [descriptor respondsToSelector:@selector(setPreferredBackgroundStyle:)];
+        HookLog(@"descriptor %s background=%@ transparent=%@ style=%@",
+                class_getName(cls),
+                background ? @"y" : @"n", transparent ? @"y" : @"n", style ? @"y" : @"n");
 
         @try {
-            if ([descriptor respondsToSelector:@selector(setBackgroundRemovable:)]) {
-                [descriptor setBackgroundRemovable:YES];
-            }
-            if ([descriptor respondsToSelector:@selector(setTransparent:)]) {
-                [descriptor setTransparent:YES];
-            }
-            if ([descriptor respondsToSelector:@selector(setPreferredBackgroundStyle:)]) {
-                [descriptor setPreferredBackgroundStyle:kClearBackgroundStyle];
-            }
+            if (background) { [descriptor setBackgroundRemovable:YES]; }
+            if (transparent) { [descriptor setTransparent:YES]; }
+            if (style) { [descriptor setPreferredBackgroundStyle:kClearBackgroundStyle]; }
         } @catch (NSException *exception) {
             HookLog(@"mutation threw: %@", exception.reason);
         }
@@ -137,19 +156,23 @@ static void ApplyTransparentFlags(NSArray *descriptors)
 
 static void HookedGetAllDescriptors(id self, SEL _cmd, DescriptorsCompletion completion)
 {
-    HookLog(@"descriptor fetch called");
     OriginalGetAllDescriptors(self, _cmd, ^(id result) {
         @try {
-            NSArray *descriptors = nil;
-            if ([result respondsToSelector:@selector(widgetDescriptors)]) {
-                descriptors = [result widgetDescriptors];
-            } else {
-                descriptors = [result valueForKey:@"widgetDescriptors"];
+            Class cls = object_getClass(result);
+            if (!DidDumpShape) {
+                DidDumpShape = YES;
+                HookLog(@"result class %s", class_getName(cls));
+                HookLog(@"result ivars: %@", DescribeIvars(cls));
+                HookLog(@"result descriptor API: %@", DescribeDescriptorsAPI(cls));
             }
-            HookLog(@"fetch returned %lu descriptor(s)", (unsigned long)descriptors.count);
-            ApplyTransparentFlags(descriptors);
+            NSArray *descriptors = DescriptorsFromResult(result);
+            if (descriptors.count == 0) {
+                HookLog(@"no widget descriptors found");
+            } else {
+                ApplyTransparentFlags(descriptors);
+            }
         } @catch (NSException *exception) {
-            HookLog(@"fetch inspection threw: %@", exception.reason);
+            HookLog(@"inspection threw: %@", exception.reason);
         }
         completion(result);
     });
@@ -162,19 +185,17 @@ __attribute__((constructor)) static void InstallWidgetDescriptorHook(void)
         HookLog(@"install: XPC server class not found");
         return;
     }
-
     SEL selector = NSSelectorFromString(@"getAllCurrentDescriptorsWithCompletion:");
     Method method = class_getInstanceMethod(server, selector);
     if (method == NULL) {
-        HookLog(@"install: %s not found on %s", sel_getName(selector), class_getName(server));
+        HookLog(@"install: selector not found");
         return;
     }
-
     OriginalGetAllDescriptors = (GetAllDescriptorsIMP)method_getImplementation(method);
     if (OriginalGetAllDescriptors == NULL) {
         HookLog(@"install: original implementation was NULL");
         return;
     }
     method_setImplementation(method, (IMP)HookedGetAllDescriptors);
-    HookLog(@"install: hooked %s", class_getName(server));
+    HookLog(@"install: hooked");
 }
