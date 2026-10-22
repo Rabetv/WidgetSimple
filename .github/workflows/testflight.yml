@@ -219,7 +219,7 @@ jobs:
               sleep 120
               continue
             fi
-            if grep -qi "no suitable application records" "$log"; then
+            if grep -Eqi "no suitable application records|Cannot determine the Apple ID" "$log"; then
               echo "::error::App Store Connect has no app with bundle ID $APP_ID yet. Create it: App Store Connect › Apps › + › New App, bundle ID $APP_ID."
             fi
             echo "::error::app-store-connect publish failed"
