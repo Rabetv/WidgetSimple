@@ -423,6 +423,9 @@ struct WidgetPreviewCard: View {
     let look: Look
     let clock: ClockOption
     let size: FaceSize
+    /// True for template thumbnails: a neutral panel instead of the app wallpaper, so
+    /// six cards do not all show the same picture.
+    var plainBackdrop = false
 
     var body: some View {
         TimelineView(.everyMinute) { context in
