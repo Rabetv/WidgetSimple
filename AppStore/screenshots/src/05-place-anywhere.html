@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>05-place-anywhere</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;width:1320px;height:2868px;overflow:hidden;position:relative;font-family:Inter,-apple-system,sans-serif;color:#fff;
+ background:radial-gradient(70% 38% at 50% 64%,rgba(214,120,70,.30) 0%,rgba(214,120,70,0) 70%),radial-gradient(60% 25% at 50% 0%,rgba(255,199,102,.10) 0%,rgba(255,199,102,0) 70%),#120c09}
+.head{position:absolute;top:150px;left:0;right:0;text-align:center;padding:0 70px;z-index:6}
+h1{font-size:128px;line-height:1.02;font-weight:800;letter-spacing:-3.5px;margin:0}
+h1 em{font-style:normal;background:linear-gradient(90deg,#FFD58A,#FFB45C);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:50px;line-height:1.25;margin:30px 0 0;color:rgba(255,255,255,.78);font-weight:500}
+.ribbon{position:absolute;inset:0;z-index:1;pointer-events:none}
+.phone{position:absolute;width:1010px;height:2230px;border-radius:150px;background:#0b0b0d;padding:22px;z-index:2;
+ box-shadow:0 80px 160px rgba(0,0,0,.65),0 0 0 2px rgba(255,255,255,.08),inset 0 0 0 4px #3b3a3f}
+.screen{width:966px;height:2186px;border-radius:130px;overflow:hidden;position:relative;background:url(../../../WidgetSimple/Assets.xcassets/AppBackground.imageset/AppBackground.svg) center/cover}
+.inner{width:390px;height:883px;transform:scale(2.477);transform-origin:0 0;position:relative}
+.island{position:absolute;top:11px;left:50%;margin-left:-62px;width:124px;height:36px;border-radius:18px;background:#000;z-index:5}
+.time{position:absolute;top:17px;left:42px;font-size:16px;font-weight:600;z-index:5}
+.g{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 8px 24px rgba(0,0,0,.2);-webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6)}
+.row{background:rgba(255,255,255,.10);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+.w{font-weight:600;line-height:1.28;text-shadow:0 1px 6px rgba(0,0,0,.35)}
+.muted{color:rgba(255,255,255,.75)}
+.icon{width:62px;height:62px;border-radius:15px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.25)}
+.dock{position:absolute;left:12px;right:12px;bottom:14px;height:94px;border-radius:34px;display:flex;justify-content:space-around;align-items:center}
+.seg{display:grid;gap:2px;padding:2px;border-radius:9px;background:rgba(255,255,255,.12);font-size:13px;font-weight:600;text-align:center}
+.seg span{padding:6px 0;border-radius:7px}
+.seg .on{background:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.hdr{font-size:13px;color:rgba(255,255,255,.7);text-transform:uppercase;margin:18px 0 7px 16px}
+.list{border-radius:24px;overflow:hidden}
+.li{display:flex;justify-content:space-between;align-items:center;min-height:46px;padding:0 16px;font-size:17px;border-bottom:.5px solid rgba(255,255,255,.14)}
+.li:last-child{border-bottom:0}
+.tabbar{position:absolute;left:18px;right:18px;bottom:26px;height:62px;border-radius:31px;display:grid;grid-template-columns:repeat(3,1fr);align-items:center;padding:0 6px;font-size:10px;font-weight:600;text-align:center}
+.tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px;height:52px;justify-content:center;border-radius:26px}
+.tabbar .on{background:rgba(255,255,255,.18);color:#FFC766}
+.pill{position:absolute;z-index:8;padding:24px 40px;border-radius:999px;font-size:44px;font-weight:700;white-space:nowrap;box-shadow:0 20px 44px rgba(0,0,0,.5)}
+.pill.amber{background:linear-gradient(180deg,#FFD58A,#FFBE5C);color:#1A1306}
+.pill.glass{background:rgba(255,255,255,.14);color:#fff;border:2px solid rgba(255,255,255,.32);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
+.badges{position:absolute;left:0;right:0;display:flex;justify-content:center;gap:22px;z-index:8}
+.badges span{padding:20px 34px;border-radius:999px;font-size:38px;font-weight:700;background:rgba(255,255,255,.10);border:2px solid rgba(255,255,255,.22);color:#fff}
+.badges span b{color:#FFC766}
+.panel{position:absolute;border-radius:96px;overflow:hidden;background:url(../../../WidgetSimple/Assets.xcassets/AppBackground.imageset/AppBackground.svg) center/cover;z-index:2;box-shadow:0 80px 160px rgba(0,0,0,.6),inset 0 0 0 3px rgba(255,255,255,.12)}
+.card{position:absolute;z-index:7;border-radius:64px;overflow:hidden;background:url(../../../WidgetSimple/Assets.xcassets/AppBackground.imageset/AppBackground.svg) center/cover;box-shadow:0 40px 90px rgba(0,0,0,.6),inset 0 0 0 3px rgba(255,255,255,.18)}
+.ripple{position:absolute;border-radius:50%;border:3px solid rgba(255,255,255,.9);background:rgba(255,255,255,.16);box-shadow:0 0 0 22px rgba(255,255,255,.10),0 0 0 48px rgba(255,255,255,.05)}
+</style></head><body>
+<svg class="ribbon" width="1320" height="2868" viewBox="0 0 1320 2868"><defs><linearGradient id="rb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD58A"/><stop offset="1" stop-color="#D9783E"/></linearGradient></defs><path d="M640 560 C 760 760, 300 860, 380 1040" fill="none" stroke="url(#rb)" stroke-width="14" stroke-linecap="round" opacity=".95"/><path d="M1260 1500 C 1350 1640, 1100 1660, 1150 1750" fill="none" stroke="url(#rb)" stroke-width="12" stroke-linecap="round" opacity=".95"/></svg>
+<div class="head"><h1>Put words<br><em>anywhere.</em></h1><p class="sub">Free placement, word by word.</p></div>
+<div class="phone" style="left:155px;top:820px;transform:rotate(0deg)"><div class="screen"><div class="inner"><div class="island"></div><div class="time">9:41</div>
+<div style="position:absolute;top:66px;left:22px;right:22px;display:flex;flex-direction:column;gap:22px">
+<div class="g" style="width:346px;height:346px;border-radius:24px;position:relative">
+<span class="w" style="position:absolute;left:20px;top:18px;font-size:19px">Messages</span>
+<span class="w" style="position:absolute;right:20px;top:18px;font-size:19px">Camera</span>
+<span class="w" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:19px;color:#FFC766">Notes</span>
+<span class="w" style="position:absolute;left:20px;bottom:18px;font-size:19px">Maps</span>
+<span style="position:absolute;right:20px;bottom:12px;font-size:56px;font-weight:200;letter-spacing:-2px">9:41</span>
+</div><div style="display:flex;justify-content:space-between;padding:0 4px"><div class="icon"></div><div class="icon"></div><div class="icon"></div><div class="icon"></div></div><div style="display:flex;justify-content:space-between;padding:0 4px"><div class="icon"></div><div class="icon"></div><div class="icon"></div><div class="icon"></div></div></div><div class="dock g"><div class="icon"></div><div class="icon"></div><div class="icon"></div><div class="icon"></div></div></div></div></div><div class="pill amber" style="left:60px;top:1060px">Each word on its own</div><div class="pill glass" style="left:760px;top:1980px">Clock anywhere</div>
+</body></html>

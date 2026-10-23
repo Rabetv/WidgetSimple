@@ -143,8 +143,8 @@ enum StoreConfig {
     static let productID = "com.rabetv.widgetsimple.pro.yearly"
     /// Required on the paywall for auto-renewable subscriptions (3.1.2).
     static let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
-    /// Must be a public page before submission; the text is in AppStore/privacy.md.
-    static let privacyURL = URL(string: "https://YOUR-PRIVACY-PAGE.example/widgetsimple/privacy")!
+    /// Hosted from the public Rabetv/widgetsimple-site repository (GitHub Pages).
+    static let privacyURL = URL(string: "https://rabetv.github.io/widgetsimple-site/privacy.html")!
 }
 
 /// Unlocks the editor while the yearly subscription is active. StoreKit 2 keeps the
