@@ -1,3 +1,4 @@
+import PhotosUI
 import StoreKit
 import SwiftUI
 import UIKit
@@ -61,10 +62,17 @@ private struct MainTabs: View {
 struct EditorView: View {
     @EnvironmentObject private var model: AppModel
     @State private var previewSize: FaceSize = .medium
+    @State private var pickingWallpaper = false
+    @State private var pickingPink = false
+    @State private var wallpaperItem: PhotosPickerItem?
+    @State private var pinkItem: PhotosPickerItem?
 
     var body: some View {
         Form {
             previewSection
+            #if APPSTORE
+            seeThroughSection.listRowBackground(GlassRowBackground())
+            #endif
             appsSection.listRowBackground(GlassRowBackground())
             clockSection.listRowBackground(GlassRowBackground())
             styleSection.listRowBackground(GlassRowBackground())
@@ -72,7 +80,67 @@ struct EditorView: View {
         .glassList()
         .navigationTitle("Launcher")
         .navigationBarTitleDisplayMode(.inline)
+        .photosPicker(isPresented: $pickingWallpaper, selection: $wallpaperItem, matching: .screenshots)
+        .photosPicker(isPresented: $pickingPink, selection: $pinkItem, matching: .screenshots)
+        .onChange(of: wallpaperItem) { _, item in
+            guard let item else { return }
+            wallpaperItem = nil
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+                await model.useWallpaper(data)
+            }
+        }
+        .onChange(of: pinkItem) { _, item in
+            guard let item else { return }
+            pinkItem = nil
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+                await model.usePinkScreenshot(data)
+            }
+        }
     }
+
+    #if APPSTORE
+    /// Matched wallpaper: two screenshots, once. Public API only, and a widget without
+    /// a match keeps the system background instead of showing a wrong piece.
+    private var seeThroughSection: some View {
+        Section {
+            Button {
+                pickingWallpaper = true
+            } label: {
+                Label(model.seeThrough.hasWallpaper ? "New wallpaper screenshot" : "Pick a wallpaper screenshot",
+                      systemImage: "photo")
+            }
+
+            if model.seeThrough.finding {
+                Button {
+                    pickingPink = true
+                } label: {
+                    Label("Pick the pink screenshot", systemImage: "camera.viewfinder")
+                }
+                Button("Cancel", role: .cancel) { model.stopFinding() }
+            } else {
+                Button {
+                    model.startFinding()
+                } label: {
+                    Label("Match my widgets", systemImage: "viewfinder")
+                }
+            }
+
+            if model.working {
+                ProgressView()
+            } else if !model.seeThrough.spots.isEmpty {
+                Label("\(model.seeThrough.spots.count) widget\(model.seeThrough.spots.count == 1 ? "" : "s") matched",
+                      systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            }
+        } header: {
+            Text("See-through")
+        } footer: {
+            Text("Two screenshots, once. Redo it only if you change the wallpaper or move a widget — a widget with no match keeps the system background.")
+        }
+    }
+    #endif
 
     // MARK: Sections
 

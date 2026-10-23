@@ -53,7 +53,7 @@ jobs:
         if: matrix.flavour == 'appstore'
         run: |
           set -o pipefail
-          Scripts/audit-appstore.sh DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app 2>&1 | tee audit.log
+          bash Scripts/audit-appstore.sh DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app 2>&1 | tee audit.log
           { echo '### App Store audit'; echo '```'; cat audit.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       # Control: the hook build must contain what the audit looks for, otherwise a
