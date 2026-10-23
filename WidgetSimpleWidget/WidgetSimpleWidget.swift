@@ -41,6 +41,10 @@ struct LauncherEntry: TimelineEntry {
     let apps: [SystemShortcut]
     /// The words shown; sample names in the widget gallery.
     let names: [String]
+    /// Matched wallpaper piece (App Store flavour). nil keeps the system background.
+    var background: UIImage? = nil
+    /// Set while the app is finding the widgets: show this key on pink.
+    var findingKey: Int? = nil
 
     static func sample(look: Look) -> LauncherEntry {
         LauncherEntry(date: .now, look: look, clock: .time, apps: [],
@@ -61,6 +65,10 @@ struct LauncherProvider: AppIntentTimelineProvider {
     }
 
     func timeline(for configuration: DirectLauncherIntent, in context: Context) async -> Timeline<LauncherEntry> {
+        // The real on-screen size helps the app cut the right piece of wallpaper.
+        if let family = SpotFamily(context.family) {
+            SharedStore.shared.recordSize(context.displaySize, for: family)
+        }
         let entry = makeEntry(for: configuration, in: context)
         // Without a clock nothing changes on its own: the app and Edit Widget reload it.
         guard entry.clock != .off else { return Timeline(entries: [entry], policy: .never) }
@@ -83,8 +91,23 @@ struct LauncherProvider: AppIntentTimelineProvider {
             return .sample(look: look)
         }
         let names = apps.map { String(localized: $0.displayRepresentation.title) }
-        return LauncherEntry(date: .now, look: look, clock: SharedStore.shared.loadClock(),
-                             apps: apps, names: names)
+        let clock = SharedStore.shared.loadClock()
+        var entry = LauncherEntry(date: .now, look: look, clock: clock, apps: apps, names: names)
+        #if APPSTORE
+        // Public-API see-through: draw the piece of wallpaper behind this widget.
+        // No match (never set up, wallpaper changed, widget moved) means the system
+        // background — never a wrong piece.
+        if !context.isPreview, let family = SpotFamily(context.family) {
+            let key = SpotKey.make(family: family, clock: clock, apps: names)
+            let state = SharedStore.shared.loadSeeThrough()
+            if state.finding {
+                entry.findingKey = key
+            } else {
+                entry.background = SharedStore.shared.spotImage(key: key, state: state)
+            }
+        }
+        #endif
+        return entry
     }
 }
 
@@ -150,6 +173,32 @@ struct LauncherWidgetView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
+        Group {
+            if let key = entry.findingKey {
+                // The app is looking for the widgets: pink with a code it can read.
+                SpotCode(key: key)
+                    .containerBackground(for: .widget) { SpotCode.marker }
+            } else {
+                face
+                    .containerBackground(for: .widget) {
+                        if let background = entry.background {
+                            Image(uiImage: background)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            // No match yet: the system background, never a wrong piece.
+                            Color.clear
+                        }
+                    }
+            }
+        }
+        #if !APPSTORE
+        .overlay { GlassProbe().frame(width: 0, height: 0) }
+        #endif
+    }
+
+    /// The words, with one button per app.
+    private var face: some View {
         LauncherFace(look: entry.look, clock: entry.clock, date: entry.date, size: size,
                      apps: entry.names, color: color, hint: "Hold here › Edit Widget › pick apps") { index, name in
             if index < entry.apps.count {
@@ -161,9 +210,6 @@ struct LauncherWidgetView: View {
                 name
             }
         }
-        // Nothing behind the words: the widget is see-through, the wallpaper shows.
-        .containerBackground(for: .widget) { Color.clear }
-        .overlay { GlassProbe().frame(width: 0, height: 0) }
     }
 
     /// The chosen colour; white when a Clear or Tinted Home Screen tints the widget.
