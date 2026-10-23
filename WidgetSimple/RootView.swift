@@ -232,12 +232,37 @@ private struct WordPlacementView: View {
 private struct AccountView: View {
     @ObservedObject var license: LicenseStore
     @Environment(\.openURL) private var openURL
+    @State private var viewLog = ""
 
     var body: some View {
         List {
             Section("Subscription") {
                 Button("Manage subscription") { openURL(license.manageSubscription()) }
                 Button("Sign out on this iPhone", role: .destructive) { license.signOut() }
+            }
+            Section {
+                DisclosureGroup("Widget view log") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(viewLog)
+                            .font(.caption2.monospaced())
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack {
+                            Button("Refresh") { viewLog = SharedStore.shared.loadViewLog() }
+                            Button("Clear", role: .destructive) {
+                                SharedStore.shared.clearViewLog()
+                                viewLog = ""
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .font(.caption)
+                    }
+                    .padding(.top, 6)
+                }
+            } header: {
+                Text("Diagnostics")
+            } footer: {
+                Text("What the widget's view hierarchy looked like. Used to find out which layer draws the glass border.")
             }
             Section {
                 LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
@@ -248,6 +273,7 @@ private struct AccountView: View {
             }
         }
         .navigationTitle("Account")
+        .task { viewLog = SharedStore.shared.loadViewLog() }
     }
 }
 
