@@ -12,7 +12,7 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            #if DEBUG
+            #if targetEnvironment(simulator)
             if ProcessInfo.processInfo.arguments.contains("-screenshot") {
                 // Simulator screenshot runs: skip onboarding and the paywall and show the
                 // real editor, which renders the actual widget preview. Debug builds only.
