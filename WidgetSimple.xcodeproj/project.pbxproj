@@ -391,7 +391,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WidgetSimpleWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WidgetSimple;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(HOME_SCREEN_NAME)";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -417,7 +417,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WidgetSimpleWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WidgetSimple;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(HOME_SCREEN_NAME)";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
