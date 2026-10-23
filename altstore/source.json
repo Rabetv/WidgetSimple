@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "WidgetSimple",
   "subtitle": "Apps as words, see-through",
   "description": "Transparent text widgets for the iPhone Home Screen. Your apps as words, tap one to open it.\n\nAdd the source, install WidgetSimple with AltStore, then add the widget from the Home Screen.",
@@ -14,7 +14,7 @@
       "bundleIdentifier": "com.rabetv.widgetsimple",
       "developerName": "Rabetv",
       "subtitle": "Apps as words on a see-through widget",
-      "localizedDescription": "Your apps as plain words on the Home Screen, in widgets that are fully transparent — no glass, no frames, no wallpaper screenshots.\n\n• Up to 12 apps per widget, a tap opens the app\n• Clock: off, time, time and date, date\n• Font, size, colour, case, shadow, spacing\n• Stacked layout, or free placement with per-word positions\n• Every widget follows the look you set in the app\n\nRequires iOS 27 and a €1/year licence.",
+      "localizedDescription": "Your apps as plain words on the Home Screen, in widgets that are fully transparent â€” no glass, no frames, no wallpaper screenshots.\n\nâ€¢ Up to 12 apps per widget, a tap opens the app\nâ€¢ Clock: off, time, time and date, date\nâ€¢ Font, size, colour, case, shadow, spacing\nâ€¢ Stacked layout, or free placement with per-word positions\nâ€¢ Every widget follows the look you set in the app\n\nRequires iOS 27 and a â‚¬1/year licence.",
       "iconURL": "https://raw.githubusercontent.com/Rabetv/WidgetSimple-dist/main/icon.png",
       "tintColor": "#F5A623",
       "category": "utilities",
@@ -24,7 +24,7 @@
           "version": "1.0",
           "date": "2026-10-23",
           "downloadURL": "https://github.com/Rabetv/WidgetSimple-dist/releases/download/v1.0/WidgetSimple.ipa",
-          "size": 0,
+          "size": 303048,
           "minOSVersion": "27.0"
         }
       ],
