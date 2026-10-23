@@ -2,8 +2,27 @@ import SwiftUI
 import WidgetKit
 
 /// Widget size, as far as the layout cares.
-enum FaceSize {
+enum FaceSize: String, CaseIterable, Identifiable {
     case small, medium, large
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .small: return "Small"
+        case .medium: return "Medium"
+        case .large: return "Large"
+        }
+    }
+
+    /// Width ÷ height of the widget on the Home Screen.
+    var aspectRatio: CGFloat {
+        switch self {
+        case .small: return 158.0 / 158.0
+        case .medium: return 338.0 / 158.0
+        case .large: return 338.0 / 354.0
+        }
+    }
 }
 
 /// What a widget shows: an optional clock and the app names, text only. Shared by the
