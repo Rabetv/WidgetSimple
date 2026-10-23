@@ -1,8 +1,12 @@
+﻿#if !APPSTORE
+// Excluded from App Store builds: xcodebuild gets GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1
+// there, so the widget keeps the system container and contains no private API.
+
 // Ask the system to draw our widget without its glass container.
 //
 // The extension cannot reach the host's layers, but it hands Chrono one descriptor
 // per widget, and the host renders from that descriptor. Flipping its private flags
-// — background removable, transparent, clear style — is the only channel from
+// â€” background removable, transparent, clear style â€” is the only channel from
 // inside the extension that changes how the Home Screen draws the container.
 //
 // PRIVATE API. Internal TestFlight only. App Store review rejects this under
@@ -20,7 +24,7 @@
 // mutate the descriptors as ordinary Objective-C objects there, encode the shim and
 // let `DescriptorFetchResult.init(coder:)` rebuild itself from those bytes. Any
 // failure falls back to the original object, so the widget can only ever be as
-// broken as before — never worse.
+// broken as before â€” never worse.
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
@@ -359,3 +363,5 @@ __attribute__((constructor)) static void InstallWidgetDescriptorHook(void)
     method_setImplementation(method, (IMP)HookedGetAllDescriptors);
     HookLog(@"install: hooked");
 }
+
+#endif

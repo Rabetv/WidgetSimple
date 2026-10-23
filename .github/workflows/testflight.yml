@@ -21,6 +21,11 @@ on:
         description: "Build number (leave empty to use the run number)"
         required: false
         default: ""
+      flavour:
+        description: "hook = AltStore/TestFlight build (private API); appstore = review build (no private API, visible name)"
+        type: choice
+        options: [hook, appstore]
+        default: hook
 
 concurrency:
   group: testflight
@@ -159,11 +164,17 @@ jobs:
         env:
           BUILD_INPUT: ${{ github.event.inputs.build_number }}
           RUN_NUMBER: ${{ github.run_number }}
+          FLAVOUR: ${{ inputs.flavour || 'hook' }}
         run: |
           set -euo pipefail
           BUILD="${BUILD_INPUT:-$RUN_NUMBER}"
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
-          echo "Archiving build $BUILD"
+          echo "Archiving build $BUILD ($FLAVOUR)"
+          EXTRA=()
+          if [ "$FLAVOUR" = "appstore" ]; then
+            # App Review build: no private API, and a visible name under the icon (2.3.8).
+            EXTRA=(HOME_SCREEN_NAME=WidgetSimple GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1)
+          fi
           xcodebuild -quiet \
             -project WidgetSimple.xcodeproj -scheme WidgetSimple -configuration Release \
             -destination 'generic/platform=iOS' \
@@ -175,6 +186,7 @@ jobs:
             WIDGET_PROFILE_SPECIFIER="$WIDGET_PROFILE" \
             OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
             CURRENT_PROJECT_VERSION="$BUILD" \
+            "${EXTRA[@]}" \
             archive
 
       - name: Export ipa
