@@ -91,6 +91,10 @@ struct LauncherProvider: AppIntentTimelineProvider {
             return .sample(look: look)
         }
         let names = apps.map { String(localized: $0.displayRepresentation.title) }
+        #if TESTFLIGHT
+        // Tells us whether a blank widget lost its intent or only its contrast.
+        WidgetLog.write("entry family=\(context.family) apps=\(apps.count) titles=\(names.map(\.count))")
+        #endif
         let clock = SharedStore.shared.loadClock()
         var entry = LauncherEntry(date: .now, look: look, clock: clock, apps: apps, names: names)
         #if APPSTORE
@@ -239,6 +243,11 @@ struct LauncherWidgetView: View {
                 name
             }
         }
+        // Accented rendering tints every word white. Without the system glass behind it
+        // (the hook removed it) a white word on a light wallpaper is invisible, so keep
+        // a shadow under the text in every non-full-colour context.
+        .shadow(color: renderingMode == .fullColor ? .clear : .black.opacity(0.55),
+                radius: 4, x: 0, y: 1)
     }
 
     /// The chosen colour; white when a Clear or Tinted Home Screen tints the widget.
