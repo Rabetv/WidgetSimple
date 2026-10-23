@@ -21,11 +21,6 @@ on:
         description: "Build number (leave empty to use the run number)"
         required: false
         default: ""
-      flavour:
-        description: "appstore = StoreKit paywall; both builds include the descriptor hook. The invisible name stays."
-        type: choice
-        options: [hook, appstore]
-        default: hook
 
 concurrency:
   group: testflight
@@ -164,19 +159,12 @@ jobs:
         env:
           BUILD_INPUT: ${{ github.event.inputs.build_number }}
           RUN_NUMBER: ${{ github.run_number }}
-          FLAVOUR: ${{ inputs.flavour || 'hook' }}
         run: |
           set -euo pipefail
           BUILD="${BUILD_INPUT:-$RUN_NUMBER}"
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
-          echo "Archiving build $BUILD ($FLAVOUR)"
-          EXTRA=()
-          if [ "$FLAVOUR" = "appstore" ]; then
-            # App Review build: no private API, and a visible name under the icon (2.3.8).
-            # Swift reads SWIFT_ACTIVE_COMPILATION_CONDITIONS (StoreKit paywall), the
-            # Objective-C hook reads GCC_PREPROCESSOR_DEFINITIONS; both are needed.
-            EXTRA=(GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1 SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE)
-          fi
+          echo "Archiving App Store build $BUILD"
+          EXTRA=(GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1 SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE)
           xcodebuild -quiet \
             -project WidgetSimple.xcodeproj -scheme WidgetSimple -configuration Release \
             -destination 'generic/platform=iOS' \
@@ -195,7 +183,6 @@ jobs:
       # sources, must be free of the hook.
       - name: "Audit App Store archive (report only: the hook is included)"
         continue-on-error: true
-        if: ${{ inputs.flavour == 'appstore' }}
         run: |
           set -o pipefail
           Scripts/audit-appstore.sh "$RUNNER_TEMP/WidgetSimple.xcarchive/Products/Applications/WidgetSimple.app" 2>&1 | tee "$RUNNER_TEMP/audit.log"
