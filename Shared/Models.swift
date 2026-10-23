@@ -148,6 +148,24 @@ enum TextTone: String, Codable, CaseIterable, Identifiable {
 
 /// How every widget looks. Set in the app and shared with the widget through the App
 /// Group, so every widget on the Home Screen keeps the same look.
+/// What sits behind the words.
+///  * `glass` — the system container, free;
+///  * `photo` — a picture the person picked, free;
+///  * `clear` — the container removed entirely, the paid unlock.
+enum WidgetBackground: String, Codable, CaseIterable, Identifiable {
+    case glass, photo, clear
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .glass: return String(localized: "Glass")
+        case .photo: return String(localized: "Photo")
+        case .clear: return String(localized: "Clear")
+        }
+    }
+
+}
 struct Look: Codable, Hashable {
     var tone: TextTone = .white
     var customHex: String = "#FFFFFF"
@@ -176,6 +194,8 @@ struct Look: Codable, Hashable {
     var perWordPlacement: Bool = false
     /// Per-word anchors, keyed by word slot ("0" … "11"); missing slots use appsPosition.
     var wordAnchors: [String: WidgetPosition] = [:]
+    /// Glass, a photo, or the paid clear background.
+    var background: WidgetBackground = .glass
 
     init() {}
 
@@ -183,7 +203,7 @@ struct Look: Codable, Hashable {
         case tone, customHex, fontID, size, align, vAlign, letterCase, shadow, spacing
         case arrangement, clockPosition, appsPosition
         case clockDX, clockDY, appsDX, appsDY
-        case perWordPlacement, wordAnchors
+        case perWordPlacement, wordAnchors, background
     }
 
     /// The key an old look stored the size under; decode only, never encoded.
@@ -209,6 +229,7 @@ struct Look: Codable, Hashable {
         appsDY = try c.decodeIfPresent(Double.self, forKey: .appsDY) ?? d.appsDY
         perWordPlacement = try c.decodeIfPresent(Bool.self, forKey: .perWordPlacement) ?? d.perWordPlacement
         wordAnchors = (try? c.decodeIfPresent([String: WidgetPosition].self, forKey: .wordAnchors)) ?? d.wordAnchors
+        background = (try? c.decodeIfPresent(WidgetBackground.self, forKey: .background)) ?? d.background
 
         if let legacy = try? decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent(TextSize.self, forKey: .textSize) {
             size = legacy.points // old small/medium/big values

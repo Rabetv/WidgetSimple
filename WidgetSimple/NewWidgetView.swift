@@ -103,18 +103,6 @@ struct NewWidgetView: View {
                                 }
                         }
                     Spacer(minLength: 0)
-                    if type.pro {
-                        Text("PRO")
-                            .font(.system(size: 10, weight: .bold))
-                            .tracking(0.4)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background {
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color(hex: "#FFC766").opacity(0.22))
-                            }
-                            .foregroundStyle(Color(hex: "#FFC766"))
-                    }
                 }
                 Text(type.name)
                     .font(.system(size: 15, weight: .semibold))
