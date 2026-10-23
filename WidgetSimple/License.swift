@@ -145,6 +145,7 @@ enum StoreConfig {
     static let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
     /// Hosted from the public Rabetv/widgetsimple-site repository (GitHub Pages).
     static let privacyURL = URL(string: "https://rabetv.github.io/widgetsimple-site/privacy.html")!
+    static let supportURL = URL(string: "https://rabetv.github.io/widgetsimple-site/")!
 }
 
 /// Unlocks the editor while the yearly subscription is active. StoreKit 2 keeps the
