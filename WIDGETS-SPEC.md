@@ -1,5 +1,10 @@
 # Widget-side spec (for the widget owner)
 
+> **Shipped so far:** Launcher, Text, Countdown, World Clock, Spacer (WidgetSimpleWidget/ExtraWidgets.swift).
+> Remaining: Clock styles, Word Clock, Photo, Calendar, Reminders, Weather, Greeting, Music,
+> Battery, Dashboard, Controls. Calendar/Reminders need EventKit prompts, Weather needs
+> WeatherKit, Photo needs storage in the App Group, Music needs MusicKit.
+
 The app side of the glass redesign is on branch `app-glass-redesign`. Everything below
 lives in the widget extension (`WidgetSimpleWidget/`, `Shared/LauncherFace.swift`), which
 the app-side work does not touch. The approved design is the Claude Design canvas
