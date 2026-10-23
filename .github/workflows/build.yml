@@ -39,7 +39,7 @@ jobs:
 
       # The hook is part of the product, so this reports what is in the binary instead
       # of failing the build. It prints every private symbol it finds.
-      - name: Audit (report only: the hook is included)
+      - name: "Audit (report only: the hook is included)"
         continue-on-error: true
         run: |
           set -o pipefail
