@@ -1,7 +1,6 @@
-﻿import SwiftUI
+import SwiftUI
 import WidgetKit
 
-/// Widget size, as far as the layout cares.
 /// Widget size, as far as the layout cares.
 enum FaceSize: String, CaseIterable, Identifiable {
     case small, medium, large
@@ -30,9 +29,11 @@ enum FaceSize: String, CaseIterable, Identifiable {
 /// widget and the in-app preview, so the preview is exactly what lands on the Home Screen.
 ///
 /// Two arrangements:
-///  * `.stacked` â€” clock above the apps (side by side on a medium widget);
-///  * `.free` â€” the clock and the apps each sit wherever their position says.
-/// `cell` wraps each name; the widget turns it into a button that opens the app.
+///  * `.stacked` — clock above the apps, and the words flow into more columns as needed;
+///  * `.free` — the clock and the apps each sit wherever their position says.
+///
+/// Nothing is ever drawn outside the widget: the layout degrades (more columns, clock
+/// beside the words) until it fits, and the result is clipped as a last resort.
 struct LauncherFace<Cell: View>: View {
     let look: Look
     let clock: ClockOption
@@ -47,6 +48,7 @@ struct LauncherFace<Cell: View>: View {
 
     private var align: HorizontalAlignment { look.align.horizontal }
     private var edgePadding: CGFloat { size == .small ? 16 : 20 }
+    private var isEmpty: Bool { apps.isEmpty && clock == .off }
 
     var body: some View {
         Group {
@@ -58,15 +60,70 @@ struct LauncherFace<Cell: View>: View {
         .foregroundStyle(color)
         .textCase(look.letterCase.textCase)
         .shadow(color: look.shadow ? Color.black.opacity(0.45) : .clear, radius: 6, x: 0, y: 3)
+        // Belt and braces: whatever the layout does, no glyph may leave the widget.
+        .clipped()
     }
 
-    // MARK: Arrangements
+    // MARK: Stacked
 
+    /// Tries the layouts in order of preference and keeps the first one that fits the
+    /// widget's height: clock above with growing column counts, then clock beside.
     private var stacked: some View {
-        content
-            .padding(edgePadding)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.alignment)
+        Group {
+            if isEmpty {
+                hintText
+            } else {
+                candidateLayouts
+            }
+        }
+        .padding(edgePadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.alignment)
     }
+
+    @ViewBuilder
+    private var candidateLayouts: some View {
+        ViewThatFits(in: .vertical) {
+            if size == .medium, clock != .off {
+                // A medium widget is wide and short: side by side fits best.
+                layout(clockBeside: true, columns: 2)
+                layout(clockBeside: true, columns: 3)
+                layout(clockBeside: true, columns: 4)
+                layout(clockBeside: false, columns: 2)
+                layout(clockBeside: false, columns: 3)
+                layout(clockBeside: false, columns: 1)
+            } else {
+                layout(clockBeside: false, columns: 1)
+                layout(clockBeside: false, columns: 2)
+                layout(clockBeside: false, columns: 3)
+                layout(clockBeside: false, columns: 4)
+                layout(clockBeside: true, columns: 2)
+                layout(clockBeside: true, columns: 3)
+                layout(clockBeside: true, columns: 4)
+            }
+        }
+    }
+
+    /// One candidate: the clock above or beside the words, in `columns` columns.
+    @ViewBuilder
+    private func layout(clockBeside: Bool, columns count: Int) -> some View {
+        if clockBeside, clock != .off {
+            HStack(alignment: .top, spacing: 16) {
+                ClockText(date: date, option: clock, look: look, size: size)
+                if !apps.isEmpty { appColumns(count) }
+            }
+        } else {
+            VStack(alignment: align, spacing: look.size * 0.8 * look.spacing) {
+                if clock != .off {
+                    ClockText(date: date, option: clock, look: look, size: size)
+                }
+                if !apps.isEmpty {
+                    appColumns(count)
+                }
+            }
+        }
+    }
+
+    // MARK: Free
 
     private var free: some View {
         ZStack {
@@ -86,11 +143,8 @@ struct LauncherFace<Cell: View>: View {
                         .offset(x: look.appsDX, y: look.appsDY)
                 }
             }
-            if apps.isEmpty && clock == .off {
-                Text(hint)
-                    .font(.system(size: 14, weight: .medium))
-                    .multilineTextAlignment(look.align.text)
-                    .opacity(0.7)
+            if isEmpty {
+                hintText
             }
         }
     }
@@ -111,45 +165,20 @@ struct LauncherFace<Cell: View>: View {
         look.wordAnchors["\(index)"] ?? look.appsPosition
     }
 
-    @ViewBuilder
-    private var content: some View {
-        if apps.isEmpty && clock == .off {
-            Text(hint)
-                .font(.system(size: 14, weight: .medium))
-                .multilineTextAlignment(look.align.text)
-                .opacity(0.7)
-        } else if clock != .off && !apps.isEmpty && size == .medium {
-            // Medium is wide and short: clock on the left, apps on the right.
-            HStack(alignment: .top, spacing: 20) {
-                ClockText(date: date, option: clock, look: look, size: size)
-                appList
-            }
-        } else {
-            VStack(alignment: align, spacing: look.size * 0.8 * look.spacing) {
-                if clock != .off {
-                    ClockText(date: date, option: clock, look: look, size: size)
-                }
-                if !apps.isEmpty {
-                    appList
-                }
-            }
-        }
-    }
-
     // MARK: Apps
 
-    /// As many columns as the widget needs to fit every app.
+    /// Free placement: as many columns as fit, without a clock to compete with.
     private var appList: some View {
         ViewThatFits(in: .vertical) {
-            columns(1)
-            columns(2)
-            columns(3)
-            columns(4)
+            appColumns(1)
+            appColumns(2)
+            appColumns(3)
+            appColumns(4)
         }
     }
 
-    private func columns(_ count: Int) -> some View {
-        let perColumn = Int((Double(apps.count) / Double(count)).rounded(.up))
+    private func appColumns(_ count: Int) -> some View {
+        let perColumn = max(1, Int((Double(apps.count) / Double(max(count, 1))).rounded(.up)))
         return HStack(alignment: .top, spacing: 16) {
             ForEach(0..<count, id: \.self) { column in
                 let start = min(column * perColumn, apps.count)
@@ -162,6 +191,13 @@ struct LauncherFace<Cell: View>: View {
                 .frame(maxWidth: .infinity, alignment: Alignment(horizontal: align, vertical: .top))
             }
         }
+    }
+
+    private var hintText: some View {
+        Text(hint)
+            .font(.system(size: 14, weight: .medium))
+            .multilineTextAlignment(look.align.text)
+            .opacity(0.7)
     }
 }
 
@@ -183,7 +219,7 @@ struct AppName: View {
         Text(name)
             .font(look.font(size: look.size))
             .lineLimit(1)
-            .minimumScaleFactor(0.6)
+            .minimumScaleFactor(0.5)
             .frame(maxWidth: fillWidth ? .infinity : nil,
                    alignment: Alignment(horizontal: look.align.horizontal, vertical: .center))
             .contentShape(Rectangle())
@@ -214,8 +250,8 @@ struct ClockText: View {
             }
         }
         .lineLimit(1)
-        .minimumScaleFactor(0.5)
-        .fixedSize(horizontal: false, vertical: true)
+        .minimumScaleFactor(0.4)
+        .layoutPriority(1)
     }
 
     private func big(_ text: String, scale: Double = 1) -> some View {
