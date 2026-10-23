@@ -146,12 +146,12 @@ enum TextTone: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// How every widget looks. Set in the app and shared with the widget through the App
-/// Group, so every widget on the Home Screen keeps the same look.
 /// What sits behind the words.
-///  * `glass` — the system container, free;
-///  * `photo` — a picture the person picked, free;
-///  * `clear` — the container removed entirely, the paid unlock.
+///  * `clear` — the container removed entirely; the app's default, so a look saved
+///    before backgrounds existed still opens see-through after an update;
+///  * `glass` — the system container, chosen deliberately;
+///  * `photo` — a picture the person picked.
+/// All three are part of the subscription; nothing here is sold separately.
 enum WidgetBackground: String, Codable, CaseIterable, Identifiable {
     case glass, photo, clear
 
@@ -166,6 +166,9 @@ enum WidgetBackground: String, Codable, CaseIterable, Identifiable {
     }
 
 }
+
+/// How every widget looks. Set in the app and shared with the widget through the App
+/// Group, so every widget on the Home Screen keeps the same look.
 struct Look: Codable, Hashable {
     var tone: TextTone = .white
     var customHex: String = "#FFFFFF"
@@ -194,8 +197,9 @@ struct Look: Codable, Hashable {
     var perWordPlacement: Bool = false
     /// Per-word anchors, keyed by word slot ("0" … "11"); missing slots use appsPosition.
     var wordAnchors: [String: WidgetPosition] = [:]
-    /// Glass, a photo, or the paid clear background.
-    var background: WidgetBackground = .glass
+    /// Clear by default: a look stored before backgrounds existed decodes as clear,
+    /// so updating the app does not silently turn a transparent widget into glass.
+    var background: WidgetBackground = .clear
 
     init() {}
 

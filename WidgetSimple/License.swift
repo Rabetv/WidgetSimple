@@ -164,6 +164,29 @@ final class LicenseStore: ObservableObject {
 
     private var updates: Task<Void, Never>?
 
+    #if TESTFLIGHT
+    /// Tester unlock for TestFlight. The subscription cannot be bought until App
+    /// Review has approved it, so a build handed to testers before that needs a way
+    /// past the paywall. `TESTFLIGHT` is only defined by the TestFlight workflow when
+    /// `paywall_unlock` is on, and never for a build submitted to App Review, so the
+    /// App Store binary contains no unlock code at all.
+    private static let testUnlockKey = "TestFlightUnlocked"
+
+    var testUnlocked: Bool { UserDefaults.standard.bool(forKey: Self.testUnlockKey) }
+
+    func unlockForTesting() {
+        UserDefaults.standard.set(true, forKey: Self.testUnlockKey)
+        message = nil
+        status = .licensed
+    }
+
+    func relockForTesting() {
+        UserDefaults.standard.set(false, forKey: Self.testUnlockKey)
+        message = nil
+        status = .unlicensed
+    }
+    #endif
+
     init() {
         // Renewals, refunds, Ask to Buy approvals and purchases made on another device
         // arrive here while the app runs.
@@ -269,6 +292,13 @@ final class LicenseStore: ObservableObject {
     func manageSubscription() -> URL { URL(string: "https://apps.apple.com/account/subscriptions")! }
 
     private func refreshEntitlement() async {
+        #if TESTFLIGHT
+        // A tester unlock outranks the store while there is nothing to buy yet.
+        if testUnlocked {
+            status = .licensed
+            return
+        }
+        #endif
         var active = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result,

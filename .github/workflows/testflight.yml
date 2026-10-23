@@ -21,6 +21,10 @@ on:
         description: "Build number (leave empty to use the run number)"
         required: false
         default: ""
+      paywall_unlock:
+        description: "TestFlight-only unlock button. Leave ON for tester builds; turn OFF for the build submitted to App Review (it is compiled out, not hidden)."
+        type: boolean
+        default: true
 
 concurrency:
   group: testflight
@@ -159,12 +163,26 @@ jobs:
         env:
           BUILD_INPUT: ${{ github.event.inputs.build_number }}
           RUN_NUMBER: ${{ github.run_number }}
+          PAYWALL_UNLOCK: ${{ github.event.inputs.paywall_unlock }}
         run: |
           set -euo pipefail
           BUILD="${BUILD_INPUT:-$RUN_NUMBER}"
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
           echo "Archiving App Store build $BUILD"
-          EXTRA=(GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1 SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE)
+          # TESTFLIGHT only adds the visible unlock button used while the subscription
+          # is still in review; without it the paywall has no way past StoreKit.
+          DEFINES="APPSTORE=1"
+          CONDITIONS="APPSTORE"
+          if [ "${PAYWALL_UNLOCK:-true}" = "true" ]; then
+            DEFINES="APPSTORE=1 TESTFLIGHT=1"
+            CONDITIONS="APPSTORE TESTFLIGHT"
+            echo "PAYWALL_UNLOCK=on" >> "$GITHUB_ENV"
+            echo "Including the TestFlight unlock button."
+          else
+            echo "PAYWALL_UNLOCK=off" >> "$GITHUB_ENV"
+            echo "No unlock button: this binary can be submitted to App Review."
+          fi
+          EXTRA=(GCC_PREPROCESSOR_DEFINITIONS="$DEFINES" SWIFT_ACTIVE_COMPILATION_CONDITIONS="$CONDITIONS")
           xcodebuild -quiet \
             -project WidgetSimple.xcodeproj -scheme WidgetSimple -configuration Release \
             -destination 'generic/platform=iOS' \
@@ -239,6 +257,13 @@ jobs:
           {
             echo "### Uploaded build $BUILD"
             echo "It appears in App Store Connect › TestFlight after Apple finishes processing (usually 5–30 minutes)."
+            if [ "${PAYWALL_UNLOCK:-off}" = "on" ]; then
+              echo ""
+              echo "**TestFlight unlock: ON.** Do not submit this build to App Review; dispatch again with \`paywall_unlock\` off for the review build."
+            else
+              echo ""
+              echo "**TestFlight unlock: OFF.** This build contains no unlock path and can be submitted."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Clean up keychain and signing files

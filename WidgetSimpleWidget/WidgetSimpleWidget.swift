@@ -189,30 +189,41 @@ struct LauncherWidgetView: View {
         Group {
             if let key = entry.findingKey {
                 // The app is looking for the widgets: pink with a code it can read.
+                // The container itself must be magenta, or the screenshot finder has
+                // no rectangle to measure.
                 SpotCode(key: key)
-                    .containerBackground(for: .widget) {
-                        if let matched = entry.background {
-                            Image(uiImage: matched)
-                                .resizable()
-                                .scaledToFill()
-                        } else {
-                            switch entry.look.background {
-                            case .photo:
-                                if let photo = SharedStore.shared.loadBackgroundImage() {
-                                    Image(uiImage: photo).resizable().scaledToFill()
-                                } else {
-                                    Color.clear
-                                }
-                            case .glass, .clear:
-                                Color.clear
-                            }
-                        }
-                    }
+                    .containerBackground(for: .widget) { SpotCode.marker }
+            } else {
+                face
+                    .containerBackground(for: .widget) { widgetBackground }
             }
         }
         #if !APPSTORE
         .overlay { GlassProbe().frame(width: 0, height: 0) }
         #endif
+    }
+
+    /// What sits in the widget container. A matched wallpaper piece wins; otherwise the
+    /// background picked in the app. Clear and Glass stay transparent so the hook (or
+    /// the system glass) is what the Home Screen shows.
+    @ViewBuilder
+    private var widgetBackground: some View {
+        if let matched = entry.background {
+            Image(uiImage: matched)
+                .resizable()
+                .scaledToFill()
+        } else {
+            switch entry.look.background {
+            case .photo:
+                if let photo = SharedStore.shared.loadBackgroundImage() {
+                    Image(uiImage: photo).resizable().scaledToFill()
+                } else {
+                    Color.clear
+                }
+            case .glass, .clear:
+                Color.clear
+            }
+        }
     }
 
     /// The words, with one button per app.

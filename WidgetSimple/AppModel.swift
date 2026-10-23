@@ -34,9 +34,25 @@ final class AppModel: ObservableObject {
 
     init() {
         FontRegistry.registerAllOnce()
-        look = store.loadLook()
+        var loaded = store.loadLook()
+        // Build 35 shipped with Glass as the default, so a look saved there can say
+        // "glass" even though nobody picked it. Move that default to Clear once; a
+        // deliberate Glass choice after this launch is kept.
+        let migratedKey = "background.clearMigrated"
+        if loaded.background == .glass, !UserDefaults.standard.bool(forKey: migratedKey) {
+            loaded.background = .clear
+            store.saveLook(loaded)
+        }
+        UserDefaults.standard.set(true, forKey: migratedKey)
+        look = loaded
         clock = store.loadClock()
         seeThrough = store.loadSeeThrough()
+        // `didSet` does not run for the initial value, and the descriptor hook reads this
+        // flag: without it a fresh install (default Clear) would keep the system glass.
+        store.setClearEnabled(look.background == .clear)
+        // A launcher without a clock asks never to be reloaded, so an update would leave
+        // the old blank/glass snapshot on the Home Screen until something else touched it.
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: Background

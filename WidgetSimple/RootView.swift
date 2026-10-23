@@ -415,6 +415,13 @@ private struct AccountView: View {
                 Button("Manage subscription") { managing = true }
                 Button("Restore Purchases") { Task { await license.restore() } }
                     .disabled(license.busy)
+                #if TESTFLIGHT
+                if license.testUnlocked {
+                    Button("Re-lock (test the paywall)", role: .destructive) {
+                        license.relockForTesting()
+                    }
+                }
+                #endif
                 // No StoreKit products in a simulator; keep the screenshot clean.
                 if let message = license.message,
                    !ProcessInfo.processInfo.arguments.contains("-screenshot") {

@@ -23,6 +23,20 @@ If a rejection arrives: resubmit a build with the hook removed (matched wallpape
 or ship that variant from the start. Concealing the calls is not an option — it converts a
 rejection into an account-level problem.
 
+## TestFlight unlock (never in the App Store build)
+
+The subscription cannot be bought before App Review approves it, which would leave
+testers stuck on the paywall. The `TestFlight` workflow therefore has a
+`paywall_unlock` input (on by default) that compiles the app with `TESTFLIGHT`:
+
+- a visible **Unlock without purchase** button on the paywall, and
+- **Re-lock (test the paywall)** in Settings so the locked state can be checked again.
+
+With `paywall_unlock` off, `TESTFLIGHT` is not defined and the App Store binary contains
+no unlock code at all — it is compiled out, not hidden. **Turn the input off for the
+build submitted to App Review**; the workflow's build summary says which kind of build
+was uploaded.
+
 ## CI
 
 `Build` compiles the app and widget unsigned. `TestFlight` archives, signs and uploads.

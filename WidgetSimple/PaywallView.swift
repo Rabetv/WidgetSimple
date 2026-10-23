@@ -19,6 +19,9 @@ struct PaywallView: View {
                     header
                     benefits
                     buyButton
+                    #if TESTFLIGHT && APPSTORE
+                    testFlightUnlock
+                    #endif
                     restore
                     footer
                 }
@@ -155,6 +158,28 @@ struct PaywallView: View {
             #endif
         }
     }
+
+    #if TESTFLIGHT && APPSTORE
+    /// TestFlight only: the subscription cannot be bought before App Review approves
+    /// it, so testers need a way in. Deliberately visible, and compiled out of the
+    /// build submitted to review.
+    private var testFlightUnlock: some View {
+        VStack(spacing: 8) {
+            Button("Unlock without purchase") {
+                license.unlockForTesting()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+            Text("TestFlight test build. This button is not in the App Store version.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .glassPanel(cornerRadius: 22)
+    }
+    #endif
 
     #if APPSTORE
     private var restore: some View {
