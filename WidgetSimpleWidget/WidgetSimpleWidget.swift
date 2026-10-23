@@ -261,5 +261,9 @@ struct LauncherWidget: Widget {
 struct WidgetSimpleWidgetBundle: WidgetBundle {
     var body: some Widget {
         LauncherWidget()
+        TextWidget()
+        CountdownWidget()
+        WorldClockWidget()
+        SpacerWidget()
     }
 }
