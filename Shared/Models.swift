@@ -172,6 +172,10 @@ struct Look: Codable, Hashable {
     var clockDY: Double = 0
     var appsDX: Double = 0
     var appsDY: Double = 0
+    /// In the free arrangement: move every word on its own instead of the block.
+    var perWordPlacement: Bool = false
+    /// Per-word anchors, keyed by word slot ("0" … "11"); missing slots use appsPosition.
+    var wordAnchors: [String: WidgetPosition] = [:]
 
     init() {}
 
@@ -179,6 +183,7 @@ struct Look: Codable, Hashable {
         case tone, customHex, fontID, size, align, vAlign, letterCase, shadow, spacing
         case arrangement, clockPosition, appsPosition
         case clockDX, clockDY, appsDX, appsDY
+        case perWordPlacement, wordAnchors
     }
 
     /// The key an old look stored the size under; decode only, never encoded.
@@ -202,6 +207,8 @@ struct Look: Codable, Hashable {
         clockDY = try c.decodeIfPresent(Double.self, forKey: .clockDY) ?? d.clockDY
         appsDX = try c.decodeIfPresent(Double.self, forKey: .appsDX) ?? d.appsDX
         appsDY = try c.decodeIfPresent(Double.self, forKey: .appsDY) ?? d.appsDY
+        perWordPlacement = try c.decodeIfPresent(Bool.self, forKey: .perWordPlacement) ?? d.perWordPlacement
+        wordAnchors = (try? c.decodeIfPresent([String: WidgetPosition].self, forKey: .wordAnchors)) ?? d.wordAnchors
 
         if let legacy = try? decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent(TextSize.self, forKey: .textSize) {
             size = legacy.points // old small/medium/big values

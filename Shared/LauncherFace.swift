@@ -1,6 +1,7 @@
-import SwiftUI
+﻿import SwiftUI
 import WidgetKit
 
+/// Widget size, as far as the layout cares.
 /// Widget size, as far as the layout cares.
 enum FaceSize: String, CaseIterable, Identifiable {
     case small, medium, large
@@ -29,8 +30,8 @@ enum FaceSize: String, CaseIterable, Identifiable {
 /// widget and the in-app preview, so the preview is exactly what lands on the Home Screen.
 ///
 /// Two arrangements:
-///  * `.stacked` — clock above the apps (side by side on a medium widget);
-///  * `.free` — the clock and the apps each sit wherever their position says.
+///  * `.stacked` â€” clock above the apps (side by side on a medium widget);
+///  * `.free` â€” the clock and the apps each sit wherever their position says.
 /// `cell` wraps each name; the widget turns it into a button that opens the app.
 struct LauncherFace<Cell: View>: View {
     let look: Look
@@ -76,10 +77,14 @@ struct LauncherFace<Cell: View>: View {
                     .offset(x: look.clockDX, y: look.clockDY)
             }
             if !apps.isEmpty {
-                appList
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.appsPosition.alignment)
-                    .padding(edgePadding)
-                    .offset(x: look.appsDX, y: look.appsDY)
+                if look.perWordPlacement {
+                    perWordApps
+                } else {
+                    appList
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.appsPosition.alignment)
+                        .padding(edgePadding)
+                        .offset(x: look.appsDX, y: look.appsDY)
+                }
             }
             if apps.isEmpty && clock == .off {
                 Text(hint)
@@ -88,6 +93,22 @@ struct LauncherFace<Cell: View>: View {
                     .opacity(0.7)
             }
         }
+    }
+
+    /// Every word on its own anchor, shifted together by the block nudge.
+    private var perWordApps: some View {
+        ZStack {
+            ForEach(apps.indices, id: \.self) { index in
+                cell(index, AppName(name: apps[index], look: look, fillWidth: false))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: anchor(for: index).alignment)
+                    .padding(edgePadding)
+                    .offset(x: look.appsDX, y: look.appsDY)
+            }
+        }
+    }
+
+    private func anchor(for index: Int) -> WidgetPosition {
+        look.wordAnchors["\(index)"] ?? look.appsPosition
     }
 
     @ViewBuilder
@@ -155,13 +176,16 @@ extension LauncherFace where Cell == AppName {
 struct AppName: View {
     let name: String
     let look: Look
+    /// False when the word is placed on its own, so it keeps its natural width.
+    var fillWidth: Bool = true
 
     var body: some View {
         Text(name)
             .font(look.font(size: look.size))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
-            .frame(maxWidth: .infinity, alignment: Alignment(horizontal: look.align.horizontal, vertical: .center))
+            .frame(maxWidth: fillWidth ? .infinity : nil,
+                   alignment: Alignment(horizontal: look.align.horizontal, vertical: .center))
             .contentShape(Rectangle())
     }
 }
