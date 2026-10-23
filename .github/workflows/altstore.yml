@@ -1,4 +1,4 @@
-name: AltStore IPA
+﻿name: AltStore IPA
 
 # Builds an unsigned WidgetSimple.ipa that AltStore / AltServer signs with the
 # user's own Apple ID when installing. Attach it to a GitHub release so the
@@ -44,8 +44,9 @@ jobs:
           cp -R build/WidgetSimple.xcarchive/Products/Applications/WidgetSimple.app build/Payload/
           (cd build && zip -qry WidgetSimple.ipa Payload)
           ls -lh build/WidgetSimple.ipa
-          echo "SIZE=$(stat -f%z build/WidgetSimple.ipa)" >> "$GITHUB_ENV"
-          echo "### WidgetSimple.ipa: $SIZE bytes" >> "$GITHUB_STEP_SUMMARY"
+          size=$(stat -f%z build/WidgetSimple.ipa)
+          echo "SIZE=$size" >> "$GITHUB_ENV"
+          echo "### WidgetSimple.ipa: $size bytes" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
