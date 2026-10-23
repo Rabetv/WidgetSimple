@@ -146,8 +146,8 @@ struct EditorView: View {
     }
 
     #if APPSTORE
-    /// Glass, your own photo, or the clear background. Everything here is part of
-    /// the subscription; nothing inside the app is sold separately.
+    /// Clear or your own photo. Everything here is part of the subscription; nothing
+    /// inside the app is sold separately.
     private var backgroundSection: some View {
         Section {
             Picker("Background", selection: Binding(
@@ -170,7 +170,7 @@ struct EditorView: View {
         } header: {
             Text("Background")
         } footer: {
-            Text("Glass is the system background. Photo draws your own picture. Clear removes the background so the wallpaper shows through.")
+            Text("Clear removes the widget background so the wallpaper shows through. Photo draws your own picture instead.")
         }
     }
 
@@ -441,6 +441,9 @@ private struct AccountView: View {
             #endif
             Section {
                 Button("Show the tutorial again") { onboarded = false }
+                #if TESTFLIGHT
+                NavigationLink("Widget diagnostics") { DiagnosticsView() }
+                #endif
                 LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
             } header: {
                 Text("About")
@@ -494,6 +497,57 @@ struct WidgetPreviewCard: View {
         .frame(maxWidth: .infinity)
     }
 }
+
+#if TESTFLIGHT
+/// TestFlight only: what the widget extension and the descriptor hook wrote into the
+/// App Group. Without a Mac or Console this is the only way to see a hook that failed
+/// to install, or an extension that cannot reach the shared container.
+private struct DiagnosticsView: View {
+    @State private var hook = ""
+    @State private var view = ""
+
+    private var groupID: String {
+        (Bundle.main.object(forInfoDictionaryKey: "AppGroupID") as? String) ?? "(missing)"
+    }
+
+    var body: some View {
+        List {
+            Section("App Group") {
+                LabeledContent("ID", value: groupID)
+                LabeledContent("Available", value: SharedStore.shared.isAppGroupAvailable ? "yes" : "no")
+                LabeledContent("Path", value: SharedStore.shared.rootURL.path)
+            }
+            Section("Current look") {
+                LabeledContent("Background", value: SharedStore.shared.loadLook().background.title)
+            }
+            Section("hook.log (widget extension)") {
+                Text(hook.isEmpty
+                     ? "Empty. The extension has not run, or it cannot see the App Group."
+                     : hook)
+                    .font(.caption.monospaced())
+                    .textSelection(.enabled)
+            }
+            Section("view.log") {
+                Text(view.isEmpty ? "Nothing yet." : view)
+                    .font(.caption.monospaced())
+                    .textSelection(.enabled)
+            }
+        }
+        .navigationTitle("Diagnostics")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Reload") { load() }
+            }
+        }
+        .task { load() }
+    }
+
+    private func load() {
+        hook = SharedStore.shared.loadHookLog()
+        view = SharedStore.shared.loadViewLog()
+    }
+}
+#endif
 
 private extension Color {
     /// "#RRGGBB", matching the decoder in `Models.swift`.

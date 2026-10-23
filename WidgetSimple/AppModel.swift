@@ -7,8 +7,6 @@ final class AppModel: ObservableObject {
     @Published var look: Look {
         didSet {
             store.saveLook(look)
-            // The descriptor hook only strips the system container for the clear background.
-            store.setClearEnabled(look.background == .clear)
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
@@ -34,24 +32,11 @@ final class AppModel: ObservableObject {
 
     init() {
         FontRegistry.registerAllOnce()
-        var loaded = store.loadLook()
-        // Build 35 shipped with Glass as the default, so a look saved there can say
-        // "glass" even though nobody picked it. Move that default to Clear once; a
-        // deliberate Glass choice after this launch is kept.
-        let migratedKey = "background.clearMigrated"
-        if loaded.background == .glass, !UserDefaults.standard.bool(forKey: migratedKey) {
-            loaded.background = .clear
-            store.saveLook(loaded)
-        }
-        UserDefaults.standard.set(true, forKey: migratedKey)
-        look = loaded
+        look = store.loadLook()
         clock = store.loadClock()
         seeThrough = store.loadSeeThrough()
-        // `didSet` does not run for the initial value, and the descriptor hook reads this
-        // flag: without it a fresh install (default Clear) would keep the system glass.
-        store.setClearEnabled(look.background == .clear)
         // A launcher without a clock asks never to be reloaded, so an update would leave
-        // the old blank/glass snapshot on the Home Screen until something else touched it.
+        // the old snapshot on the Home Screen until something else touched it.
         WidgetCenter.shared.reloadAllTimelines()
     }
 

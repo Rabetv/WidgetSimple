@@ -204,8 +204,8 @@ struct LauncherWidgetView: View {
     }
 
     /// What sits in the widget container. A matched wallpaper piece wins; otherwise the
-    /// background picked in the app. Clear and Glass stay transparent so the hook (or
-    /// the system glass) is what the Home Screen shows.
+    /// background picked in the app. Clear stays empty: the descriptor hook removes the
+    /// container, so the wallpaper behind the widget is what shows.
     @ViewBuilder
     private var widgetBackground: some View {
         if let matched = entry.background {
@@ -220,7 +220,7 @@ struct LauncherWidgetView: View {
                 } else {
                     Color.clear
                 }
-            case .glass, .clear:
+            case .clear:
                 Color.clear
             }
         }

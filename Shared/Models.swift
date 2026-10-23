@@ -147,21 +147,21 @@ enum TextTone: String, Codable, CaseIterable, Identifiable {
 }
 
 /// What sits behind the words.
-///  * `clear` — the container removed entirely; the app's default, so a look saved
-///    before backgrounds existed still opens see-through after an update;
-///  * `glass` — the system container, chosen deliberately;
-///  * `photo` — a picture the person picked.
-/// All three are part of the subscription; nothing here is sold separately.
+///  * `clear` — the app's default: the descriptor hook removes the system container,
+///    so the wallpaper shows through;
+///  * `photo` — a picture the person picked, drawn in the container.
+/// A "glass" value from builds 35–37 no longer decodes; it falls back to clear, because
+/// the container it asked for is exactly what the hook removes.
+/// Both options are part of the subscription; nothing here is sold separately.
 enum WidgetBackground: String, Codable, CaseIterable, Identifiable {
-    case glass, photo, clear
+    case clear, photo
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .glass: return String(localized: "Glass")
-        case .photo: return String(localized: "Photo")
         case .clear: return String(localized: "Clear")
+        case .photo: return String(localized: "Photo")
         }
     }
 

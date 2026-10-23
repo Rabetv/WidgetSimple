@@ -325,25 +325,14 @@ static id RewrittenResult(id original)
     }
 }
 
-/// The app creates this file only while the paid clear background is selected, so the
-/// free tiers (glass, photo) keep the system container and this hook stays inert.
-static BOOL ClearBackgroundEnabled(void)
-{
-    NSString *group = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"AppGroupID"];
-    if (group.length == 0) return NO;
-    NSURL *container = [[NSFileManager defaultManager] containerURLForSecurityApplicationGroupIdentifier:group];
-    if (container == nil) return NO;
-    NSURL *flag = [[container URLByAppendingPathComponent:@"WidgetSimple" isDirectory:YES]
-                   URLByAppendingPathComponent:@"clear.on"];
-    return [[NSFileManager defaultManager] fileExistsAtPath:flag.path];
-}
-
+// The clear background is the app's default, and a descriptor is fetched once per
+// extension install: chronod caches it and a timeline reload does not fetch it again.
+// A flag the app writes at launch is therefore too late — the first fetch has already
+// happened — which is why this hook runs unconditionally, exactly as it did before
+// build 35. Glass is gone from the picker: the container it would need is the one
+// this hook removes.
 static void HookedGetAllDescriptors(id self, SEL _cmd, DescriptorsCompletion completion)
 {
-    if (!ClearBackgroundEnabled()) {
-        OriginalGetAllDescriptors(self, _cmd, completion);
-        return;
-    }
     OriginalGetAllDescriptors(self, _cmd, ^(id result) {
         id replacement = result;
         if (!DidRewrite) {

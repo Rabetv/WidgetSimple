@@ -43,9 +43,6 @@ final class SharedStore: @unchecked Sendable {
     // MARK: Widget background
 
     var backgroundImageURL: URL { rootURL.appendingPathComponent("background.png") }
-    /// The descriptor hook removes the system container only while this file exists,
-    /// i.e. only while the paid clear background is chosen.
-    var clearFlagURL: URL { rootURL.appendingPathComponent("clear.on") }
 
     func saveBackgroundImage(_ data: Data) {
         try? data.write(to: backgroundImageURL, options: .atomic)
@@ -55,13 +52,6 @@ final class SharedStore: @unchecked Sendable {
         UIImage(contentsOfFile: backgroundImageURL.path)
     }
 
-    func setClearEnabled(_ enabled: Bool) {
-        if enabled {
-            try? Data().write(to: clearFlagURL, options: .atomic)
-        } else {
-            try? FileManager.default.removeItem(at: clearFlagURL)
-        }
-    }
     // MARK: Matched wallpaper (App Store see-through, public API only)
 
     var seeThroughURL: URL { rootURL.appendingPathComponent("see-through.json") }
@@ -134,6 +124,13 @@ final class SharedStore: @unchecked Sendable {
 
     func loadViewLog() -> String {
         (try? String(contentsOf: viewLogURL, encoding: .utf8)) ?? "Nothing yet. Add the widget, then come back."
+    }
+
+    /// What the descriptor hook wrote: install result and every descriptor it rewrote.
+    var hookLogURL: URL { rootURL.appendingPathComponent("hook.log") }
+
+    func loadHookLog() -> String {
+        (try? String(contentsOf: hookLogURL, encoding: .utf8)) ?? ""
     }
 
     func clearViewLog() {
