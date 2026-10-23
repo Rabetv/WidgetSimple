@@ -10,13 +10,31 @@ struct RootView: View {
     @AppStorage("onboarded") private var onboarded = false
     @Environment(\.scenePhase) private var scenePhase
 
+    #if targetEnvironment(simulator)
+    /// "-screenshot [-screen editor|templates|settings]" in a simulator build.
+    static var screenshotScreen: String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("-screenshot") else { return nil }
+        if let index = args.firstIndex(of: "-screen"), args.indices.contains(index + 1) {
+            return args[index + 1]
+        }
+        return "editor"
+    }
+
+    @ViewBuilder
+    private func screenshotView(_ screen: String) -> some View {
+        switch screen {
+        case "templates": NavigationStack { TemplatesView() }
+        case "settings": NavigationStack { AccountView(license: license) }
+        default: NavigationStack { EditorView() }
+        }
+    }
+    #endif
     var body: some View {
         Group {
             #if targetEnvironment(simulator)
-            if ProcessInfo.processInfo.arguments.contains("-screenshot") {
-                // Simulator screenshot runs: skip onboarding and the paywall and show the
-                // real editor, which renders the actual widget preview. Debug builds only.
-                NavigationStack { EditorView() }
+            if let screen = Self.screenshotScreen {
+                screenshotView(screen)
             } else {
                 normalFlow
             }
