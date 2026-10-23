@@ -12,21 +12,17 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if !onboarded {
-                OnboardingView { onboarded = true }
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-screenshot") {
+                // Simulator screenshot runs: skip onboarding and the paywall and show the
+                // real editor, which renders the actual widget preview. Debug builds only.
+                NavigationStack { EditorView() }
             } else {
-                switch license.status {
-                case .checking:
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(AppBackground())
-                        .task { await license.refresh() }
-                case .unlicensed:
-                    PaywallView(license: license)
-                case .licensed:
-                    MainTabs(license: license)
-                }
+                normalFlow
             }
+            #else
+            normalFlow
+            #endif
         }
         // The design is dark glass over a dark wallpaper in both system appearances.
         .preferredColorScheme(.dark)
@@ -36,6 +32,25 @@ struct RootView: View {
             if phase == .active { Task { await license.refresh() } }
         }
         #endif
+    }
+
+    @ViewBuilder
+    private var normalFlow: some View {
+        if !onboarded {
+            OnboardingView { onboarded = true }
+        } else {
+            switch license.status {
+            case .checking:
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AppBackground())
+                    .task { await license.refresh() }
+            case .unlicensed:
+                PaywallView(license: license)
+            case .licensed:
+                MainTabs(license: license)
+            }
+        }
     }
 }
 
