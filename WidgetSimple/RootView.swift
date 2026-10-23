@@ -346,6 +346,7 @@ private struct AccountView: View {
                     Text(message).font(.footnote).foregroundStyle(.secondary)
                 }
                 Link("Terms of Use", destination: StoreConfig.termsURL)
+                Link("Support", destination: StoreConfig.supportURL)
                 Link("Privacy Policy", destination: StoreConfig.privacyURL)
             }
             .listRowBackground(GlassRowBackground())
