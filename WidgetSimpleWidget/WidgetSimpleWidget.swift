@@ -190,17 +190,22 @@ struct LauncherWidgetView: View {
             if let key = entry.findingKey {
                 // The app is looking for the widgets: pink with a code it can read.
                 SpotCode(key: key)
-                    .containerBackground(for: .widget) { SpotCode.marker }
-            } else {
-                face
                     .containerBackground(for: .widget) {
-                        if let background = entry.background {
-                            Image(uiImage: background)
+                        if let matched = entry.background {
+                            Image(uiImage: matched)
                                 .resizable()
                                 .scaledToFill()
                         } else {
-                            // No match yet: the system background, never a wrong piece.
-                            Color.clear
+                            switch entry.look.background {
+                            case .photo:
+                                if let photo = SharedStore.shared.loadBackgroundImage() {
+                                    Image(uiImage: photo).resizable().scaledToFill()
+                                } else {
+                                    Color.clear
+                                }
+                            case .glass, .clear:
+                                Color.clear
+                            }
                         }
                     }
             }

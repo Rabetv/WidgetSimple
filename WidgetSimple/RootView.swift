@@ -99,10 +99,13 @@ struct EditorView: View {
     @State private var pickingPink = false
     @State private var wallpaperItem: PhotosPickerItem?
     @State private var pinkItem: PhotosPickerItem?
+    @State private var pickingBackground = false
+    @State private var backgroundItem: PhotosPickerItem?
 
     var body: some View {
         Form {
             previewSection
+            backgroundSection.listRowBackground(GlassRowBackground())
             #if APPSTORE
             seeThroughSection.listRowBackground(GlassRowBackground())
             #endif
@@ -115,6 +118,15 @@ struct EditorView: View {
         .navigationBarTitleDisplayMode(.inline)
         .photosPicker(isPresented: $pickingWallpaper, selection: $wallpaperItem, matching: .screenshots)
         .photosPicker(isPresented: $pickingPink, selection: $pinkItem, matching: .screenshots)
+        .photosPicker(isPresented: $pickingBackground, selection: $backgroundItem, matching: .images)
+        .onChange(of: backgroundItem) { _, item in
+            guard let item else { return }
+            backgroundItem = nil
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+                model.useBackgroundPhoto(data)
+            }
+        }
         .onChange(of: wallpaperItem) { _, item in
             guard let item else { return }
             wallpaperItem = nil
@@ -134,6 +146,34 @@ struct EditorView: View {
     }
 
     #if APPSTORE
+    /// Glass, your own photo, or the clear background. Everything here is part of
+    /// the subscription; nothing inside the app is sold separately.
+    private var backgroundSection: some View {
+        Section {
+            Picker("Background", selection: Binding(
+                get: { model.look.background },
+                set: { model.setBackground($0) }
+            )) {
+                ForEach(WidgetBackground.allCases) { option in
+                    Text(option.title).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if model.look.background == .photo {
+                Button {
+                    pickingBackground = true
+                } label: {
+                    Label("Choose a photo", systemImage: "photo")
+                }
+            }
+        } header: {
+            Text("Background")
+        } footer: {
+            Text("Glass is the system background. Photo draws your own picture. Clear removes the background so the wallpaper shows through.")
+        }
+    }
+
     /// Matched wallpaper: two screenshots, once. Public API only, and a widget without
     /// a match keeps the system background instead of showing a wrong piece.
     private var seeThroughSection: some View {

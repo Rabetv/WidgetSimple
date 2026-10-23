@@ -40,6 +40,28 @@ final class SharedStore: @unchecked Sendable {
     var fontsIndexURL: URL { rootURL.appendingPathComponent("fonts.json") }
     var fontsURL: URL { rootURL.appendingPathComponent("Fonts", isDirectory: true) }
 
+    // MARK: Widget background
+
+    var backgroundImageURL: URL { rootURL.appendingPathComponent("background.png") }
+    /// The descriptor hook removes the system container only while this file exists,
+    /// i.e. only while the paid clear background is chosen.
+    var clearFlagURL: URL { rootURL.appendingPathComponent("clear.on") }
+
+    func saveBackgroundImage(_ data: Data) {
+        try? data.write(to: backgroundImageURL, options: .atomic)
+    }
+
+    func loadBackgroundImage() -> UIImage? {
+        UIImage(contentsOfFile: backgroundImageURL.path)
+    }
+
+    func setClearEnabled(_ enabled: Bool) {
+        if enabled {
+            try? Data().write(to: clearFlagURL, options: .atomic)
+        } else {
+            try? FileManager.default.removeItem(at: clearFlagURL)
+        }
+    }
     // MARK: Matched wallpaper (App Store see-through, public API only)
 
     var seeThroughURL: URL { rootURL.appendingPathComponent("see-through.json") }

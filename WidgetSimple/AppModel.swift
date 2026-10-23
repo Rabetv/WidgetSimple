@@ -7,6 +7,8 @@ final class AppModel: ObservableObject {
     @Published var look: Look {
         didSet {
             store.saveLook(look)
+            // The descriptor hook only strips the system container for the clear background.
+            store.setClearEnabled(look.background == .clear)
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
@@ -35,6 +37,17 @@ final class AppModel: ObservableObject {
         look = store.loadLook()
         clock = store.loadClock()
         seeThrough = store.loadSeeThrough()
+    }
+
+    // MARK: Background
+
+    func setBackground(_ option: WidgetBackground) {
+        look.background = option
+    }
+
+    func useBackgroundPhoto(_ data: Data) {
+        store.saveBackgroundImage(data)
+        look.background = .photo
     }
 
     // MARK: Matched wallpaper
