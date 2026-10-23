@@ -50,7 +50,7 @@ struct RootView: View {
         Section("Clock") {
             Picker("Clock", selection: $model.clock) {
                 ForEach(ClockOption.allCases, id: \.self) { option in
-                    Text(ClockOption.caseDisplayRepresentations[option] ?? option.rawValue).tag(option)
+                    Text(option.title).tag(option)
                 }
             }
             .pickerStyle(.menu)

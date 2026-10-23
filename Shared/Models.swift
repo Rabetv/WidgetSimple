@@ -176,6 +176,11 @@ enum ClockOption: String, Codable, CaseIterable, AppEnum {
         .timeAndDate: "Time and date",
         .date: "Date",
     ]
+
+    var title: String {
+        String(localized: Self.caseDisplayRepresentations[self]?.title
+               ?? LocalizedStringResource(stringLiteral: rawValue))
+    }
 }
 
 // MARK: - Colour
