@@ -142,3 +142,34 @@
 "%lld years free" = "%lld Jahre gratis";
 "Free trial" = "Gratis-Testzeitraum";
 "WidgetSimple Pro, 1 year. When the free trial ends, the price above is charged to your Apple Account and the subscription renews each year until cancelled. Cancel any time in Settings › Apple Account › Subscriptions, at least 24 hours before the trial or the current year ends." = "WidgetSimple Pro, 1 Jahr. Nach dem Gratis-Zeitraum wird der oben genannte Preis über deinen Apple Account abgerechnet, und das Abo verlängert sich jedes Jahr, bis du kündigst. Kündigen jederzeit unter Einstellungen › Apple Account › Abonnements, spätestens 24 Stunden vor Ende des Gratis-Zeitraums oder des laufenden Jahres.";
+
+/* Glass redesign: tabs, home, templates, tutorial */
+"Widgets" = "Widgets";
+"Templates" = "Vorlagen";
+"Settings" = "Einstellungen";
+"Launcher" = "Launcher";
+"On your Home Screen" = "Auf deinem Home-Bildschirm";
+"Every launcher widget uses this look." = "Alle Launcher-Widgets nutzen diesen Stil.";
+"Start from a template" = "Mit einer Vorlage starten";
+"Add a widget" = "Widget hinzufügen";
+"Add a Widget" = "Widget hinzufügen";
+"Apps as words. Tap a word, open the app." = "Apps als Wörter. Wort antippen, App öffnet sich.";
+"Touch and hold the Home Screen, then tap **Edit › Add Widget**." = "Halte den Home-Bildschirm gedrückt und tippe auf **Bearbeiten › Widget hinzufügen**.";
+"Search **WidgetSimple** and pick a size." = "Suche **WidgetSimple** und wähle eine Größe.";
+"Tap the widget's **Edit Widget** and choose your apps." = "Tippe beim Widget auf **Widget bearbeiten** und wähle deine Apps.";
+"Your apps,
+as words." = "Deine Apps,
+als Wörter.";
+"Three steps, once. After that you style everything here." = "Drei Schritte, einmalig. Danach gestaltest du alles hier.";
+"Continue" = "Weiter";
+"Thin clock" = "Schmale Uhr";
+"Serif list" = "Serifen-Liste";
+"Amber caps" = "Bernstein, groß";
+"Centred" = "Zentriert";
+"Mono" = "Mono";
+"Big words" = "Große Wörter";
+"Use this template?" = "Diese Vorlage verwenden?";
+"Apply to all launcher widgets" = "Für alle Launcher-Widgets übernehmen";
+"Your current font, colour and layout are replaced." = "Deine aktuelle Schrift, Farbe und Anordnung werden ersetzt.";
+"Show the tutorial again" = "Anleitung erneut zeigen";
+"Your words on the widget background iOS draws. Add the widget once from the Home Screen and style it here." = "Deine Wörter auf dem Widget-Hintergrund von iOS. Füge das Widget einmal vom Home-Bildschirm hinzu und gestalte es hier.";

@@ -2,28 +2,33 @@ import StoreKit
 import SwiftUI
 import UIKit
 
-/// The app: the paywall until a licence is validated, then one screen with a live
-/// preview and every control that styles the widget.
+/// The app: a one-time tutorial, the paywall until the subscription is active, then
+/// three tabs over the app background — widgets, templates, settings.
 struct RootView: View {
-    @EnvironmentObject private var model: AppModel
     @StateObject private var license = LicenseStore()
-    @State private var previewSize: FaceSize = .medium
+    @AppStorage("onboarded") private var onboarded = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
-            switch license.status {
-            case .checking:
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(.systemGroupedBackground).ignoresSafeArea())
-                    .task { await license.refresh() }
-            case .unlicensed:
-                PaywallView(license: license)
-            case .licensed:
-                editor
+            if !onboarded {
+                OnboardingView { onboarded = true }
+            } else {
+                switch license.status {
+                case .checking:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(AppBackground())
+                        .task { await license.refresh() }
+                case .unlicensed:
+                    PaywallView(license: license)
+                case .licensed:
+                    MainTabs(license: license)
+                }
             }
         }
+        // The design is dark glass over a dark wallpaper in both system appearances.
+        .preferredColorScheme(.dark)
         #if APPSTORE
         // A subscription can lapse or be refunded while the app sits in the background.
         .onChange(of: scenePhase) { _, phase in
@@ -31,28 +36,42 @@ struct RootView: View {
         }
         #endif
     }
+}
 
-    private var editor: some View {
-        NavigationStack {
-            Form {
-                previewSection
-                appsSection
-                clockSection
-                styleSection
+private struct MainTabs: View {
+    @ObservedObject var license: LicenseStore
+
+    var body: some View {
+        TabView {
+            Tab("Widgets", systemImage: "square.grid.2x2") {
+                HomeView()
             }
-            .navigationTitle("WidgetSimple")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        AccountView(license: license)
-                    } label: {
-                        Image(systemName: "person.crop.circle")
-                    }
-                    .accessibilityLabel("Account")
-                }
+            Tab("Templates", systemImage: "rectangle.grid.1x2") {
+                TemplatesView()
+            }
+            Tab("Settings", systemImage: "gearshape") {
+                NavigationStack { AccountView(license: license) }
             }
         }
+    }
+}
+
+/// Every control that styles the launcher widget, with a live preview. All launcher
+/// widgets on the Home Screen follow this one look.
+struct EditorView: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var previewSize: FaceSize = .medium
+
+    var body: some View {
+        Form {
+            previewSection
+            appsSection.listRowBackground(GlassRowBackground())
+            clockSection.listRowBackground(GlassRowBackground())
+            styleSection.listRowBackground(GlassRowBackground())
+        }
+        .glassList()
+        .navigationTitle("Launcher")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     // MARK: Sections
@@ -71,7 +90,11 @@ struct RootView: View {
         } header: {
             Text("Preview")
         } footer: {
+            #if APPSTORE
+            Text("Your words on the widget background iOS draws. Add the widget once from the Home Screen and style it here.")
+            #else
             Text("The widget is see-through — the wallpaper shows behind the words. Add it once from the Home Screen and style it here.")
+            #endif
         }
     }
 
@@ -242,6 +265,7 @@ private struct AccountView: View {
     @Environment(\.openURL) private var openURL
     @State private var viewLog = ""
     @State private var managing = false
+    @AppStorage("onboarded") private var onboarded = true
 
     var body: some View {
         List {
@@ -256,11 +280,13 @@ private struct AccountView: View {
                 Link("Terms of Use", destination: StoreConfig.termsURL)
                 Link("Privacy Policy", destination: StoreConfig.privacyURL)
             }
+            .listRowBackground(GlassRowBackground())
             #else
             Section("Subscription") {
                 Button("Manage subscription") { openURL(license.manageSubscription()) }
                 Button("Sign out on this iPhone", role: .destructive) { license.signOut() }
             }
+            .listRowBackground(GlassRowBackground())
             // The view-hierarchy probe exists for the transparency research; the App
             // Store build has nothing to investigate there.
             Section {
@@ -287,8 +313,10 @@ private struct AccountView: View {
             } footer: {
                 Text("What the widget's view hierarchy looked like. Used to find out which layer draws the glass border.")
             }
+            .listRowBackground(GlassRowBackground())
             #endif
             Section {
+                Button("Show the tutorial again") { onboarded = false }
                 LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
             } header: {
                 Text("About")
@@ -299,8 +327,10 @@ private struct AccountView: View {
                 Text("Widgets stay see-through when the app is locked; the subscription unlocks the editor.")
                 #endif
             }
+            .listRowBackground(GlassRowBackground())
         }
-        .navigationTitle("Account")
+        .glassList()
+        .navigationTitle("Settings")
         #if APPSTORE
         .manageSubscriptionsSheet(isPresented: $managing)
         #else
@@ -312,7 +342,7 @@ private struct AccountView: View {
 // MARK: - Preview
 
 /// The widget as it will look on the Home Screen: just the words.
-private struct WidgetPreviewCard: View {
+struct WidgetPreviewCard: View {
     let look: Look
     let clock: ClockOption
     let size: FaceSize
@@ -324,18 +354,11 @@ private struct WidgetPreviewCard: View {
         }
         .aspectRatio(size.aspectRatio, contentMode: .fit)
         .padding(18)
-        .background(LinearGradient.sampleWallpaper)
+        .background(Image("AppBackground").resizable().scaledToFill())
         .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
         .animation(.easeInOut(duration: 0.2), value: look)
         .frame(maxWidth: .infinity)
     }
-}
-
-private extension LinearGradient {
-    /// Stands in for a wallpaper in the app's preview.
-    static let sampleWallpaper = LinearGradient(
-        colors: [Color(red: 0.98, green: 0.55, blue: 0.45), Color(red: 0.45, green: 0.35, blue: 0.85)],
-        startPoint: .topLeading, endPoint: .bottomTrailing)
 }
 
 private extension Color {
