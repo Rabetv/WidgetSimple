@@ -6,6 +6,7 @@ import UIKit
 /// the look, the clock, and the hint that the apps are picked in Edit Widget.
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var previewSize: FaceSize = .medium
 
     var body: some View {
         NavigationStack {
@@ -24,7 +25,13 @@ struct RootView: View {
 
     private var previewSection: some View {
         Section {
-            WidgetPreviewCard(look: model.look, clock: model.clock)
+            Picker("Size", selection: $previewSize) {
+                ForEach(FaceSize.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .listRowBackground(Color.clear)
+
+            WidgetPreviewCard(look: model.look, clock: model.clock, size: previewSize)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
         } header: {
@@ -160,13 +167,14 @@ struct RootView: View {
 private struct WidgetPreviewCard: View {
     let look: Look
     let clock: ClockOption
+    let size: FaceSize
 
     var body: some View {
         TimelineView(.everyMinute) { context in
-            LauncherFace(look: look, clock: clock, date: context.date, size: .medium,
+            LauncherFace(look: look, clock: clock, date: context.date, size: size,
                          apps: ["Phone", "Messages", "Music"], color: look.color)
         }
-        .aspectRatio(338.0 / 158.0, contentMode: .fit)
+        .aspectRatio(size.aspectRatio, contentMode: .fit)
         .padding(18)
         .background(LinearGradient.sampleWallpaper)
         .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))

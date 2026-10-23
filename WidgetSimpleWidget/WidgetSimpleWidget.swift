@@ -135,6 +135,9 @@ struct LauncherWidget: Widget {
         .description("Your apps as words on clear glass, with a clock if you like.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .systemExtraLargePortrait])
         .contentMarginsDisabled()
+        // Adding the widget immediately opens Edit Widget, where the apps are picked:
+        // iOS only lets the system fill that list.
+        .promptsForUserConfiguration()
     }
 }
 
