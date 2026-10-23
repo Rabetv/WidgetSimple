@@ -167,6 +167,19 @@ private struct GlassProbe: UIViewRepresentable {
     func updateUIView(_ uiView: UIView, context: Context) {}
 }
 
+extension SpotFamily {
+    /// Bridges WidgetKit's family to the four sizes the wallpaper matching knows.
+    init?(_ family: WidgetFamily) {
+        switch family {
+        case .systemSmall: self = .small
+        case .systemMedium: self = .medium
+        case .systemLarge: self = .large
+        case .systemExtraLargePortrait: self = .max
+        default: return nil
+        }
+    }
+}
+
 struct LauncherWidgetView: View {
     let entry: LauncherEntry
     @Environment(\.widgetFamily) private var family
