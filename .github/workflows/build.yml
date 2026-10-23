@@ -62,8 +62,13 @@ jobs:
         if: matrix.flavour == 'hook'
         run: |
           set -euo pipefail
-          appex=DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app/PlugIns/WidgetSimpleWidget.appex/WidgetSimpleWidget
-          strings -a "$appex" | grep -F getAllCurrentDescriptorsWithCompletion
+          shopt -s nullglob
+          found=0
+          for appex in DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app/PlugIns/*.appex; do
+            bin="$appex/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$appex/Info.plist")"
+            if strings -a "$bin" | grep -F getAllCurrentDescriptorsWithCompletion; then found=1; fi
+          done
+          [ "$found" -eq 1 ] || { echo "::error::hook not found in the hook build; the audit patterns are stale"; exit 1; }
 
       - name: Upload build log
         if: always()
