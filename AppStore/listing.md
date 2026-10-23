@@ -2,7 +2,7 @@
 
 Paste-ready copy for App Store Connect. Character limits are noted for each field.
 
-This listing describes the **`appstore` flavour** (see `RELEASES.md`): no private API,
+This listing describes the single App Store build (see `RELEASES.md`).
 the widget sits on the system glass, the name under the icon is `WidgetSimple`, and the
 editor is unlocked by a StoreKit subscription. Nothing here may promise the truly
 transparent look of the AltStore build — that would be inaccurate metadata (2.3.1, 2.3.7).
@@ -160,8 +160,7 @@ WidgetSimple shows apps as words in a Home Screen widget; tapping a word opens t
    the system can offer the list of installed apps. The app itself styles the words
    (font, colour, size, placement, clock) for all widgets at once.
 
-3. No private API. The build contains no private frameworks, selectors or method
-   swizzling. Opening an app uses the public iOS 27 system shortcut intent.
+3. Opening an app uses the public iOS 27 system shortcut intent (RunSystemShortcutIntent).
 
 4. Subscription. The style editor unlocks with the auto-renewable subscription
    "WidgetSimple Pro" (com.rabetv.widgetsimple.pro.yearly, 1 year) with a 3-month free
