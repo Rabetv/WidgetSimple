@@ -375,7 +375,9 @@ private struct AccountView: View {
                 Button("Manage subscription") { managing = true }
                 Button("Restore Purchases") { Task { await license.restore() } }
                     .disabled(license.busy)
-                if let message = license.message {
+                // No StoreKit products in a simulator; keep the screenshot clean.
+                if let message = license.message,
+                   !ProcessInfo.processInfo.arguments.contains("-screenshot") {
                     Text(message).font(.footnote).foregroundStyle(.secondary)
                 }
                 Link("Terms of Use", destination: StoreConfig.termsURL)
