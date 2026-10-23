@@ -167,12 +167,18 @@ struct Look: Codable, Hashable {
     var clockPosition: WidgetPosition = .top
     /// Where the apps sit in the free arrangement.
     var appsPosition: WidgetPosition = .topLeading
+    /// Fine nudge in points on top of the anchor, so any spot is reachable.
+    var clockDX: Double = 0
+    var clockDY: Double = 0
+    var appsDX: Double = 0
+    var appsDY: Double = 0
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case tone, customHex, fontID, size, align, vAlign, letterCase, shadow, spacing
         case arrangement, clockPosition, appsPosition
+        case clockDX, clockDY, appsDX, appsDY
     }
 
     /// The key an old look stored the size under; decode only, never encoded.
@@ -192,6 +198,10 @@ struct Look: Codable, Hashable {
         arrangement = (try? c.decodeIfPresent(Arrangement.self, forKey: .arrangement)) ?? d.arrangement
         clockPosition = (try? c.decodeIfPresent(WidgetPosition.self, forKey: .clockPosition)) ?? d.clockPosition
         appsPosition = (try? c.decodeIfPresent(WidgetPosition.self, forKey: .appsPosition)) ?? d.appsPosition
+        clockDX = try c.decodeIfPresent(Double.self, forKey: .clockDX) ?? d.clockDX
+        clockDY = try c.decodeIfPresent(Double.self, forKey: .clockDY) ?? d.clockDY
+        appsDX = try c.decodeIfPresent(Double.self, forKey: .appsDX) ?? d.appsDX
+        appsDY = try c.decodeIfPresent(Double.self, forKey: .appsDY) ?? d.appsDY
 
         if let legacy = try? decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent(TextSize.self, forKey: .textSize) {
             size = legacy.points // old small/medium/big values

@@ -54,11 +54,13 @@ struct LauncherFace<Cell: View>: View {
                 ClockText(date: date, option: clock, look: look, size: size)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.clockPosition.alignment)
                     .padding(edgePadding)
+                    .offset(x: look.clockDX, y: look.clockDY)
             }
             if !apps.isEmpty {
                 appList
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.appsPosition.alignment)
                     .padding(edgePadding)
+                    .offset(x: look.appsDX, y: look.appsDY)
             }
             if apps.isEmpty && clock == .off {
                 Text(hint)

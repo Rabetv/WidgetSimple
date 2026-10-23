@@ -91,10 +91,14 @@ struct RootView: View {
                 }
                 .pickerStyle(.menu)
 
+                nudge("Clock nudge", x: $model.look.clockDX, y: $model.look.clockDY)
+
                 Picker("Apps position", selection: $model.look.appsPosition) {
                     ForEach(WidgetPosition.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.menu)
+
+                nudge("Apps nudge", x: $model.look.appsDX, y: $model.look.appsDY)
             }
 
             Picker("Letter case", selection: $model.look.letterCase) {
@@ -119,6 +123,25 @@ struct RootView: View {
             }
         } header: {
             Text("Style")
+        }
+    }
+
+    /// Two sliders that move a block by points on top of its anchor.
+    private func nudge(_ title: String, x: Binding<Double>, y: Binding<Double>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LabeledContent(title, value: "\(Int(x.wrappedValue)), \(Int(y.wrappedValue)) pt")
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.left.and.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Slider(value: x, in: -80...80, step: 1)
+            }
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.up.and.down")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Slider(value: y, in: -80...80, step: 1)
+            }
         }
     }
 
