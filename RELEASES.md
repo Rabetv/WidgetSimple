@@ -18,9 +18,17 @@ Actions › **TestFlight** › *Run workflow*, `flavour`:
 - `hook` (default) — the build that goes to TestFlight and to AltStore;
 - `appstore` — no private API, visible name, external checkout hidden from the paywall.
 
-`AppStore` builds still need the StoreKit purchase wired into `PaywallView` /
-`LicenseStore`; until then the App Store flavour shows no way to pay, which is at least
-not a rule violation.
+The `appstore` flavour passes `HOME_SCREEN_NAME=WidgetSimple`,
+`GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1` (Objective-C: compiles the hook out) **and**
+`SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE` (Swift: StoreKit 2 store in
+`License.swift`, StoreKit paywall in `PaywallView.swift`). Without the Swift setting
+every `#if APPSTORE` in Swift is silently false and the external checkout ships.
+
+`Scripts/audit-appstore.sh <path/to/WidgetSimple.app>` checks the built binaries with
+`nm` / `strings` for every hook symbol, selector, class name and log line, for any
+Lemon Squeezy trace, for the StoreKit product id and for the visible name. It runs in
+the **Build** workflow (`appstore` leg; the `hook` leg is the control that must still
+contain the hook) and gates the TestFlight upload of `flavour=appstore` archives.
 
 AltStore IPA (unsigned, for AltServer) is a separate workflow: **Actions › AltStore IPA**.
 

@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 import UIKit
 
@@ -7,6 +8,7 @@ struct RootView: View {
     @EnvironmentObject private var model: AppModel
     @StateObject private var license = LicenseStore()
     @State private var previewSize: FaceSize = .medium
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -22,6 +24,12 @@ struct RootView: View {
                 editor
             }
         }
+        #if APPSTORE
+        // A subscription can lapse or be refunded while the app sits in the background.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await license.refresh() } }
+        }
+        #endif
     }
 
     private var editor: some View {
@@ -233,13 +241,28 @@ private struct AccountView: View {
     @ObservedObject var license: LicenseStore
     @Environment(\.openURL) private var openURL
     @State private var viewLog = ""
+    @State private var managing = false
 
     var body: some View {
         List {
+            #if APPSTORE
+            Section("Subscription") {
+                Button("Manage subscription") { managing = true }
+                Button("Restore Purchases") { Task { await license.restore() } }
+                    .disabled(license.busy)
+                if let message = license.message {
+                    Text(message).font(.footnote).foregroundStyle(.secondary)
+                }
+                Link("Terms of Use", destination: StoreConfig.termsURL)
+                Link("Privacy Policy", destination: StoreConfig.privacyURL)
+            }
+            #else
             Section("Subscription") {
                 Button("Manage subscription") { openURL(license.manageSubscription()) }
                 Button("Sign out on this iPhone", role: .destructive) { license.signOut() }
             }
+            // The view-hierarchy probe exists for the transparency research; the App
+            // Store build has nothing to investigate there.
             Section {
                 DisclosureGroup("Widget view log") {
                     VStack(alignment: .leading, spacing: 8) {
@@ -264,16 +287,25 @@ private struct AccountView: View {
             } footer: {
                 Text("What the widget's view hierarchy looked like. Used to find out which layer draws the glass border.")
             }
+            #endif
             Section {
                 LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
             } header: {
                 Text("About")
             } footer: {
+                #if APPSTORE
+                Text("Widgets keep working when the subscription ends; the subscription unlocks the editor.")
+                #else
                 Text("Widgets stay see-through when the app is locked; the subscription unlocks the editor.")
+                #endif
             }
         }
         .navigationTitle("Account")
+        #if APPSTORE
+        .manageSubscriptionsSheet(isPresented: $managing)
+        #else
         .task { viewLog = SharedStore.shared.loadViewLog() }
+        #endif
     }
 }
 

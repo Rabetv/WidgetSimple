@@ -1,6 +1,12 @@
 import Foundation
 import Security
+import StoreKit
+import SwiftUI
 import UIKit
+
+#if !APPSTORE
+// AltStore build: sold on the web, unlocked with a licence key. App Store builds use
+// the StoreKit store below instead (guideline 3.1.1), so none of this ships there.
 
 /// Where the licence is bought. Fill these in once the store exists; everything else
 /// in the app already works with them.
@@ -128,6 +134,130 @@ final class LicenseStore: ObservableObject {
         UIDevice.current.name.isEmpty ? "iPhone" : UIDevice.current.name
     }
 }
+
+#else
+
+/// The App Store subscription. The product is created in App Store Connect as an
+/// auto-renewable subscription; its price comes from the store, never from here.
+enum StoreConfig {
+    static let productID = "com.rabetv.widgetsimple.pro.yearly"
+    /// Required on the paywall for auto-renewable subscriptions (3.1.2).
+    static let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
+    /// Must be a public page before submission; the text is in AppStore/privacy.md.
+    static let privacyURL = URL(string: "https://YOUR-PRIVACY-PAGE.example/widgetsimple/privacy")!
+}
+
+/// Unlocks the editor while the yearly subscription is active. StoreKit 2 keeps the
+/// signed transactions on the device, so the check also works offline.
+@MainActor
+final class LicenseStore: ObservableObject {
+    enum Status: Equatable { case checking, unlicensed, licensed }
+
+    @Published private(set) var status: Status = .checking
+    @Published private(set) var message: String?
+    @Published private(set) var busy = false
+    @Published private(set) var product: Product?
+
+    private var updates: Task<Void, Never>?
+
+    init() {
+        // Renewals, refunds, Ask to Buy approvals and purchases made on another device
+        // arrive here while the app runs.
+        updates = Task { [weak self] in
+            for await result in Transaction.updates {
+                guard let self else { return }
+                if case .verified(let transaction) = result {
+                    await transaction.finish()
+                }
+                await self.refreshEntitlement()
+            }
+        }
+    }
+
+    /// "€1 per year", in the person's storefront currency once the product has loaded.
+    var priceLine: String {
+        guard let product else { return "" }
+        return String(localized: "\(product.displayPrice) per year")
+    }
+
+    /// Called on launch and when the app comes back to the foreground.
+    func refresh() async {
+        await refreshEntitlement()
+        if product == nil { await loadProduct() }
+    }
+
+    func loadProduct() async {
+        message = nil
+        do {
+            product = try await Product.products(for: [StoreConfig.productID]).first
+            if product == nil { message = String(localized: "The subscription is not available right now.") }
+        } catch {
+            message = String(localized: "Could not reach the App Store. Check your connection and try again.")
+        }
+    }
+
+    /// Buys the subscription through the system sheet (`@Environment(\.purchase)`).
+    func purchase(with purchase: PurchaseAction) async {
+        guard let product else {
+            await loadProduct()
+            return
+        }
+        busy = true
+        defer { busy = false }
+        message = nil
+        do {
+            switch try await purchase(product) {
+            case .success(.verified(let transaction)):
+                await transaction.finish()
+                await refreshEntitlement()
+            case .success(.unverified):
+                message = String(localized: "The App Store could not verify this purchase.")
+            case .pending:
+                message = String(localized: "The purchase is waiting for approval.")
+            case .userCancelled:
+                break
+            @unknown default:
+                break
+            }
+        } catch {
+            message = String(localized: "The purchase did not go through. Try again.")
+        }
+    }
+
+    /// Restore Purchases: syncs with the App Store, which may ask the person to sign in.
+    func restore() async {
+        busy = true
+        defer { busy = false }
+        message = nil
+        do {
+            try await AppStore.sync()
+        } catch {
+            message = String(localized: "Could not reach the App Store. Check your connection and try again.")
+            return
+        }
+        await refreshEntitlement()
+        if status != .licensed {
+            message = String(localized: "No active subscription was found for this Apple Account.")
+        }
+    }
+
+    /// Fallback for the manage link; the app shows `manageSubscriptionsSheet` instead.
+    func manageSubscription() -> URL { URL(string: "https://apps.apple.com/account/subscriptions")! }
+
+    private func refreshEntitlement() async {
+        var active = false
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result,
+                  transaction.productID == StoreConfig.productID,
+                  transaction.revocationDate == nil else { continue }
+            if let expiry = transaction.expirationDate, expiry < Date() { continue }
+            active = true
+        }
+        status = active ? .licensed : .unlicensed
+    }
+}
+
+#endif
 
 /// The few Keychain calls this app needs.
 final class Keychain {
