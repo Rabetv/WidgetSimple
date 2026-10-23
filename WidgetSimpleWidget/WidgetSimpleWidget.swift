@@ -88,6 +88,62 @@ struct LauncherProvider: AppIntentTimelineProvider {
     }
 }
 
+/// Appends a line to the shared log, so the app can show what the widget saw.
+enum WidgetLog {
+    static func write(_ message: String) {
+        guard let group = Bundle.main.object(forInfoDictionaryKey: "AppGroupID") as? String,
+              !group.isEmpty, !group.contains("$("),
+              let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else { return }
+        let directory = container.appendingPathComponent("WidgetSimple", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let file = directory.appendingPathComponent("view.log")
+        let line = "\(Date().formatted(date: .omitted, time: .standard)) \(message)\n"
+        if let handle = try? FileHandle(forWritingTo: file) {
+            handle.seekToEndOfFile()
+            handle.write(Data(line.utf8))
+            try? handle.close()
+        } else {
+            try? Data(line.utf8).write(to: file)
+        }
+    }
+}
+
+/// Reports the view chain the widget is hosted in, and blanks what looks like the
+/// system's glass or its background layer. Glass drawn by the host in another process
+/// can't be reached this way; anything that disappears from here was drawn in-process.
+private struct GlassProbe: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let probe = UIView(frame: .zero)
+        probe.isUserInteractionEnabled = false
+        probe.backgroundColor = .clear
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak probe] in
+            var chain: [String] = []
+            var current = probe?.superview
+            var depth = 0
+            while let view = current, depth < 14 {
+                let name = String(describing: type(of: view))
+                let lower = name.lowercased()
+                chain.append("\(name)(r=\(Int(view.layer.cornerRadius)))")
+
+                if view is UIVisualEffectView || lower.contains("glass") {
+                    view.isHidden = true
+                    WidgetLog.write("hid \(name)")
+                } else if lower.contains("background") {
+                    view.backgroundColor = .clear
+                    WidgetLog.write("cleared background of \(name)")
+                }
+
+                current = view.superview
+                depth += 1
+            }
+            WidgetLog.write("chain: " + chain.joined(separator: " < "))
+        }
+        return probe
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
+}
+
 struct LauncherWidgetView: View {
     let entry: LauncherEntry
     @Environment(\.widgetFamily) private var family
@@ -107,6 +163,7 @@ struct LauncherWidgetView: View {
         }
         // Nothing behind the words: the widget is see-through, the wallpaper shows.
         .containerBackground(for: .widget) { Color.clear }
+        .overlay { GlassProbe().frame(width: 0, height: 0) }
     }
 
     /// The chosen colour; white when a Clear or Tinted Home Screen tints the widget.

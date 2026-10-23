@@ -39,6 +39,17 @@ final class SharedStore: @unchecked Sendable {
     var fontsIndexURL: URL { rootURL.appendingPathComponent("fonts.json") }
     var fontsURL: URL { rootURL.appendingPathComponent("Fonts", isDirectory: true) }
 
+    /// What the widget's view probe saw; written by the extension, read here.
+    var viewLogURL: URL { rootURL.appendingPathComponent("view.log") }
+
+    func loadViewLog() -> String {
+        (try? String(contentsOf: viewLogURL, encoding: .utf8)) ?? "Nothing yet. Add the widget, then come back."
+    }
+
+    func clearViewLog() {
+        try? FileManager.default.removeItem(at: viewLogURL)
+    }
+
     // MARK: Generic JSON
 
     private func read<T: Decodable>(_ type: T.Type, from url: URL) -> T? {
