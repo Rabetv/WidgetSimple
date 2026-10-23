@@ -74,6 +74,56 @@ enum LetterCase: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// A placement on the widget, used for the clock and the apps in the free arrangement.
+enum WidgetPosition: String, Codable, CaseIterable, Identifiable {
+    case topLeading, top, topTrailing, leading, center, trailing, bottomLeading, bottom, bottomTrailing
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .topLeading: return "Top Left"
+        case .top: return "Top"
+        case .topTrailing: return "Top Right"
+        case .leading: return "Left"
+        case .center: return "Center"
+        case .trailing: return "Right"
+        case .bottomLeading: return "Bottom Left"
+        case .bottom: return "Bottom"
+        case .bottomTrailing: return "Bottom Right"
+        }
+    }
+
+    var alignment: Alignment {
+        switch self {
+        case .topLeading: return .topLeading
+        case .top: return .top
+        case .topTrailing: return .topTrailing
+        case .leading: return .leading
+        case .center: return .center
+        case .trailing: return .trailing
+        case .bottomLeading: return .bottomLeading
+        case .bottom: return .bottom
+        case .bottomTrailing: return .bottomTrailing
+        }
+    }
+}
+
+/// How the clock and the apps sit together on the widget.
+enum Arrangement: String, Codable, CaseIterable, Identifiable {
+    /// Clock above the apps (side by side on a medium widget).
+    case stacked
+    /// The clock and the apps each sit wherever their position says, even overlapping.
+    case free
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .stacked: return "Stacked"
+        case .free: return "Free"
+        }
+    }
+}
+
 enum TextTone: String, Codable, CaseIterable, Identifiable {
     case white, black, custom
     var id: String { rawValue }
@@ -111,11 +161,18 @@ struct Look: Codable, Hashable {
     var shadow: Bool = false
     /// Line spacing multiplier: 0.6 tight … 2.0 airy.
     var spacing: Double = 1.0
+    /// Stacked (clock above apps) or free placement.
+    var arrangement: Arrangement = .stacked
+    /// Where the clock sits in the free arrangement.
+    var clockPosition: WidgetPosition = .top
+    /// Where the apps sit in the free arrangement.
+    var appsPosition: WidgetPosition = .topLeading
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case tone, customHex, fontID, size, align, vAlign, letterCase, shadow, spacing
+        case arrangement, clockPosition, appsPosition
     }
 
     /// The key an old look stored the size under; decode only, never encoded.
@@ -132,6 +189,9 @@ struct Look: Codable, Hashable {
         letterCase = (try? c.decodeIfPresent(LetterCase.self, forKey: .letterCase)) ?? d.letterCase
         shadow = try c.decodeIfPresent(Bool.self, forKey: .shadow) ?? d.shadow
         spacing = try c.decodeIfPresent(Double.self, forKey: .spacing) ?? d.spacing
+        arrangement = (try? c.decodeIfPresent(Arrangement.self, forKey: .arrangement)) ?? d.arrangement
+        clockPosition = (try? c.decodeIfPresent(WidgetPosition.self, forKey: .clockPosition)) ?? d.clockPosition
+        appsPosition = (try? c.decodeIfPresent(WidgetPosition.self, forKey: .appsPosition)) ?? d.appsPosition
 
         if let legacy = try? decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent(TextSize.self, forKey: .textSize) {
             size = legacy.points // old small/medium/big values

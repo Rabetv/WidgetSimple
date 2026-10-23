@@ -80,6 +80,23 @@ struct RootView: View {
             }
             .pickerStyle(.segmented)
 
+            Picker("Arrangement", selection: $model.look.arrangement) {
+                ForEach(Arrangement.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+
+            if model.look.arrangement == .free {
+                Picker("Clock position", selection: $model.look.clockPosition) {
+                    ForEach(WidgetPosition.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.menu)
+
+                Picker("Apps position", selection: $model.look.appsPosition) {
+                    ForEach(WidgetPosition.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.menu)
+            }
+
             Picker("Letter case", selection: $model.look.letterCase) {
                 ForEach(LetterCase.allCases) { Text($0.title).tag($0) }
             }

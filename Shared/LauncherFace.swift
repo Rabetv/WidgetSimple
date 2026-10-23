@@ -8,6 +8,10 @@ enum FaceSize {
 
 /// What a widget shows: an optional clock and the app names, text only. Shared by the
 /// widget and the in-app preview, so the preview is exactly what lands on the Home Screen.
+///
+/// Two arrangements:
+///  * `.stacked` — clock above the apps (side by side on a medium widget);
+///  * `.free` — the clock and the apps each sit wherever their position says.
 /// `cell` wraps each name; the widget turns it into a button that opens the app.
 struct LauncherFace<Cell: View>: View {
     let look: Look
@@ -22,14 +26,47 @@ struct LauncherFace<Cell: View>: View {
     @ViewBuilder let cell: (Int, AppName) -> Cell
 
     private var align: HorizontalAlignment { look.align.horizontal }
+    private var edgePadding: CGFloat { size == .small ? 16 : 20 }
 
     var body: some View {
+        Group {
+            switch look.arrangement {
+            case .stacked: stacked
+            case .free: free
+            }
+        }
+        .foregroundStyle(color)
+        .textCase(look.letterCase.textCase)
+        .shadow(color: look.shadow ? Color.black.opacity(0.45) : .clear, radius: 6, x: 0, y: 3)
+    }
+
+    // MARK: Arrangements
+
+    private var stacked: some View {
         content
-            .foregroundStyle(color)
-            .textCase(look.letterCase.textCase)
-            .padding(size == .small ? 16 : 20)
+            .padding(edgePadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.alignment)
-            .shadow(color: look.shadow ? Color.black.opacity(0.45) : .clear, radius: 6, x: 0, y: 3)
+    }
+
+    private var free: some View {
+        ZStack {
+            if clock != .off {
+                ClockText(date: date, option: clock, look: look, size: size)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.clockPosition.alignment)
+                    .padding(edgePadding)
+            }
+            if !apps.isEmpty {
+                appList
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.appsPosition.alignment)
+                    .padding(edgePadding)
+            }
+            if apps.isEmpty && clock == .off {
+                Text(hint)
+                    .font(.system(size: 14, weight: .medium))
+                    .multilineTextAlignment(look.align.text)
+                    .opacity(0.7)
+            }
+        }
     }
 
     @ViewBuilder
@@ -56,6 +93,8 @@ struct LauncherFace<Cell: View>: View {
             }
         }
     }
+
+    // MARK: Apps
 
     /// As many columns as the widget needs to fit every app.
     private var appList: some View {
