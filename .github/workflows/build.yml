@@ -49,7 +49,7 @@ jobs:
             build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
 
-      - name: Audit App Store build (report only: the hook is included)
+      - name: "Audit App Store build (report only: the hook is included)"
         if: matrix.flavour == 'appstore'
         continue-on-error: true
         run: |
