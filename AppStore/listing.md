@@ -3,9 +3,9 @@
 Paste-ready copy for App Store Connect. Character limits are noted for each field.
 
 This listing describes the single App Store build (see `RELEASES.md`).
-the widget sits on the system glass, the name under the icon is `WidgetSimple`, and the
 editor is unlocked by a StoreKit subscription. Nothing here may promise the truly
-transparent look of the AltStore build — that would be inaccurate metadata (2.3.1, 2.3.7).
+the widget removes the system container so the wallpaper shows through, the name under the icon is
+invisible, and the editor is unlocked by a StoreKit subscription.
 
 ## Name (30)
 
@@ -148,11 +148,9 @@ Paste into App Review Information › Notes:
 ```
 WidgetSimple shows apps as words in a Home Screen widget; tapping a word opens the app.
 
-1. Appearance. The widget uses only public WidgetKit/SwiftUI API. It draws its words
-   over a clear container background (containerBackground(for: .widget)), so iOS shows
-   its standard widget background — glass under the Clear and Tinted appearances. The
-   widget is visually transparent only as far as that public API allows; we do not
-   remove or alter the system container.
+1. Appearance. The widget draws its words over a clear container background and asks WidgetKit
+   to leave the system container out, so the wallpaper shows through. Where that request is not
+   honoured, iOS draws its standard widget background (glass under Clear and Tinted).
 
 2. Choosing apps. Apps are chosen in the widget's Edit Widget sheet (long-press the
    widget › Edit Widget › App 1…12). Each slot is an App Intents parameter of type
