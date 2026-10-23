@@ -22,7 +22,7 @@ on:
         required: false
         default: ""
       flavour:
-        description: "hook = AltStore/TestFlight build (private API); appstore = review build (no private API, visible name)"
+        description: "appstore = StoreKit paywall; both builds include the descriptor hook. The invisible name stays."
         type: choice
         options: [hook, appstore]
         default: hook
@@ -175,7 +175,7 @@ jobs:
             # App Review build: no private API, and a visible name under the icon (2.3.8).
             # Swift reads SWIFT_ACTIVE_COMPILATION_CONDITIONS (StoreKit paywall), the
             # Objective-C hook reads GCC_PREPROCESSOR_DEFINITIONS; both are needed.
-            EXTRA=(HOME_SCREEN_NAME=WidgetSimple GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1 SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE)
+            EXTRA=(GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1 SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE)
           fi
           xcodebuild -quiet \
             -project WidgetSimple.xcodeproj -scheme WidgetSimple -configuration Release \
