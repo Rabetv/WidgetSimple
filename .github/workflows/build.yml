@@ -9,6 +9,13 @@ jobs:
   build:
     runs-on: xcode-27
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # hook = AltStore/TestFlight build with the private-API hook;
+        # appstore = App Review build (see RELEASES.md). Both must stay green.
+        flavour: [hook, appstore]
+    name: build (${{ matrix.flavour }})
     steps:
       - uses: actions/checkout@v4
 
@@ -19,22 +26,51 @@ jobs:
           xcodebuild -version
 
       - name: Build app + widget (unsigned, device SDK)
+        env:
+          FLAVOUR: ${{ matrix.flavour }}
         run: |
           set -o pipefail
+          EXTRA=()
+          if [ "$FLAVOUR" = "appstore" ]; then
+            # Same settings as the TestFlight appstore archive. Swift reads
+            # SWIFT_ACTIVE_COMPILATION_CONDITIONS, Objective-C reads the GCC ones.
+            EXTRA=(HOME_SCREEN_NAME=WidgetSimple GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1 SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE)
+          fi
           xcodebuild \
             -project WidgetSimple.xcodeproj \
             -scheme WidgetSimple \
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
+            -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
+            ${EXTRA[@]+"${EXTRA[@]}"} \
             build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Audit App Store build (no private API)
+        if: matrix.flavour == 'appstore'
+        run: |
+          set -o pipefail
+          Scripts/audit-appstore.sh DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app 2>&1 | tee audit.log
+          { echo '### App Store audit'; echo '```'; cat audit.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      # Control: the hook build must contain what the audit looks for, otherwise a
+      # passing audit above proves nothing.
+      - name: Audit control (hook build contains the hook)
+        if: matrix.flavour == 'hook'
+        run: |
+          set -euo pipefail
+          appex=DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app/PlugIns/WidgetSimpleWidget.appex/WidgetSimpleWidget
+          strings -a "$appex" | grep -F getAllCurrentDescriptorsWithCompletion
 
       - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
-          path: build.log
+          name: build-log-${{ matrix.flavour }}
+          path: |
+            build.log
+            audit.log
+          if-no-files-found: ignore

@@ -110,3 +110,21 @@
 "Enter the licence key from your receipt." = "Gib den Lizenzschlüssel aus deiner Bestellung ein.";
 "Could not reach the licence server." = "Der Lizenzserver war nicht erreichbar.";
 "That key was not accepted." = "Dieser Schlüssel wurde nicht akzeptiert.";
+
+/* App Store subscription (StoreKit, APPSTORE builds) */
+"Your apps as words." = "Deine Apps als Wörter.";
+"Words over your wallpaper, on the system glass" = "Wörter über deinem Hintergrundbild, auf dem Systemglas";
+"%@ per year" = "%@ pro Jahr";
+"Loading…" = "Wird geladen …";
+"Try Again" = "Erneut versuchen";
+"WidgetSimple Pro, 1 year. Renews automatically each year until cancelled. Cancel any time in Settings › Apple Account › Subscriptions, at least 24 hours before the renewal date." = "WidgetSimple Pro, 1 Jahr. Verlängert sich jedes Jahr automatisch, bis du kündigst. Kündigen jederzeit unter Einstellungen › Apple Account › Abonnements, spätestens 24 Stunden vor der Verlängerung.";
+"Restore Purchases" = "Käufe wiederherstellen";
+"Terms of Use" = "Nutzungsbedingungen";
+"Privacy Policy" = "Datenschutzerklärung";
+"The subscription is not available right now." = "Das Abo ist gerade nicht verfügbar.";
+"Could not reach the App Store. Check your connection and try again." = "Der App Store war nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.";
+"The App Store could not verify this purchase." = "Der App Store konnte diesen Kauf nicht bestätigen.";
+"The purchase is waiting for approval." = "Der Kauf wartet auf Freigabe.";
+"The purchase did not go through. Try again." = "Der Kauf hat nicht geklappt. Versuche es erneut.";
+"No active subscription was found for this Apple Account." = "Für diesen Apple Account wurde kein aktives Abo gefunden.";
+"Widgets keep working when the subscription ends; the subscription unlocks the editor." = "Widgets funktionieren weiter, wenn das Abo endet; das Abo schaltet den Editor frei.";
