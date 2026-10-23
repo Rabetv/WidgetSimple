@@ -96,6 +96,8 @@ struct PaywallView: View {
                         ProgressView()
                     } else if license.product == nil {
                         license.message == nil ? Text("Loading…") : Text("Try Again")
+                    } else if license.trialLine != nil {
+                        Text("Start Free Trial")
                     } else {
                         Text("Subscribe — \(license.priceLine)")
                     }
@@ -108,11 +110,22 @@ struct PaywallView: View {
             .controlSize(.large)
             .disabled(license.busy || (license.product == nil && license.message == nil))
 
-            // 3.1.2: title, length and price of the subscription, how it renews.
-            Text("WidgetSimple Pro, 1 year. Renews automatically each year until cancelled. Cancel any time in Settings › Apple Account › Subscriptions, at least 24 hours before the renewal date.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            // 3.1.2: title, length and price of the subscription, how it renews, and what
+            // the trial turns into. The amount billed stays the most prominent price.
+            if let trialLine = license.trialLine {
+                Text("\(trialLine), then \(license.priceLine)")
+                    .font(.subheadline.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                Text("WidgetSimple Pro, 1 year. When the free trial ends, the price above is charged to your Apple Account and the subscription renews each year until cancelled. Cancel any time in Settings › Apple Account › Subscriptions, at least 24 hours before the trial or the current year ends.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("WidgetSimple Pro, 1 year. Renews automatically each year until cancelled. Cancel any time in Settings › Apple Account › Subscriptions, at least 24 hours before the renewal date.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             if let message = license.message {
                 Text(message)
                     .font(.footnote)
