@@ -60,7 +60,7 @@ struct HomeView: View {
                 }
             }
             .sheet(isPresented: $adding) {
-                AddWidgetSheet()
+                NewWidgetView()
             }
         }
     }

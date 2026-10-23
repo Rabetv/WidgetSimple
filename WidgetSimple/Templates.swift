@@ -62,7 +62,7 @@ struct TemplateGrid: View {
                     pending = template
                 } label: {
                     VStack(alignment: .leading, spacing: 8) {
-                        WidgetPreviewCard(look: template.look, clock: template.clock, size: .small)
+                        WidgetPreviewCard(look: template.look, clock: template.clock, size: .small, plainBackdrop: true)
                             .allowsHitTesting(false)
                         Text(template.name)
                             .font(.subheadline.weight(.semibold))

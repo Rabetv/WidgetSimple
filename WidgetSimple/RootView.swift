@@ -423,6 +423,9 @@ struct WidgetPreviewCard: View {
     let look: Look
     let clock: ClockOption
     let size: FaceSize
+    /// True for template thumbnails: a neutral panel instead of the app wallpaper, so
+    /// six cards do not all show the same picture.
+    var plainBackdrop = false
 
     var body: some View {
         TimelineView(.everyMinute) { context in
@@ -431,7 +434,14 @@ struct WidgetPreviewCard: View {
         }
         .aspectRatio(size.aspectRatio, contentMode: .fit)
         .padding(18)
-        .background(Image("AppBackground").resizable().scaledToFill())
+        .background {
+            if plainBackdrop {
+                LinearGradient(colors: [look.color.opacity(0.30), Color.black.opacity(0.55)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+            } else {
+                Image("AppBackground").resizable().scaledToFill()
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
         .animation(.easeInOut(duration: 0.2), value: look)
         .frame(maxWidth: .infinity)
