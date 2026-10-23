@@ -127,12 +127,15 @@ which Apple handles. `PrivacyInfo.xcprivacy` declares no collected data types.
 Ready: `AppStore/screenshots/*.png`, 1320 × 2868 (6.9", the required size; App Store
 Connect scales them for smaller iPhones). Upload in this order:
 
-1. `01-apps-as-words.png`: Home Screen with launcher widgets on the system glass.
-2. `02-style-every-word.png`: the editor.
-3. `03-templates.png`: the Templates tab.
-4. `04-every-size.png`: small, medium and large widgets.
+1. `01-apps-as-words.png`: hero, launcher widgets on the system glass.
+2. `02-style-every-word.png`: the editor (40+ fonts = 4 system + 40 built-in families).
+3. `03-templates.png`: the Templates tab, two templates popping out.
+4. `04-every-size.png`: small, medium, large and extra-large widgets.
 5. `05-place-anywhere.png`: free placement, word by word.
-6. `06-three-steps.png`: the first-run tutorial.
+6. `06-three-steps.png`: the first-run tutorial; no account, no ads, no tracking.
+
+Style: dark warm stage, amber ribbon, callout pills, screens breaking out of the frame.
+Every claim on them is true for the `appstore` build; no user counts or ratings.
 
 They show only what the `appstore` build has: the launcher widget on the system glass,
 no other widget types (2.3.1, 2.3.3). Sources: `AppStore/screenshots/src/*.html`,
