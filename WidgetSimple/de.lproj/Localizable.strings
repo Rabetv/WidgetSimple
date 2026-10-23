@@ -128,3 +128,17 @@
 "The purchase did not go through. Try again." = "Der Kauf hat nicht geklappt. Versuche es erneut.";
 "No active subscription was found for this Apple Account." = "Für diesen Apple Account wurde kein aktives Abo gefunden.";
 "Widgets keep working when the subscription ends; the subscription unlocks the editor." = "Widgets funktionieren weiter, wenn das Abo endet; das Abo schaltet den Editor frei.";
+
+/* Free trial (introductory offer) */
+"Start Free Trial" = "Gratis testen";
+"%@, then %@" = "%1$@, danach %2$@";
+"1 day free" = "1 Tag gratis";
+"%lld days free" = "%lld Tage gratis";
+"1 week free" = "1 Woche gratis";
+"%lld weeks free" = "%lld Wochen gratis";
+"1 month free" = "1 Monat gratis";
+"%lld months free" = "%lld Monate gratis";
+"1 year free" = "1 Jahr gratis";
+"%lld years free" = "%lld Jahre gratis";
+"Free trial" = "Gratis-Testzeitraum";
+"WidgetSimple Pro, 1 year. When the free trial ends, the price above is charged to your Apple Account and the subscription renews each year until cancelled. Cancel any time in Settings › Apple Account › Subscriptions, at least 24 hours before the trial or the current year ends." = "WidgetSimple Pro, 1 Jahr. Nach dem Gratis-Zeitraum wird der oben genannte Preis über deinen Apple Account abgerechnet, und das Abo verlängert sich jedes Jahr, bis du kündigst. Kündigen jederzeit unter Einstellungen › Apple Account › Abonnements, spätestens 24 Stunden vor Ende des Gratis-Zeitraums oder des laufenden Jahres.";

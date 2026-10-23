@@ -66,7 +66,9 @@ is set in the app and applies to all your widgets at once.
 WIDGETSIMPLE PRO
 
 The style editor is unlocked with WidgetSimple Pro, an auto-renewable yearly
-subscription. Payment is charged to your Apple Account at confirmation of purchase.
+subscription. New subscribers get the first 3 months free; after the free trial the
+yearly price is charged unless you cancel at least 24 hours before it ends. Payment is
+charged to your Apple Account at confirmation of purchase.
 The subscription renews automatically unless cancelled at least 24 hours before the end
 of the current period; you can manage or cancel it in Settings › Apple Account ›
 Subscriptions. Widgets you already placed keep working if the subscription ends.
@@ -86,6 +88,7 @@ Privacy Policy: <PRIVACY POLICY URL>
 | Product ID | `com.rabetv.widgetsimple.pro.yearly` (must match `StoreConfig.productID`) |
 | Duration | 1 year |
 | Price | €1/year target — pick the nearest EUR price point (e.g. €0.99), let Apple derive other storefronts |
+| Introductory offer | Free trial, 3 months, all storefronts, no end date (new subscribers only; Apple enforces one per group and Apple Account) |
 | Display name | WidgetSimple Pro |
 | Description | Unlocks the style editor for all widgets. |
 | Review screenshot | the paywall of the `appstore` build (shows price, length, Restore, Terms, Privacy) |
@@ -154,8 +157,9 @@ WidgetSimple shows apps as words in a Home Screen widget; tapping a word opens t
    swizzling. Opening an app uses the public iOS 27 system shortcut intent.
 
 4. Subscription. The style editor unlocks with the auto-renewable subscription
-   "WidgetSimple Pro" (com.rabetv.widgetsimple.pro.yearly, 1 year). Buy it from the
-   first screen with a sandbox account; "Restore Purchases", Terms of Use and Privacy
+   "WidgetSimple Pro" (com.rabetv.widgetsimple.pro.yearly, 1 year) with a 3-month free
+   trial for new subscribers; the paywall states the trial length and the yearly price
+   that follows. Buy it from the first screen with a sandbox account; "Restore Purchases", Terms of Use and Privacy
    Policy are on the same screen, and Account › Manage subscription opens the system
    subscription sheet. Widgets keep rendering without a subscription.
 
