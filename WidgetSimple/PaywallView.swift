@@ -24,7 +24,7 @@ struct PaywallView: View {
                 }
                 .padding(22)
             }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .background(AppBackground())
             .navigationBarTitleDisplayMode(.inline)
             #if APPSTORE
             .task { if license.product == nil { await license.loadProduct() } }
@@ -39,9 +39,14 @@ struct PaywallView: View {
 
     private var header: some View {
         VStack(spacing: 12) {
-            Image(systemName: "textformat")
-                .font(.system(size: 44, weight: .light))
-                .foregroundStyle(.tint)
+            Image("AppIconImage")
+                .resizable()
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 1))
+                .shadow(color: .black.opacity(0.45), radius: 20, y: 12)
+                .accessibilityHidden(true)
             #if APPSTORE
             Text("Your apps as words.")
                 .font(.title.bold())
@@ -79,8 +84,7 @@ struct PaywallView: View {
         .font(.callout)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color(.secondarySystemGroupedBackground),
-                    in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassPanel(cornerRadius: 26)
     }
 
     private var buyButton: some View {
@@ -106,7 +110,7 @@ struct PaywallView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.glassProminent)
             .controlSize(.large)
             .disabled(license.busy || (license.product == nil && license.message == nil))
 
@@ -141,7 +145,7 @@ struct PaywallView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.glassProminent)
             .controlSize(.large)
 
             Text("After paying you get a licence key by email. Enter it below.")
@@ -191,8 +195,7 @@ struct PaywallView: View {
             .font(.footnote)
         }
         .padding(18)
-        .background(Color(.secondarySystemGroupedBackground),
-                    in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassPanel(cornerRadius: 26)
     }
     #endif
 
