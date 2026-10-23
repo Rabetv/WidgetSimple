@@ -76,7 +76,7 @@ Subscriptions. Widgets you already placed keep working if the subscription ends.
 No account. No ads. No tracking.
 
 Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
-Privacy Policy: <PRIVACY POLICY URL>
+Privacy Policy: https://rabetv.github.io/widgetsimple-site/privacy.html
 ```
 
 ## In-app purchase (App Store Connect › Subscriptions)
@@ -115,24 +115,28 @@ which Apple handles. `PrivacyInfo.xcprivacy` declares no collected data types.
 
 ## URLs
 
-- **Privacy Policy URL (required): not hosted yet — blocker.** Text ready in
-  `AppStore/privacy.md`. Once it is public, put the URL here, in the description above
-  and in `StoreConfig.privacyURL` (`WidgetSimple/License.swift`), which the paywall links to.
-- **Support URL (required): not hosted yet — blocker.** Any public page with a contact
-  e-mail works. This repository is private, so its README is not reachable.
+- **Privacy Policy URL:** https://rabetv.github.io/widgetsimple-site/privacy.html
+  (English and German; also linked from the paywall via `StoreConfig.privacyURL`).
+- **Support URL:** https://rabetv.github.io/widgetsimple-site/ (help, subscription,
+  contact, Impressum).
+- Both pages live in the public repository `Rabetv/widgetsimple-site` (GitHub Pages).
 - Marketing URL: optional, leave empty.
 
 ## Screenshots to capture
 
-Capture from an **`appstore`-flavour build** only: the AltStore/hook build has no glass
-and would make the screenshots inaccurate (2.3.3). Required: 6.9" display
-(1320 × 2868 or 1290 × 2796 portrait); App Store Connect scales them for smaller iPhones.
+Ready: `AppStore/screenshots/*.png`, 1320 × 2868 (6.9", the required size; App Store
+Connect scales them for smaller iPhones). Upload in this order:
 
-1. Medium widget on the Home Screen, clock + 4 words, photo wallpaper.
-2. Same widget with free placement: clock bottom-right, words top-left.
-3. Small widget, white words, Clear Home Screen appearance (glass visible).
-4. Style screen in the app (form with live preview).
-5. Edit Widget sheet choosing apps (shows why apps are picked there).
+1. `01-apps-as-words.png`: Home Screen with launcher widgets on the system glass.
+2. `02-style-every-word.png`: the editor.
+3. `03-templates.png`: the Templates tab.
+4. `04-every-size.png`: small, medium and large widgets.
+5. `05-place-anywhere.png`: free placement, word by word.
+6. `06-three-steps.png`: the first-run tutorial.
+
+They show only what the `appstore` build has: the launcher widget on the system glass,
+no other widget types (2.3.1, 2.3.3). Sources: `AppStore/screenshots/src/*.html`,
+rendered with headless Chrome at 1320 × 2868; re-render after UI changes.
 
 ## Notes for review
 

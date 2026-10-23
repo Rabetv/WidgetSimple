@@ -13,6 +13,8 @@ WidgetSimple does not collect, store on a server, share or sell any personal dat
   whether the WidgetSimple Pro subscription is active on your Apple Account.
 - **Children.** The app is suitable for all ages and collects no data from anyone.
 
-Questions: <SUPPORT E-MAIL>
+Published at https://rabetv.github.io/widgetsimple-site/privacy.html (English and
+German). Controller: Kristin Raschke, Emmy-Noether-Straße 25, 40789 Monheim am Rhein,
+Germany. Questions: loopmaster.exe@gmail.com
 
 Changes to this policy will be published at this address with a new date.
