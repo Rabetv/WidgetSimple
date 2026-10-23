@@ -26,8 +26,10 @@ struct LauncherFace<Cell: View>: View {
     var body: some View {
         content
             .foregroundStyle(color)
+            .textCase(look.letterCase.textCase)
             .padding(size == .small ? 16 : 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: Alignment(horizontal: align, vertical: .top))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.alignment)
+            .shadow(color: look.shadow ? Color.black.opacity(0.45) : .clear, radius: 6, x: 0, y: 3)
     }
 
     @ViewBuilder
@@ -44,7 +46,7 @@ struct LauncherFace<Cell: View>: View {
                 appList
             }
         } else {
-            VStack(alignment: align, spacing: look.textSize.points * 0.8) {
+            VStack(alignment: align, spacing: look.size * 0.8 * look.spacing) {
                 if clock != .off {
                     ClockText(date: date, option: clock, look: look, size: size)
                 }
@@ -71,7 +73,7 @@ struct LauncherFace<Cell: View>: View {
             ForEach(0..<count, id: \.self) { column in
                 let start = min(column * perColumn, apps.count)
                 let end = min(start + perColumn, apps.count)
-                VStack(alignment: align, spacing: look.textSize.points * 0.45) {
+                VStack(alignment: align, spacing: look.size * 0.45 * look.spacing) {
                     ForEach(start..<end, id: \.self) { index in
                         cell(index, AppName(name: apps[index], look: look))
                     }
@@ -96,7 +98,7 @@ struct AppName: View {
 
     var body: some View {
         Text(name)
-            .font(look.font(size: look.textSize.points))
+            .font(look.font(size: look.size))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             .frame(maxWidth: .infinity, alignment: Alignment(horizontal: look.align.horizontal, vertical: .center))
@@ -140,12 +142,12 @@ struct ClockText: View {
 
     private func small(_ text: String) -> some View {
         Text(text)
-            .font(look.font(size: look.textSize.points * 0.8))
+            .font(look.font(size: look.size * 0.8))
             .opacity(0.75)
     }
 
     private var bigSize: Double {
-        let base = look.textSize.points
+        let base = look.size
         switch size {
         case .small: return base * 1.8
         case .medium: return base * 2.2
