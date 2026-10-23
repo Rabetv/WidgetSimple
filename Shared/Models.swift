@@ -116,8 +116,10 @@ struct Look: Codable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case tone, customHex, fontID, size, align, vAlign, letterCase, shadow, spacing
-        case textSize // legacy key, decode only
     }
+
+    /// The key an old look stored the size under; decode only, never encoded.
+    private enum LegacyKeys: String, CodingKey { case textSize }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -131,7 +133,7 @@ struct Look: Codable, Hashable {
         shadow = try c.decodeIfPresent(Bool.self, forKey: .shadow) ?? d.shadow
         spacing = try c.decodeIfPresent(Double.self, forKey: .spacing) ?? d.spacing
 
-        if let legacy = try? c.decodeIfPresent(TextSize.self, forKey: .textSize) {
+        if let legacy = try? decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent(TextSize.self, forKey: .textSize) {
             size = legacy.points // old small/medium/big values
         } else {
             size = try c.decodeIfPresent(Double.self, forKey: .size) ?? d.size
@@ -164,7 +166,7 @@ enum TextSize: String, Codable {
 // MARK: - Clock
 
 /// The clock a widget shows above (or beside) its apps. Picked in the app.
-enum ClockOption: String, CaseIterable, AppEnum {
+enum ClockOption: String, Codable, CaseIterable, AppEnum {
     case off, time, timeAndDate, date
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Clock"
