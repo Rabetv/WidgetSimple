@@ -1,0 +1,112 @@
+/* WidgetSimple — German. Keys are the English strings used in the code. */
+
+/* Sections */
+"Preview" = "Vorschau";
+"Apps" = "Apps";
+"Clock" = "Uhr";
+"Style" = "Stil";
+
+/* Preview */
+"The widget is see-through — the wallpaper shows behind the words. Add it once from the Home Screen and style it here." = "Das Widget ist transparent – das Hintergrundbild scheint hinter den Wörtern durch. Einmal zum Home-Bildschirm hinzufügen, hier gestalten.";
+"Small" = "Klein";
+"Medium" = "Mittel";
+"Large" = "Groß";
+
+/* Apps */
+"Hold the widget › Edit Widget to pick the apps." = "Widget gedrückt halten › Widget bearbeiten, um die Apps zu wählen.";
+"A tap on a word opens that app directly." = "Ein Tippen auf ein Wort öffnet die App direkt.";
+"Every widget can open a different set." = "Jedes Widget kann eine andere Auswahl öffnen.";
+"iOS only lets the system fill the app list, so it lives in Edit Widget." = "iOS lässt die App-Liste nur vom System füllen, deshalb liegt sie unter „Widget bearbeiten“.";
+
+/* Clock */
+"No clock" = "Keine Uhr";
+"Time" = "Uhrzeit";
+"Time and date" = "Uhrzeit und Datum";
+"Date" = "Datum";
+
+/* Style rows */
+"Font" = "Schrift";
+"Size" = "Größe";
+"Alignment" = "Ausrichtung";
+"Position" = "Position";
+"Arrangement" = "Anordnung";
+"Clock position" = "Position der Uhr";
+"Apps position" = "Position der Apps";
+"Clock nudge" = "Uhr verschieben";
+"Apps nudge" = "Apps verschieben";
+"Place every word separately" = "Jedes Wort einzeln platzieren";
+"Word placement" = "Wortpositionen";
+"Word %lld" = "Wort %lld";
+"Words you haven't picked in Edit Widget are ignored." = "Wörter, die du nicht unter „Widget bearbeiten“ gewählt hast, werden ignoriert.";
+"Letter case" = "Groß-/Kleinschreibung";
+"Color" = "Farbe";
+"Custom color" = "Eigene Farbe";
+"Shadow" = "Schatten";
+"Spacing" = "Abstand";
+
+/* Alignment values */
+"Left" = "Links";
+"Center" = "Mitte";
+"Right" = "Rechts";
+"Top" = "Oben";
+"Middle" = "Mittig";
+"Bottom" = "Unten";
+
+/* Placement values */
+"Top Left" = "Oben links";
+"Top Right" = "Oben rechts";
+"Bottom Left" = "Unten links";
+"Bottom Right" = "Unten rechts";
+
+/* Arrangement */
+"Stacked" = "Gestapelt";
+"Free" = "Frei";
+
+/* Colours */
+"White" = "Weiß";
+"Black" = "Schwarz";
+"Custom" = "Eigene";
+
+/* Values with numbers */
+"%lld pt" = "%lld pt";
+"%lld, %lld pt" = "%lld, %lld pt";
+"%.1f×" = "%.1f×";
+
+/* Font picker */
+"Fonts" = "Schriften";
+"System" = "System";
+"Your fonts" = "Deine Schriften";
+"Built into iOS" = "In iOS enthalten";
+"Add a font file (.ttf / .otf)" = "Schriftdatei hinzufügen (.ttf / .otf)";
+"Done" = "Fertig";
+"OK" = "OK";
+"Font import failed" = "Import der Schrift fehlgeschlagen";
+"Search" = "Suchen";
+
+/* Account */
+"Account" = "Konto";
+"Subscription" = "Abo";
+"Manage subscription" = "Abo verwalten";
+"Sign out on this iPhone" = "Auf diesem iPhone abmelden";
+"About" = "Über";
+"Version" = "Version";
+"Widgets stay see-through when the app is locked; the subscription unlocks the editor." = "Widgets bleiben transparent, auch wenn die App gesperrt ist; das Abo schaltet den Editor frei.";
+
+/* Paywall */
+"Your apps as words, see-through." = "Deine Apps als Wörter, transparent.";
+"One subscription, every widget. %@." = "Ein Abo, alle Widgets. %@.";
+"Up to 12 apps per widget, tap to open" = "Bis zu 12 Apps pro Widget, antippen zum Öffnen";
+"Truly transparent — no glass, no frames" = "Wirklich transparent – kein Glas, keine Rahmen";
+"Fonts, colours, placement, clock" = "Schriften, Farben, Position, Uhr";
+"Updates and new features included" = "Updates und neue Funktionen inklusive";
+"Subscribe — %@" = "Abonnieren – %@";
+"After paying you get a licence key by email. Enter it below." = "Nach der Zahlung kommt der Lizenzschlüssel per E-Mail. Gib ihn unten ein.";
+"Already subscribed?" = "Schon abonniert?";
+"Licence key" = "Lizenzschlüssel";
+"Activate" = "Aktivieren";
+"The licence is checked online and works offline for a week." = "Die Lizenz wird online geprüft und funktioniert eine Woche offline.";
+"Widgets keep working even if the app is locked." = "Widgets funktionieren weiter, auch wenn die App gesperrt ist.";
+"The licence could not be checked. Connect to the internet and try again." = "Die Lizenz konnte nicht geprüft werden. Verbinde dich mit dem Internet und versuche es erneut.";
+"Enter the licence key from your receipt." = "Gib den Lizenzschlüssel aus deiner Bestellung ein.";
+"Could not reach the licence server." = "Der Lizenzserver war nicht erreichbar.";
+"That key was not accepted." = "Dieser Schlüssel wurde nicht akzeptiert.";

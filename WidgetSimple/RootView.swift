@@ -1,14 +1,30 @@
 import SwiftUI
 import UIKit
 
-/// The whole app: a live preview of the widget and every control that styles it.
-/// The widget itself is see-through, so there is no wallpaper setup here — only
-/// the look, the clock, and the hint that the apps are picked in Edit Widget.
+/// The app: the paywall until a licence is validated, then one screen with a live
+/// preview and every control that styles the widget.
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
+    @StateObject private var license = LicenseStore()
     @State private var previewSize: FaceSize = .medium
 
     var body: some View {
+        Group {
+            switch license.status {
+            case .checking:
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                    .task { await license.refresh() }
+            case .unlicensed:
+                PaywallView(license: license)
+            case .licensed:
+                editor
+            }
+        }
+    }
+
+    private var editor: some View {
         NavigationStack {
             Form {
                 previewSection
@@ -18,6 +34,16 @@ struct RootView: View {
             }
             .navigationTitle("WidgetSimple")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        AccountView(license: license)
+                    } label: {
+                        Image(systemName: "person.crop.circle")
+                    }
+                    .accessibilityLabel("Account")
+                }
+            }
         }
     }
 
@@ -105,6 +131,14 @@ struct RootView: View {
                 }
                 .pickerStyle(.menu)
 
+                Toggle("Place every word separately", isOn: $model.look.perWordPlacement)
+
+                if model.look.perWordPlacement {
+                    NavigationLink("Word placement") {
+                        WordPlacementView(look: $model.look)
+                    }
+                }
+
                 nudge("Apps nudge", x: $model.look.appsDX, y: $model.look.appsDY)
             }
 
@@ -158,6 +192,62 @@ struct RootView: View {
             get: { Color(hex: model.look.customHex) },
             set: { model.look.customHex = $0.toHex() }
         )
+    }
+}
+
+// MARK: - Word placement
+
+/// Per-word anchors. The app can't see the app names (iOS resolves them in Edit
+/// Widget), so the rows are word slots: slot 1 is the first app picked.
+private struct WordPlacementView: View {
+    @Binding var look: Look
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(0..<12, id: \.self) { slot in
+                    Picker("Word \(slot + 1)", selection: anchorBinding(slot)) {
+                        ForEach(WidgetPosition.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.menu)
+                }
+            } footer: {
+                Text("Words you haven't picked in Edit Widget are ignored.")
+            }
+        }
+        .navigationTitle("Word placement")
+    }
+
+    private func anchorBinding(_ slot: Int) -> Binding<WidgetPosition> {
+        Binding(
+            get: { look.wordAnchors["\(slot)"] ?? look.appsPosition },
+            set: { look.wordAnchors["\(slot)"] = $0 }
+        )
+    }
+}
+
+// MARK: - Account
+
+/// Licence controls: manage the subscription or forget the key on this iPhone.
+private struct AccountView: View {
+    @ObservedObject var license: LicenseStore
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        List {
+            Section("Subscription") {
+                Button("Manage subscription") { openURL(license.manageSubscription()) }
+                Button("Sign out on this iPhone", role: .destructive) { license.signOut() }
+            }
+            Section {
+                LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+            } header: {
+                Text("About")
+            } footer: {
+                Text("Widgets stay see-through when the app is locked; the subscription unlocks the editor.")
+            }
+        }
+        .navigationTitle("Account")
     }
 }
 
