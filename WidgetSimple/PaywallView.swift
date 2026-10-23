@@ -62,6 +62,14 @@ struct PaywallView: View {
 
     private var buyButton: some View {
         VStack(spacing: 10) {
+            #if APPSTORE
+            // App Store builds must sell through StoreKit (3.1.1); the external checkout
+            // and its "enter your key" flow are only for the AltStore distribution.
+            Text("Purchases are handled by the App Store.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            #else
             Button {
                 openURL(LicenseConfig.checkoutURL)
             } label: {
@@ -77,6 +85,7 @@ struct PaywallView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            #endif
         }
     }
 
@@ -100,10 +109,12 @@ struct PaywallView: View {
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
+            #if !APPSTORE
             Button("Manage subscription") {
                 openURL(license.manageSubscription())
             }
             .font(.footnote)
+            #endif
         }
         .padding(18)
         .background(Color(.secondarySystemGroupedBackground),
