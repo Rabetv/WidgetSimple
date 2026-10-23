@@ -356,33 +356,6 @@ private struct AccountView: View {
                 Button("Sign out on this iPhone", role: .destructive) { license.signOut() }
             }
             .listRowBackground(GlassRowBackground())
-            // The view-hierarchy probe exists for the transparency research; the App
-            // Store build has nothing to investigate there.
-            Section {
-                DisclosureGroup("Widget view log") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(viewLog)
-                            .font(.caption2.monospaced())
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        HStack {
-                            Button("Refresh") { viewLog = SharedStore.shared.loadViewLog() }
-                            Button("Clear", role: .destructive) {
-                                SharedStore.shared.clearViewLog()
-                                viewLog = ""
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                        .font(.caption)
-                    }
-                    .padding(.top, 6)
-                }
-            } header: {
-                Text("Diagnostics")
-            } footer: {
-                Text("What the widget's view hierarchy looked like. Used to find out which layer draws the glass border.")
-            }
-            .listRowBackground(GlassRowBackground())
             #endif
             Section {
                 Button("Show the tutorial again") { onboarded = false }
