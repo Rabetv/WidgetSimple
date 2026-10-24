@@ -78,12 +78,14 @@ struct WidgetType: Identifiable {
         WidgetType(id: "spacer", glyph: "⬚", name: "Spacer",
                    detail: "A blank that shows your wallpaper once matched.",
                    surfaces: [.home], pro: false, available: true),
+        // Not buildable: the App Intents metadata processor only allows SystemShortcut
+        // in widget configuration intents, not in controls (CI run 40082067043).
         WidgetType(id: "appcontrol", glyph: "◉", name: "App Control",
                    detail: "Open any app from Control Center.",
-                   surfaces: [.controls, .lock], pro: false, available: true),
+                   surfaces: [.controls], pro: false, available: false),
         WidgetType(id: "shortcutcontrol", glyph: "⟳", name: "Shortcut Control",
                    detail: "Run a shortcut with one tap.",
-                   surfaces: [.controls, .lock], pro: true, available: false)
+                   surfaces: [.controls, .lock], pro: true, available: true)
     ]
 
     static func on(_ surface: WidgetSurface) -> [WidgetType] {
@@ -103,7 +105,7 @@ struct WidgetType: Identifiable {
         case "countdown": return "Countdown"
         case "worldclock": return "World Clock"
         case "spacer": return "Spacer"
-        case "appcontrol": return "Open App"
+        case "shortcutcontrol": return "Run Shortcut"
         default: return nil
         }
     }

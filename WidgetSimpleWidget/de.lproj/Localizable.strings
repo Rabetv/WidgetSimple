@@ -85,9 +85,8 @@
 "Bold" = "Fett";
 
 /* Control Center */
-"Open App" = "App öffnen";
-"Opens the app you pick." = "Öffnet die App, die du wählst.";
-"App" = "App";
-"Choose an app" = "App wählen";
-"Pick an app in the control's settings first." = "Wähle zuerst in den Einstellungen der Steuerung eine App.";
-"Open any app from Control Center." = "Öffne jede App aus dem Kontrollzentrum.";
+"Run Shortcut" = "Kurzbefehl ausführen";
+"Runs one of your shortcuts by its name." = "Führt einen deiner Kurzbefehle anhand seines Namens aus.";
+"Shortcut name" = "Name des Kurzbefehls";
+"Choose a shortcut" = "Kurzbefehl wählen";
+"Run one of your shortcuts from Control Center." = "Führe einen deiner Kurzbefehle im Kontrollzentrum aus.";

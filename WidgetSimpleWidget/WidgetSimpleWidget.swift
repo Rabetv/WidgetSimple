@@ -211,7 +211,7 @@ struct MoreWidgets: WidgetBundle {
         GreetingWidget()
         DashboardWidget()
         ZenWidget()
-        OpenAppControl()
+        RunShortcutControl()
         #if WEATHER
         WeatherWidget()
         #endif

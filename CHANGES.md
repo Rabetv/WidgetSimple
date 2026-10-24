@@ -87,7 +87,7 @@ margins (the piece is full-bleed; content re-applies the system margins).
 | Dashboard (`WidgetSimpleDashboard`) — new | S M L, Lock circular | clock, battery %, free storage |
 | Zen (`WidgetSimpleZen`) — new | S M | a step per minute + a live `ProgressView(timerInterval:)` ring |
 | Spacer (`WidgetSimpleSpacer`) | S M L | shows its wallpaper piece |
-| Open App control (`WidgetSimpleOpenAppControl`) — new | Control Center, Lock Screen controls | MD's "Control Widget": pick an app in the control's settings; a tap chains to the system's `RunSystemShortcutIntent` |
+| Run Shortcut control (`WidgetSimpleRunShortcutControl`) — new | Control Center, Lock Screen controls | MD's "Control Widget": runs a shortcut by name via `OpenURLIntent(shortcuts://run-shortcut?name=…)`. An "open any app" control is **not possible**: the App Intents metadata processor rejects `SystemShortcut` outside widget configuration intents (CI run 40082067043) |
 | Weather — stub, **not built** | S | behind `WEATHER`; placeholder data only (see decisions) |
 | Music — **skipped** | | a widget can't read another app's playback; the Launcher opens Music |
 | Live Wallpaper — **not a widget** | | MD's Live Wallpaper is an app feature that makes a Live Photo the wallpaper; no public API sets the wallpaper, so it is out of scope |
@@ -221,9 +221,9 @@ project object → fail naming the object; no map → fail.
 5. `UIDevice.batteryLevel` in the extension may report "–" on some iOS versions.
 6. The magenta threshold was widened for the glass veil (r,b > 200, g < 90); check a scan
    on a pink or purple wallpaper.
-7. The Open App control: that `RunSystemShortcutIntent` runs when chained from a control
-   (`opensIntent`). If it doesn't, the control needs another route (WIDGETS-SPEC called
-   for a spike).
+7. The Run Shortcut control: that `OpenURLIntent` with a `shortcuts://` URL runs the
+   shortcut when tapped in Control Center (Apple documents `OpenURLIntent` for controls;
+   another app's URL scheme is the part to confirm).
 
 ## How to test each fix on the device
 

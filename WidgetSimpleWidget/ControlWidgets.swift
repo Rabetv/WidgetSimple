@@ -2,49 +2,58 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-// Control Center (and the Lock Screen's control slots): open any app with one tap, the
-// launcher's job in a control. The app is picked in the control's own settings; a tap
-// hands over to the system's RunSystemShortcutIntent, the same public intent the
-// launcher's words use. SystemShortcut can only be filled by the system's picker.
+// Control Center (and the Lock Screen's control slots): run one of the person's
+// shortcuts with a tap — MD's "Control Widget" slot, WIDGETS-SPEC's Shortcut Control.
+//
+// An "open any app" control isn't possible with public API: the App Intents metadata
+// processor rejects SystemShortcut in anything but a WidgetConfigurationIntent (CI run
+// 40082067043: "can only be used in an AppIntent conforming to
+// WidgetConfigurationIntent"). A shortcut can open an app, so this covers that need.
 
-struct OpenAppControlIntent: ControlConfigurationIntent {
-    static let title: LocalizedStringResource = "Open App"
-    static let description = IntentDescription("Opens the app you pick.")
+struct RunShortcutControlIntent: ControlConfigurationIntent {
+    static let title: LocalizedStringResource = "Run Shortcut"
+    static let description = IntentDescription("Runs one of your shortcuts by its name.")
 
-    @Parameter(title: "App") var app: SystemShortcut?
+    @Parameter(title: "Shortcut name", default: "")
+    var shortcut: String
 
     init() {}
 
-    func perform() async throws -> some IntentResult & OpensIntent {
-        guard let app else { throw OpenAppControlError.noApp }
-        return .result(opensIntent: RunSystemShortcutIntent(shortcut: app))
+    func perform() async throws -> some IntentResult {
+        .result()
     }
 
-    /// The picked app's name, or what to do when none is picked yet.
+    var trimmedName: String {
+        shortcut.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// shortcuts://run-shortcut?name=… ; without a name it opens the Shortcuts app.
+    var url: URL {
+        var components = URLComponents()
+        components.scheme = "shortcuts"
+        if !trimmedName.isEmpty {
+            components.host = "run-shortcut"
+            components.queryItems = [URLQueryItem(name: "name", value: trimmedName)]
+        }
+        return components.url ?? URL(fileURLWithPath: "/")
+    }
+
     var label: String {
-        app.map { String(localized: $0.displayRepresentation.title) } ?? String(localized: "Choose an app")
+        trimmedName.isEmpty ? String(localized: "Choose a shortcut") : trimmedName
     }
 }
 
-enum OpenAppControlError: Error, CustomLocalizedStringResourceConvertible {
-    case noApp
-
-    var localizedStringResource: LocalizedStringResource {
-        "Pick an app in the control's settings first."
-    }
-}
-
-struct OpenAppControl: ControlWidget {
-    static let kind = "WidgetSimpleOpenAppControl"
+struct RunShortcutControl: ControlWidget {
+    static let kind = "WidgetSimpleRunShortcutControl"
 
     var body: some ControlWidgetConfiguration {
-        AppIntentControlConfiguration(kind: Self.kind, intent: OpenAppControlIntent.self) { configuration in
-            ControlWidgetButton(action: configuration) {
-                Label(configuration.label, systemImage: "arrow.up.forward.app")
+        AppIntentControlConfiguration(kind: Self.kind, intent: RunShortcutControlIntent.self) { configuration in
+            ControlWidgetButton(action: OpenURLIntent(configuration.url)) {
+                Label(configuration.label, systemImage: "square.2.layers.3d")
             }
         }
-        .displayName("Open App")
-        .description("Open any app from Control Center.")
+        .displayName("Run Shortcut")
+        .description("Run one of your shortcuts from Control Center.")
         .promptsForUserConfiguration()
     }
 }
