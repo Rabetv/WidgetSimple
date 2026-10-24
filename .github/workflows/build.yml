@@ -21,8 +21,8 @@ jobs:
       - name: Build app + widget (unsigned, device SDK)
         run: |
           set -o pipefail
-          # One build, App Store only: APPSTORE selects the StoreKit paywall in Swift,
-          # and the descriptor hook is compiled in on purpose (see RELEASES.md).
+          # One build, App Store only: APPSTORE selects the StoreKit paywall in Swift.
+          # No private API anywhere (CHANGES.md); warnings fail the build.
           xcodebuild \
             -project WidgetSimple.xcodeproj \
             -scheme WidgetSimple \
@@ -34,13 +34,22 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1 \
             SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            GCC_TREAT_WARNINGS_AS_ERRORS=YES \
             build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
 
-      # The hook is part of the product, so this reports what is in the binary instead
-      # of failing the build. It prints every private symbol it finds.
-      - name: "Audit (report only: the hook is included)"
-        continue-on-error: true
+      # Source check first (cheap), then the binaries. Either one failing fails the build.
+      - name: No private API in the sources
+        run: |
+          set -euo pipefail
+          P='set''Transparent\|set''BackgroundRemovable\|WidgetExtension''XPCServer\|objc_''msgSend\|dl''sym\|NSClass''FromString'
+          if grep -RIn --exclude-dir=.git --exclude-dir=DerivedData "$P" .; then
+            echo "::error::Private API symbol in the sources"; exit 1
+          fi
+          echo "clean"
+
+      - name: Audit the built app
         run: |
           set -o pipefail
           bash Scripts/audit-appstore.sh DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app 2>&1 | tee audit.log

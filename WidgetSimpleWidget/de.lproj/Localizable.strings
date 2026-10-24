@@ -1,0 +1,85 @@
+/* WidgetSimple widget extension — German. Keys are the English strings used in the code. */
+
+/* Gallery and Edit Widget */
+"Apps" = "Apps";
+"Pick up to 12 apps. A tap opens the app." = "Wähle bis zu 12 Apps. Ein Tippen öffnet die App.";
+"Your apps as words over your wallpaper, with a clock if you like." = "Deine Apps als Wörter über deinem Hintergrund, auf Wunsch mit Uhr.";
+"App %lld" = "App %lld";
+"Layout" = "Layout";
+"See-through ID" = "Durchsicht-ID";
+"Widget %@" = "Widget %@";
+"Text" = "Text";
+"Your own words, in the style you picked in the app." = "Deine eigenen Worte im Stil, den du in der App gewählt hast.";
+"Write something and it appears on the Home Screen in your style." = "Schreib etwas, und es erscheint in deinem Stil auf dem Home-Bildschirm.";
+"Countdown" = "Countdown";
+"Label" = "Beschriftung";
+"Date" = "Datum";
+"Days until a date, or since it." = "Tage bis zu einem Datum oder seitdem.";
+"Days until a date, or since it, in your font and colour." = "Tage bis zu einem Datum oder seitdem, in deiner Schrift und Farbe.";
+"World Clock" = "Weltuhr";
+"Up to four cities. Leave a slot empty to hide it." = "Bis zu vier Städte. Lass ein Feld leer, um es auszublenden.";
+"Times in up to four cities." = "Uhrzeiten in bis zu vier Städten.";
+"Spacer" = "Platzhalter";
+"An empty widget, to break up the Home Screen." = "Ein leeres Widget, um den Home-Bildschirm aufzulockern.";
+"An empty widget that shows your wallpaper once matched." = "Ein leeres Widget, das nach dem Abgleich dein Hintergrundbild zeigt.";
+"Date & Time" = "Datum & Uhrzeit";
+"The time, the date, or both, in your font." = "Uhrzeit, Datum oder beides, in deiner Schrift.";
+"The time and date in your font, with a second city if you like." = "Uhrzeit und Datum in deiner Schrift, auf Wunsch mit zweiter Stadt.";
+"Style" = "Stil";
+"Time" = "Uhrzeit";
+"Time and date" = "Uhrzeit und Datum";
+"Calendar page" = "Kalenderblatt";
+"Second city" = "Zweite Stadt";
+"Photo" = "Foto";
+"A photo from the library in the app." = "Ein Foto aus der Bibliothek in der App.";
+"A photo from the library, cropped around what matters." = "Ein Foto aus der Bibliothek, um das Wesentliche zugeschnitten.";
+"Shuffle every hour" = "Stündlich wechseln";
+"Open WidgetSimple once to load the photos." = "Öffne WidgetSimple einmal, um die Fotos zu laden.";
+"Greeting" = "Begrüßung";
+"Good morning, good evening — with your name if you like." = "Guten Morgen, guten Abend – auf Wunsch mit deinem Namen.";
+"Changes with the time of day." = "Ändert sich mit der Tageszeit.";
+"Name" = "Name";
+"Good morning" = "Guten Morgen";
+"Good afternoon" = "Guten Tag";
+"Good evening" = "Guten Abend";
+"Good night" = "Gute Nacht";
+"Dashboard" = "Dashboard";
+"Clock, battery and free storage." = "Uhr, Akku und freier Speicher.";
+"Clock, battery and free storage at a glance." = "Uhr, Akku und freier Speicher auf einen Blick.";
+"Battery" = "Akku";
+"Free" = "Frei";
+"Zen" = "Zen";
+"A slow breath and a quiet line, every minute." = "Ein langsamer Atemzug und ein ruhiger Satz, jede Minute.";
+"Breathe in" = "Einatmen";
+"Hold" = "Halten";
+"Breathe out" = "Ausatmen";
+"Rest" = "Ruhen";
+"Notice your shoulders" = "Spür deine Schultern";
+"Unclench your jaw" = "Lockere den Kiefer";
+"One thing at a time" = "Eins nach dem anderen";
+"Look far away" = "Schau in die Ferne";
+
+/* On the widget */
+"Hold here › Edit Widget › pick apps" = "Hier halten › Widget bearbeiten › Apps wählen";
+"Launcher" = "Launcher";
+"Launcher: %@" = "Launcher: %@";
+"%@, app" = "%@, App";
+"Matching code" = "Abgleich-Code";
+"day to go" = "Tag noch";
+"days to go" = "Tage noch";
+"day since" = "Tag her";
+"days since" = "Tage her";
+"hour to go" = "Stunde noch";
+"hours to go" = "Stunden noch";
+"today" = "heute";
+
+/* Layout summaries (shown under a layout in Edit Widget) */
+"Free · %lld placed" = "Frei · %lld platziert";
+"Columns · automatic" = "Spalten · automatisch";
+"%lld columns" = "%lld Spalten";
+"Columns" = "Spalten";
+"Light" = "Leicht";
+"Regular" = "Normal";
+"Medium" = "Mittel";
+"Semibold" = "Halbfett";
+"Bold" = "Fett";

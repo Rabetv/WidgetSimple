@@ -1,0 +1,196 @@
+# CHANGES — branch `seethrough-fixes` (from `origin/main` b83c73c)
+
+Bug fixes for the matched-wallpaper see-through, a layout engine with a design system,
+the freeform layout editor, seven more widget kinds, a CC0 stock library, and the
+removal of the private-API hook. Public API only. **Nothing here has been compiled yet**
+— there is no Mac on this machine; see "Not verified" before merging.
+
+## Where the handoff and the repository disagreed
+
+| Handoff said | Repository had | What I did |
+|---|---|---|
+| Working tree `WidgetSimple-main/`, "no private API, verified absent" | `origin/main` (and every branch) contains `WidgetSimpleWidget/WidgetDescriptorHook.mm`, a swizzle of WidgetKit's descriptor XPC server, shipped on purpose ("App Store risk accepted") | Deleted it, plus everything that leaned on it (glass probe, hook log, "Clear removes the container" copy). The repo-wide grep from the handoff now returns nothing. |
+| `HOME_SCREEN_NAME = " "` (DeepSeek) | Still U+2800 on `main` | Set to one U+0020 space (built from two empty expansions, since xcconfig trims whitespace); the audit checks the built plist. |
+| Widget extension display name stays `WidgetSimple` | It was `$(HOME_SCREEN_NAME)` | Set to `WidgetSimple`. |
+| `ANALYSIS.md`, `widget_probe.py`, `device_fetch.py` | Not in this repo or on this machine | Not used. |
+
+## Bug fixes (§3)
+
+Each fix carries a one-line comment in the code naming the failure mode.
+
+**3.1 Wallpaper in the wrong widget / in plain widgets**
+- (a) *Key collisions.* Every widget kind now has a `See-through ID` parameter
+  (`WidgetIdentity`, `WidgetSimpleWidget/SeeThroughWidget.swift`): a UUID the system
+  stores in that widget's configuration, filled by `defaultResult()` when the widget is
+  added. Keys are `family(2) | origin(1) | hash(29)` of that UUID. Widgets added before
+  this have no ID and keep a content key (migration only; kind `WidgetSimpleDirect`
+  unchanged). If two widgets ever share a key, the scan drops both and says how to fix it
+  ("set a new See-through ID in Edit Widget").
+- (b) *Silent fallback.* `SharedStore.spotImage` returns only the exact key's piece. No
+  "only one of its size" borrowing anywhere; a widget without its own piece draws
+  `Color.clear` (the system background). Builds 35–39 pieces are still read by exact
+  legacy key until the first new scan, so existing users don't lose see-through on update.
+- (c) *Stale spots / mid-render wipe.* Pieces are written into a new folder
+  `Spots/<generation>/` and switched in by one atomic write of `see-through.json`; the
+  previous generation is kept so a widget mid-render still finds its file. A rescan of
+  one page keeps identity-keyed matches on other pages; "Start over" forgets all.
+
+**3.2 Misaligned crops.** The size each widget reported is the authority; the pink only
+gives the centre. `pixelsPerPoint` = screenshot width ÷ screen width in points (correct
+under Display Zoom) and is stored. Screenshots must be portrait and exactly this iPhone's
+native pixel width. A widget whose measured size is more than 2 % off its reported size
+rejects the whole scan with a message, and nothing is changed.
+
+**3.3 `readKey` dropping widgets.** The code is now 6 × 6 (32-bit key + CRC-4). It is
+located from the pixels (the non-pink block in the middle), not from an assumed size.
+Each square is the median of 9 samples over its inner half, with 0.35 / 0.65 bands, and
+pink samples are ignored. The CRC rejects misreads, so tolerance can't produce a wrong
+key. Unreadable codes are kept and reported ("found N widgets but couldn't read their ID").
+
+**3.4 Layout and spacing.** New `Shared/DesignSystem.swift` (`Spacing` 4–32,
+`Typography` ratios, `FaceMetrics` widget sizes) and `Shared/FacePlan.swift`. The planner
+measures every word with the same font the face draws (UIKit/CoreText), picks columns
+1–4 (row-major, `rows = ⌈n/cols⌉`, last row padded, no empty columns) and clock
+above/beside, and applies **one** scale to the whole block. The clock may shrink to 60 %
+before the words do. Margins come from `widgetContentMargins`, not a constant;
+Dynamic Type scales the words before the fit. `ViewThatFits` and per-word
+`minimumScaleFactor(0.6)` are gone. The older "Free" arrangement still works, and words
+on the same anchor are now stacked instead of drawn on top of each other.
+
+**3.5 Smaller bugs**
+- Preview card draws at the widget's real point size (reported by the widget) and scales
+  the picture, over this size's matched piece or the middle of the wallpaper screenshot.
+- `model.message` is shown as an alert from every tab.
+- The same-size / same-device / upright rule is stated in the See-through footer before
+  the second screenshot.
+- Atomic piece swap (above).
+- `recordSize` no longer reads or writes the file on every timeline call (in-process cache).
+- Every app name is announced as "Phone, app"; the face is a container labelled
+  "Launcher: Phone, Messages, …".
+- Widget reloads from the editor are debounced to 300 ms.
+
+## Features (§4)
+
+**4.1 Catalogue.** Every kind is see-through, declares its families and disables content
+margins (the piece is full-bleed; content re-applies the system margins).
+
+| Kind (`kind`) | Families | Notes |
+|---|---|---|
+| Launcher (`WidgetSimpleDirect`, unchanged) | S M L XL | + Layout and See-through ID parameters |
+| Text (`WidgetSimpleText`) | S M L, Lock rect | |
+| Date & Time (`WidgetSimpleDateTime`) — new | S M L, Lock inline/circular/rect | time, time+date, date, calendar page, optional second city |
+| Countdown (`WidgetSimpleCountdown`) | S M, Lock circular/rect | days to go / hours on the last day / days since |
+| World Clock (`WidgetSimpleWorldClock`) | S M L, Lock rect | now a minute timeline |
+| Photo (`WidgetSimplePhoto`) — new | S M L | photo per widget from the library, optional hourly shuffle, focal-point crop per size |
+| Greeting (`WidgetSimpleGreeting`) — new | S M | time of day + optional name, localised |
+| Dashboard (`WidgetSimpleDashboard`) — new | S M L, Lock circular | clock, battery %, free storage |
+| Zen (`WidgetSimpleZen`) — new | S M | a step per minute + a live `ProgressView(timerInterval:)` ring |
+| Spacer (`WidgetSimpleSpacer`) | S M L | shows its wallpaper piece |
+| Weather — stub, **not built** | S | behind `WEATHER`; placeholder data only (see decisions) |
+| Music — **skipped** | | a widget can't read another app's playback; the Launcher opens Music |
+
+**4.2 Stock photos.** 14 photos in `WidgetSimple/Stock/`, every one **CC0 1.0**
+(Wikimedia Commons Quality Images; licence and "no restrictions" checked per file through
+the Commons API). Each is sRGB, JPEG q80, at most 1600 px and under 300 KB (3.4 MB in all).
+`stock-manifest.json` has id, title, file, credit, licence, source and focal point.
+`CREDITS.md` lists each file's source and contains the CC0 legal code verbatim; it is
+shown in Settings › Photo credits. I did not use the Unsplash or Pexels licences: both
+forbid redistributing photos in a way that competes with or replicates their service,
+which is a risk for a paid widget app. The app copies the files into the App Group on
+launch. Nothing is fetched at run time.
+
+**4.3 Freeform layouts.** Widgets › Launcher › Layouts. The canvas is the real widget at
+real size and draws the same `LauncherFace` from the same plan. Drag words (and the
+clock), snap to a 12 × 8 grid with centre guides, and set per-word size, rotation,
+weight, opacity and colour. Column mode offers 1–4 or auto, row/column spacing and a
+vertical offset. Layouts are saved as `Layouts/<uuid>.json` plus a PNG thumbnail and
+picked per widget in Edit Widget › Layout (`LayoutEntity`). A word overlapping an
+earlier one by more than 40 % moves by one grid row. Names come from what a launcher
+last showed (the widget records them), else samples.
+
+**4.4 Editor.** Grouped into See-through, Background, Apps, Clock, Typography (font,
+weight, size, letter spacing, case), Colour (white/black/custom, "match my wallpaper",
+shadow) and Layout (alignment, position, spacing, arrangement, Layouts, "Check every
+size"). See-through has the three steps, status (matched / unread / shared IDs), a map
+of where each widget was matched (the seam explanation) and Start over.
+
+## Also changed
+
+- `Scripts/audit-appstore.sh`: looks for every hook trace and forbidden runtime import in
+  the binaries, prints linked frameworks and fails on a private one, and checks
+  `CFBundleDisplayName` is a single space. The private names are assembled from pieces,
+  so the script itself passes the repo grep.
+- CI (`build.yml`): warnings as errors, a source grep step, and the audit now **blocks**.
+  `testflight.yml`: the audit blocks the upload.
+- Privacy manifests: widget declares disk space (85F4.1, shown to the person); app
+  declares UserDefaults (CA92.1, already used by `@AppStorage`).
+- German strings for everything new; the widget extension gets its first `de.lproj`.
+- README, RELEASES, WIDGETS-SPEC and the App Store listing no longer claim the container
+  is removed. The **review notes** now describe the matching honestly.
+
+## Verified here (Windows, no Mac)
+
+- Repo-wide grep from the handoff: no matches. No `.m/.mm/.h` files remain.
+- No force unwraps or `try!` in any file I touched.
+- **Scanner:** a Python port of `SpotKey` + `SeeThroughMaker.scan`, run on synthetic
+  1206 × 2622 screenshots (photo wallpaper, 10 % veil, 3 px rim, blur, a shadow across
+  one code). 4/4 widgets found with **0 px** crop error; CRC caught 2000/2000 single-bit
+  errors; all-white/all-black never decode; duplicates dropped; a fogged code is reported
+  as unread; a wrong reported size is rejected; a family with no reported size falls back
+  to the pink rect.
+- **Layout:** a Python port of the column planner, run on the acceptance matrix
+  (1/2/4/8/12 apps × S/M/L × 17/21/26 pt, clock on and off) with Arial, Georgia and Segoe
+  UI metrics: **no overlap and no clipping** in any cell. The tightest cell is small,
+  26 pt, 12 apps with a clock, at 43 % scale. That is why the floor is 0.4.
+- Plists and both privacy manifests parse; strings files have no duplicate keys.
+
+## Not verified — needs CI and the device
+
+1. **It has not compiled.** Run the Build workflow (push the branch). Most likely
+   friction: Swift API signatures I couldn't check against the iOS 27 SDK; warnings as
+   errors catching warnings that already exist in untouched files (turn the flag off in
+   `build.yml` if so and fix them separately).
+2. `WidgetIdentity.defaultResult()` gives each **new** widget its own UUID. If the system
+   reuses one default, the scan reports the shared ID instead of mis-matching; the fix is
+   "New ID" in Edit Widget. Confirm on device that two freshly added identical widgets
+   get different IDs (Edit Widget shows "Widget XXXX").
+3. The `$(EMPTY) $(EMPTY)` xcconfig trick for the single space — the audit checks the
+   built plist.
+4. Content margins are recorded from the widget's body; check the preview matches.
+5. `UIDevice.batteryLevel` in the extension may report "–" on some iOS versions.
+6. The magenta threshold was widened for the glass veil (r,b > 200, g < 90); check a scan
+   on a pink or purple wallpaper.
+
+## How to test each fix on the device
+
+- **3.1a** Add two launchers of the same size with the same apps on two pages. Match
+  (take a pink screenshot of each page and pick both). Each shows its own piece; move
+  one and rematch, and only that one changes.
+- **3.1b** After matching, add a new widget: it shows the system background, never
+  another widget's piece.
+- **3.1c** Change the clock or the apps on a matched launcher: its piece stays (the
+  identity didn't change). Rematch while watching the Home Screen: no frame without a
+  background.
+- **3.2** Set Display Zoom differently from when the widgets were added and match: the
+  scan is refused with the size message. At 100 % zoom, the edge ring with
+  `widget_probe.py` should be under 3/255 inside the rect.
+- **3.3** Match with a notification banner partly over one pink widget: it is reported as
+  unread, not silently dropped, and gets no piece.
+- **3.4** Widgets › Launcher › Check every size: every cell should read "fits" or
+  "shrunk to N %", never "overlap" or "clipped".
+- **4.3** Make a Free layout, drag "Phone" to the bottom right, save, and pick it in Edit
+  Widget › Layout: the widget shows it there.
+- **Name** `plutil -p WidgetSimple.app/Info.plist | grep CFBundleDisplayName` → `" "`.
+- Take before/after screenshots of each family on a bright gradient, a photo and pure
+  black.
+
+## Decisions for the owner
+
+- **Weather:** WeatherKit (capability on both App IDs + Apple attribution) or Open-Meteo
+  (no key, but its free tier is non-commercial, so a paid app needs the paid plan). The
+  stub is behind `WEATHER` until then.
+- **Uptime** for the dashboard is left out: boot time is a required-reason API with no
+  approved reason for showing it.
+- **App Store screenshots** show the old launcher only; reshoot before using the new
+  listing copy.
+- The blank name is a 2.3.8 risk; the fallback stays documented in `Base.xcconfig`.

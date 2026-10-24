@@ -57,7 +57,7 @@ All of it must stay public API: the `appstore` flavour is audited by
 | Dashboard | medium, large | composes Clock, Weather, Calendar, Battery | Reviewers' favourite at MD (iBoard). |
 | Battery | small, Lock circular | `UIDevice` battery, refreshed on timeline | **Design correction:** iPhone only. There is no public API for AirPods or Watch levels; drop "connected devices". |
 | Music | medium | — | **Design correction:** a widget cannot read what other apps play. Either Apple Music via MusicKit in the app with `AudioPlaybackIntent` buttons, or drop the type. Reviewers' top music complaint is "doesn't update": don't promise now-playing. |
-| Spacer | small, medium, large | empty view, clear container | The App Store build still shows "WidgetSimple" under it (2.3.8); only the AltStore build is label-free. |
+| Spacer | small, medium, large | empty view, matched wallpaper piece | Built. Label-free (name is one space); `WidgetSimple` is the 2.3.8 fallback. |
 | App Control | Control Center | `ControlWidgetButton` + `RunSystemShortcutIntent` (verify it runs from a control) | Spike first. |
 | Shortcut Control | Control Center, Lock | `OpenURLIntent` with `shortcuts://run-shortcut?name=` | |
 

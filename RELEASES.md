@@ -1,40 +1,26 @@
 # One build, one target
 
-WidgetSimple ships to the **App Store** only. There is no second flavour any more: every
-build contains the descriptor hook and the invisible Home Screen name, and sells through
-StoreKit.
+WidgetSimple ships to the **App Store** only. There is one build: public API only, the
+blank Home Screen name, and StoreKit for the subscription.
 
 | | Value |
 |---|---|
-| Private API | **yes** — `WidgetSimpleWidget/WidgetDescriptorHook.mm` |
-| Name under the icon | U+2800 (invisible) |
+| Private API | **none.** The descriptor hook was removed (see CHANGES.md); CI fails if a private symbol appears in the sources or the binaries. |
+| Name under the icon | one U+0020 space (`HOME_SCREEN_NAME`), as MD Blank ships; fallback `WidgetSimple` |
 | Payment | StoreKit 2 auto-renewable subscription |
-| Widget background | Clear (default) or a photo. The hook removes the container unconditionally; matched wallpaper remains the fallback if the hook does nothing. |
+| Widget background | Clear (default: the widget's matched piece of the wallpaper) or a photo. iOS always draws its container and rim; nothing public removes them. |
 
-## Why the hook is unconditional
+## Why there is no hook any more
 
-Build 35 gated the hook on a `clear.on` flag the app wrote at launch. That cannot work:
-chronod fetches an extension's descriptors once per extension install and then caches
-them, and a timeline reload does not fetch them again. The first fetch happens at install
-time, before the new app has ever run, so the flag is always missing when it matters.
-Builds 38+ therefore rewrite every descriptor, exactly as builds up to 34 did.
+The earlier builds swizzled a private WidgetKit method to rewrite the widget descriptor
+and remove the system container. That is a guideline 2.5.1 rejection waiting to happen
+and it was never needed for the product: on a blue or purple wallpaper the container
+edge measures +71 to +85 luminance against the bare wallpaper with *or* without any
+trick an app may legally use, and on pure black it measures 0. The transparency comes
+from drawing the right wallpaper pixels inside the container (`Shared/SeeThrough.swift`).
 
-The consequence: a system-glass option cannot exist in the same build. The descriptor
-that carries the container is the one the hook replaces, and it cannot be fetched again
-per widget. The background picker is **Clear** and **Photo**; a stored `glass` value from
-builds 35–37 decodes as Clear.
-
-## The risk, written down
-
-App Review can reject this build under **guideline 2.5.1** (private API). The binary
-contains the private selectors in plain text — `setTransparent:`,
-`setBackgroundRemovable:`, `setPreferredBackgroundStyle:`,
-`getAllCurrentDescriptorsWithCompletion:` — and `Scripts/audit-appstore.sh` prints them on
-every run. Nothing here is obfuscated.
-
-If a rejection arrives: resubmit a build with the hook removed (matched wallpaper only),
-or ship that variant from the start. Concealing the calls is not an option — it converts a
-rejection into an account-level problem.
+Do not bring it back, on any branch. `Scripts/audit-appstore.sh` and the **Build**
+workflow check for it.
 
 ## TestFlight unlock (never in the App Store build)
 
@@ -52,7 +38,9 @@ was uploaded.
 
 ## CI
 
-`Build` compiles the app and widget unsigned. `TestFlight` archives, signs and uploads.
-Both need GitHub-hosted minutes: on a private repo the runs fail before starting with
-"recent account payments have failed or your spending limit needs to be increased" —
-either raise the limit or flip the repo public for the run.
+`Build` compiles the app and widget unsigned with warnings as errors, greps the sources
+for private symbols, and audits the built binaries. `TestFlight` archives, signs, audits
+and uploads; a failed audit stops the upload. Both need GitHub-hosted minutes: on a
+private repo the runs fail before starting with "recent account payments have failed or
+your spending limit needs to be increased" — either raise the limit or flip the repo
+public for the run.

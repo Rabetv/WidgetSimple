@@ -15,182 +15,114 @@ enum FaceSize: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Width ÷ height of the widget on the Home Screen.
+    /// Width ÷ height of the widget on the Home Screen (393-point screens).
     var aspectRatio: CGFloat {
-        switch self {
-        case .small: return 158.0 / 158.0
-        case .medium: return 338.0 / 158.0
-        case .large: return 338.0 / 354.0
-        }
+        let size = FaceMetrics.tableSize(self, screenWidth: 393)
+        return size.width / size.height
     }
 }
 
 /// What a widget shows: an optional clock and the app names, text only. Shared by the
 /// widget and the in-app preview, so the preview is exactly what lands on the Home Screen.
 ///
-/// Two arrangements:
-///  * `.stacked` — clock above the apps, and the words flow into more columns as needed;
-///  * `.free` — the clock and the apps each sit wherever their position says.
-///
-/// Nothing is ever drawn outside the widget: the layout degrades (more columns, clock
-/// beside the words) until it fits, and the result is clipped as a last resort.
+/// Where things go is decided by `FacePlanner` from the real size; this view only draws
+/// the plan. Three arrangements:
+///  * columns — clock above or beside, names in 1–4 balanced columns (the default);
+///  * free (layout editor) — every name where the person dragged it;
+///  * anchored — the older Free arrangement: 9-point anchors and nudges from the look.
 struct LauncherFace<Cell: View>: View {
     let look: Look
     let clock: ClockOption
     let date: Date
     let size: FaceSize
     let apps: [String]
-    /// The chosen word color; white on the system glass (Clear / Tinted Home Screen).
+    /// The chosen word colour; white when the Home Screen tints the widget.
     let color: Color
+    let layout: LayoutDocument?
+    /// nil uses the system's content margins (the widget) or the default (elsewhere).
+    let insets: EdgeInsets?
     /// Shown when there is nothing else to show.
-    var hint: String = ""
-    @ViewBuilder let cell: (Int, AppName) -> Cell
+    let hint: String
+    let cell: (Int, AppName) -> Cell
 
-    private var align: HorizontalAlignment { look.align.horizontal }
-    private var edgePadding: CGFloat { size == .small ? 16 : 20 }
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.widgetContentMargins) private var systemMargins
+
+    init(look: Look, clock: ClockOption, date: Date, size: FaceSize, apps: [String], color: Color,
+         layout: LayoutDocument? = nil, insets: EdgeInsets? = nil, hint: String = "",
+         @ViewBuilder cell: @escaping (Int, AppName) -> Cell) {
+        self.look = look
+        self.clock = clock
+        self.date = date
+        self.size = size
+        self.apps = apps
+        self.color = color
+        self.layout = layout
+        self.insets = insets
+        self.hint = hint
+        self.cell = cell
+    }
+
     private var isEmpty: Bool { apps.isEmpty && clock == .off }
 
     var body: some View {
-        Group {
-            switch look.arrangement {
-            case .stacked: stacked
-            case .free: free
+        GeometryReader { geo in
+            let plan = FacePlanner.plan(input(canvas: geo.size))
+            ZStack(alignment: .topLeading) {
+                if let placed = plan.clock, let content = ClockContent.make(date: date, option: clock, size: size) {
+                    ClockText(content: content, look: look, bigSize: placed.bigSize, smallSize: placed.smallSize)
+                        .frame(width: placed.frame.width, height: placed.frame.height,
+                               alignment: Alignment(horizontal: look.align.horizontal, vertical: .top))
+                        .offset(x: placed.frame.minX, y: placed.frame.minY)
+                }
+                ForEach(Array(plan.names.enumerated()), id: \.offset) { index, placed in
+                    if index < apps.count {
+                        cell(index, AppName(name: apps[index], look: look, placed: placed))
+                            .frame(width: placed.frame.width, height: placed.frame.height)
+                            .rotationEffect(.degrees(placed.rotation))
+                            .opacity(placed.opacity)
+                            .offset(x: placed.frame.minX, y: placed.frame.minY)
+                    }
+                }
+                if isEmpty {
+                    hintText
+                        .frame(width: plan.content.width, height: plan.content.height)
+                        .offset(x: plan.content.minX, y: plan.content.minY)
+                }
             }
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
         .foregroundStyle(color)
         .textCase(look.letterCase.textCase)
         .shadow(color: look.shadow ? Color.black.opacity(0.45) : .clear, radius: 6, x: 0, y: 3)
-        // Belt and braces: whatever the layout does, no glyph may leave the widget.
+        // Belt and braces: the plan keeps everything inside, and nothing may leave the widget.
         .clipped()
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(accessibilitySummary)
     }
 
-    // MARK: Stacked
-
-    /// Tries the layouts in order of preference and keeps the first one that fits the
-    /// widget's height: clock above with growing column counts, then clock beside.
-    private var stacked: some View {
-        Group {
-            if isEmpty {
-                hintText
-            } else {
-                candidateLayouts
-            }
-        }
-        .padding(edgePadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.alignment)
+    /// The same input the widget builds, so the preview gets the same plan.
+    private func input(canvas: CGSize) -> FacePlanInput {
+        FacePlanInput(canvas: canvas,
+                      insets: resolvedInsets,
+                      size: size,
+                      look: look,
+                      layout: layout,
+                      names: apps,
+                      clock: ClockContent.make(date: date, option: clock, size: size),
+                      typeFactor: Typography.dynamicFactor(dynamicTypeSize))
     }
 
-    @ViewBuilder
-    private var candidateLayouts: some View {
-        ViewThatFits(in: .vertical) {
-            if size == .medium, clock != .off {
-                // A medium widget is wide and short: side by side fits best.
-                layout(clockBeside: true, columns: 2)
-                layout(clockBeside: true, columns: 3)
-                layout(clockBeside: true, columns: 4)
-                layout(clockBeside: false, columns: 2)
-                layout(clockBeside: false, columns: 3)
-                layout(clockBeside: false, columns: 1)
-            } else {
-                layout(clockBeside: false, columns: 1)
-                layout(clockBeside: false, columns: 2)
-                layout(clockBeside: false, columns: 3)
-                layout(clockBeside: false, columns: 4)
-                layout(clockBeside: true, columns: 2)
-                layout(clockBeside: true, columns: 3)
-                layout(clockBeside: true, columns: 4)
-            }
-        }
+    private var resolvedInsets: EdgeInsets {
+        if let insets { return insets }
+        let m = systemMargins
+        if m.top + m.leading + m.bottom + m.trailing > 0 { return m }
+        let d = FaceMetrics.defaultMargin
+        return EdgeInsets(top: d, leading: d, bottom: d, trailing: d)
     }
 
-    /// One candidate: the clock above or beside the words, in `columns` columns.
-    @ViewBuilder
-    private func layout(clockBeside: Bool, columns count: Int) -> some View {
-        if clockBeside, clock != .off {
-            HStack(alignment: .top, spacing: 16) {
-                ClockText(date: date, option: clock, look: look, size: size)
-                if !apps.isEmpty { appColumns(count) }
-            }
-        } else {
-            VStack(alignment: align, spacing: look.size * 0.8 * look.spacing) {
-                if clock != .off {
-                    ClockText(date: date, option: clock, look: look, size: size)
-                }
-                if !apps.isEmpty {
-                    appColumns(count)
-                }
-            }
-        }
-    }
-
-    // MARK: Free
-
-    private var free: some View {
-        ZStack {
-            if clock != .off {
-                ClockText(date: date, option: clock, look: look, size: size)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.clockPosition.alignment)
-                    .padding(edgePadding)
-                    .offset(x: look.clockDX, y: look.clockDY)
-            }
-            if !apps.isEmpty {
-                if look.perWordPlacement {
-                    perWordApps
-                } else {
-                    appList
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.appsPosition.alignment)
-                        .padding(edgePadding)
-                        .offset(x: look.appsDX, y: look.appsDY)
-                }
-            }
-            if isEmpty {
-                hintText
-            }
-        }
-    }
-
-    /// Every word on its own anchor, shifted together by the block nudge.
-    private var perWordApps: some View {
-        ZStack {
-            ForEach(apps.indices, id: \.self) { index in
-                cell(index, AppName(name: apps[index], look: look, fillWidth: false))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: anchor(for: index).alignment)
-                    .padding(edgePadding)
-                    .offset(x: look.appsDX, y: look.appsDY)
-            }
-        }
-    }
-
-    private func anchor(for index: Int) -> WidgetPosition {
-        look.wordAnchors["\(index)"] ?? look.appsPosition
-    }
-
-    // MARK: Apps
-
-    /// Free placement: as many columns as fit, without a clock to compete with.
-    private var appList: some View {
-        ViewThatFits(in: .vertical) {
-            appColumns(1)
-            appColumns(2)
-            appColumns(3)
-            appColumns(4)
-        }
-    }
-
-    private func appColumns(_ count: Int) -> some View {
-        let perColumn = max(1, Int((Double(apps.count) / Double(max(count, 1))).rounded(.up)))
-        return HStack(alignment: .top, spacing: 16) {
-            ForEach(0..<count, id: \.self) { column in
-                let start = min(column * perColumn, apps.count)
-                let end = min(start + perColumn, apps.count)
-                VStack(alignment: align, spacing: look.size * 0.45 * look.spacing) {
-                    ForEach(start..<end, id: \.self) { index in
-                        cell(index, AppName(name: apps[index], look: look))
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: Alignment(horizontal: align, vertical: .top))
-            }
-        }
+    private var accessibilitySummary: Text {
+        apps.isEmpty ? Text("Launcher") : Text("Launcher: \(apps.joined(separator: ", "))")
     }
 
     private var hintText: some View {
@@ -203,81 +135,75 @@ struct LauncherFace<Cell: View>: View {
 
 extension LauncherFace where Cell == AppName {
     /// Names only, no buttons (in-app preview, widget gallery).
-    init(look: Look, clock: ClockOption, date: Date, size: FaceSize, apps: [String], color: Color) {
-        self.init(look: look, clock: clock, date: date, size: size, apps: apps, color: color) { _, name in name }
+    init(look: Look, clock: ClockOption, date: Date, size: FaceSize, apps: [String], color: Color,
+         layout: LayoutDocument? = nil, insets: EdgeInsets? = nil) {
+        self.init(look: look, clock: clock, date: date, size: size, apps: apps, color: color,
+                  layout: layout, insets: insets) { _, name in name }
     }
 }
 
-/// One app, as a word in the chosen font.
+/// One app, as a word in the chosen font, at the size and weight the plan gave it.
+/// Fills the frame it is given, so the whole frame is the tap target.
 struct AppName: View {
     let name: String
     let look: Look
-    /// False when the word is placed on its own, so it keeps its natural width.
-    var fillWidth: Bool = true
+    let placed: FacePlan.Name
+
+    @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
-        Text(name)
-            .font(look.font(size: look.size))
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .frame(maxWidth: fillWidth ? .infinity : nil,
+        word
+            .frame(maxWidth: .infinity, maxHeight: .infinity,
                    alignment: Alignment(horizontal: look.align.horizontal, vertical: .center))
             .contentShape(Rectangle())
+            .accessibilityLabel(Text("\(name), app"))
+    }
+
+    /// Keeps the inherited colour unless the layout set one for this name.
+    @ViewBuilder
+    private var word: some View {
+        let text = Text(name)
+            .font(look.font(size: Double(placed.fontSize), weight: placed.weight.font))
+            .tracking(look.tracking)
+            .lineLimit(1)
+            // The plan measured the word; this only absorbs sub-point rounding.
+            .minimumScaleFactor(0.9)
+        if let color = overrideColor {
+            text.foregroundStyle(color)
+        } else {
+            text
+        }
+    }
+
+    /// A per-name colour from the layout. A tinted Home Screen colours every word itself.
+    private var overrideColor: Color? {
+        guard renderingMode == .fullColor, let hex = placed.colorHex else { return nil }
+        return Color(hex: hex)
     }
 }
 
 /// The built-in clock in the chosen font. The big line is the widget's accent, so a
-/// Tinted Home Screen colors it. 12 or 24 hours follows the iPhone setting.
+/// Tinted Home Screen colours it. 12 or 24 hours follows the iPhone setting.
 struct ClockText: View {
-    let date: Date
-    let option: ClockOption
+    let content: ClockContent
     let look: Look
-    let size: FaceSize
+    let bigSize: CGFloat
+    let smallSize: CGFloat
 
     var body: some View {
         VStack(alignment: look.align.horizontal, spacing: 0) {
-            switch option {
-            case .off:
-                EmptyView()
-            case .time:
-                big(date.formatted(.dateTime.hour().minute()))
-            case .timeAndDate:
-                big(date.formatted(.dateTime.hour().minute()))
-                small(date.formatted(dateFormat))
-            case .date:
-                big(date.formatted(.dateTime.weekday(.wide)), scale: 0.6)
-                small(date.formatted(.dateTime.month(.wide).day()))
+            Text(content.big)
+                .font(look.font(size: Double(bigSize), weight: .light))
+                .monospacedDigit()
+                .widgetAccentable()
+            if let small = content.small {
+                Text(small)
+                    .font(look.font(size: Double(smallSize), weight: look.weight.font))
+                    .opacity(0.75)
             }
         }
+        .tracking(look.tracking)
         .lineLimit(1)
-        .minimumScaleFactor(0.4)
-        .layoutPriority(1)
-    }
-
-    private func big(_ text: String, scale: Double = 1) -> some View {
-        Text(text)
-            .font(look.font(size: bigSize * scale, weight: .light))
-            .widgetAccentable()
-    }
-
-    private func small(_ text: String) -> some View {
-        Text(text)
-            .font(look.font(size: look.size * 0.8))
-            .opacity(0.75)
-    }
-
-    private var bigSize: Double {
-        let base = look.size
-        switch size {
-        case .small: return base * 1.8
-        case .medium: return base * 2.2
-        case .large: return base * 2.8
-        }
-    }
-
-    private var dateFormat: Date.FormatStyle {
-        size == .small
-            ? .dateTime.weekday(.abbreviated).month(.abbreviated).day()
-            : .dateTime.weekday(.wide).month(.wide).day()
+        .minimumScaleFactor(0.85)
     }
 }

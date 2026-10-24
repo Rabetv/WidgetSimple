@@ -2,10 +2,10 @@
 
 Paste-ready copy for App Store Connect. Character limits are noted for each field.
 
-This listing describes the single App Store build (see `RELEASES.md`).
-editor is unlocked by a StoreKit subscription. Nothing here may promise the truly
-the widget removes the system container so the wallpaper shows through, the name under the icon is
-invisible, and the editor is unlocked by a StoreKit subscription.
+This listing describes the single App Store build (see `RELEASES.md`): public API only,
+see-through by matching each widget to the person's wallpaper, a blank name under the
+icon, and the editor unlocked by a StoreKit subscription. Nothing here may promise that
+the system's widget container or rim disappears: it doesn't.
 
 ## Name (30)
 
@@ -51,11 +51,17 @@ WHAT YOU GET
 • Stacked layout, or free placement: put the clock and the words anywhere on the widget
 • Every widget on the Home Screen follows the look you set, instantly
 • Small, medium, large and extra-large sizes
+• Layouts: drag every word anywhere, then pick the layout per widget
+• More widgets in the same style: Text, Date & Time, Countdown, World Clock, Greeting,
+  Photo, Dashboard (battery and storage), Zen and Spacer
 
 HOW IT LOOKS
 
-Your words sit on the standard iOS widget background. With the Clear or Tinted Home
-Screen appearance, iOS shows that background as glass over your wallpaper.
+Each widget can show the piece of your wallpaper behind it, so the words look like they
+sit right on your Home Screen. Matching takes two screenshots, once: an empty page and
+your widgets while they show a pink code. iOS still draws its thin widget edge, most
+visible on bright wallpapers. With the Clear or Tinted Home Screen appearance, iOS shows
+its own glass instead.
 
 WHY THE APPS ARE PICKED IN EDIT WIDGET
 
@@ -137,8 +143,9 @@ Connect scales them for smaller iPhones). Upload in this order:
 Style: dark warm stage, amber ribbon, callout pills, screens breaking out of the frame.
 Every claim on them is true for the `appstore` build; no user counts or ratings.
 
-They show only what the `appstore` build has: the launcher widget on the system glass,
-no other widget types (2.3.1, 2.3.3). Sources: `AppStore/screenshots/src/*.html`,
+They show the launcher widget on the system glass. The build now also has matched
+wallpaper and the other widget types; new screenshots should show them (2.3.1, 2.3.3)
+before any copy above that mentions them goes live. Sources: `AppStore/screenshots/src/*.html`,
 rendered with headless Chrome at 1320 × 2868; re-render after UI changes.
 
 ## Notes for review
@@ -148,9 +155,12 @@ Paste into App Review Information › Notes:
 ```
 WidgetSimple shows apps as words in a Home Screen widget; tapping a word opens the app.
 
-1. Appearance. The widget draws its words over a clear container background and asks WidgetKit
-   to leave the system container out, so the wallpaper shows through. Where that request is not
-   honoured, iOS draws its standard widget background (glass under Clear and Tinted).
+1. Appearance. Only public API. Each widget's containerBackground is a picture: the piece of
+   the person's own wallpaper behind that widget, cut in the app from a screenshot the person
+   picks with the system photo picker. To find where each widget sits, the app asks the widgets
+   to show a pink square code for a moment (Widgets › Launcher › See-through › Match my
+   widgets); the person takes a screenshot and picks it. Everything stays on the device. iOS
+   draws its standard widget container around it as usual.
 
 2. Choosing apps. Apps are chosen in the widget's Edit Widget sheet (long-press the
    widget › Edit Widget › App 1…12). Each slot is an App Intents parameter of type

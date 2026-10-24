@@ -198,9 +198,8 @@ jobs:
             archive
 
       # Gate before anything reaches App Store Connect: the archived binaries, not the
-      # sources, must be free of the hook.
-      - name: "Audit App Store archive (report only: the hook is included)"
-        continue-on-error: true
+      # sources, must be free of private API.
+      - name: Audit App Store archive
         run: |
           set -o pipefail
           Scripts/audit-appstore.sh "$RUNNER_TEMP/WidgetSimple.xcarchive/Products/Applications/WidgetSimple.app" 2>&1 | tee "$RUNNER_TEMP/audit.log"

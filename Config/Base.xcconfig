@@ -11,11 +11,17 @@ DEVELOPMENT_TEAM = HN6QY3V757
 BUNDLE_ID_PREFIX = com.rabetv
 
 // Name shown under the app icon AND under every WidgetSimple widget on the
-// Home Screen. The default is U+2800 (an invisible "blank" character) so the
-// widget has no label. If App Review rejects the app under Guideline 2.3.8
-// (name on device differs from App Store name), change it to:
+// Home Screen. It is one U+0020 space, the same value MD Blank ships
+// (CFBundleDisplayName == " ", length 1), so the widget has no visible label.
+// xcconfig trims leading and trailing whitespace, so the space is built from two
+// empty expansions instead of being typed; Scripts/audit-appstore.sh checks the
+// built Info.plist really holds a single space.
+// Do not go back to U+2800. If App Review objects under Guideline 2.3.8, the
+// fallback is:
 //     HOME_SCREEN_NAME = WidgetSimple
-HOME_SCREEN_NAME = ⠀
+EMPTY =
+SPACE = $(EMPTY) $(EMPTY)
+HOME_SCREEN_NAME = $(SPACE)
 
 MARKETING_VERSION = 1.0
 CURRENT_PROJECT_VERSION = 1

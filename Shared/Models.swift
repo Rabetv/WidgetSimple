@@ -146,12 +146,13 @@ enum TextTone: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// What sits behind the words.
-///  * `clear` — the app's default: the descriptor hook removes the system container,
-///    so the wallpaper shows through;
+/// What sits behind the words, inside the system's widget container (iOS always
+/// draws that container; nothing public removes it).
+///  * `clear` — the app's default: the matched piece of wallpaper (SeeThrough.swift),
+///    so the widget looks see-through; a widget with no match shows the system glass;
 ///  * `photo` — a picture the person picked, drawn in the container.
-/// A "glass" value from builds 35–37 no longer decodes; it falls back to clear, because
-/// the container it asked for is exactly what the hook removes.
+/// A "glass" value from builds 35–37 no longer decodes; it falls back to clear, which
+/// shows the same system glass until the widget is matched.
 /// Both options are part of the subscription; nothing here is sold separately.
 enum WidgetBackground: String, Codable, CaseIterable, Identifiable {
     case clear, photo
@@ -198,8 +199,12 @@ struct Look: Codable, Hashable {
     /// Per-word anchors, keyed by word slot ("0" … "11"); missing slots use appsPosition.
     var wordAnchors: [String: WidgetPosition] = [:]
     /// Clear by default: a look stored before backgrounds existed decodes as clear,
-    /// so updating the app does not silently turn a transparent widget into glass.
+    /// so updating the app keeps the matched wallpaper.
     var background: WidgetBackground = .clear
+    /// Weight of the app names.
+    var weight: NameWeight = .regular
+    /// Letter spacing in points.
+    var tracking: Double = 0
 
     init() {}
 
@@ -207,7 +212,7 @@ struct Look: Codable, Hashable {
         case tone, customHex, fontID, size, align, vAlign, letterCase, shadow, spacing
         case arrangement, clockPosition, appsPosition
         case clockDX, clockDY, appsDX, appsDY
-        case perWordPlacement, wordAnchors, background
+        case perWordPlacement, wordAnchors, background, weight, tracking
     }
 
     /// The key an old look stored the size under; decode only, never encoded.
@@ -234,6 +239,8 @@ struct Look: Codable, Hashable {
         perWordPlacement = try c.decodeIfPresent(Bool.self, forKey: .perWordPlacement) ?? d.perWordPlacement
         wordAnchors = (try? c.decodeIfPresent([String: WidgetPosition].self, forKey: .wordAnchors)) ?? d.wordAnchors
         background = (try? c.decodeIfPresent(WidgetBackground.self, forKey: .background)) ?? d.background
+        weight = (try? c.decodeIfPresent(NameWeight.self, forKey: .weight)) ?? d.weight
+        tracking = min(max(try c.decodeIfPresent(Double.self, forKey: .tracking) ?? d.tracking, -2), 8)
 
         if let legacy = try? decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent(TextSize.self, forKey: .textSize) {
             size = legacy.points // old small/medium/big values

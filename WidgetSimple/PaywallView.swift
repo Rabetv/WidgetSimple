@@ -76,11 +76,7 @@ struct PaywallView: View {
     private var benefits: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label("Up to 12 apps per widget, tap to open", systemImage: "hand.tap")
-            #if APPSTORE
-            Label("Words over your wallpaper, on the system glass", systemImage: "square.dashed")
-            #else
-            Label("Truly transparent — no glass, no frames", systemImage: "square.dashed")
-            #endif
+            Label("Words over your own wallpaper, matched to each widget", systemImage: "square.dashed")
             Label("Fonts, colours, placement, clock", systemImage: "slider.horizontal.3")
             Label("Updates and new features included", systemImage: "arrow.triangle.2.circlepath")
         }

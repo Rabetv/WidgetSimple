@@ -1,0 +1,156 @@
+[
+  {
+    "id": "stock-clouds-summit",
+    "title": "Sea of clouds",
+    "file": "stock-clouds-summit.jpg",
+    "credit": "DimiTalen",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Aiguille_Rousse_in_sea_of_clouds,_2018.jpg",
+    "focalX": 0.33,
+    "focalY": 0.45,
+    "isStock": true
+  },
+  {
+    "id": "stock-alpine-slope",
+    "title": "Alpine slope",
+    "file": "stock-alpine-slope.jpg",
+    "credit": "DimiTalen",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Photogenic_mountain_along_the_Ponteilles_slope,_La_Thuile,_2024.jpg",
+    "focalX": 0.45,
+    "focalY": 0.35,
+    "isStock": true
+  },
+  {
+    "id": "stock-river-valley",
+    "title": "River valley",
+    "file": "stock-river-valley.jpg",
+    "credit": "Wilfredor",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Parc_national_de_la_Jacques-Cartier,_Quebec,_Canada_22.jpg",
+    "focalX": 0.45,
+    "focalY": 0.45,
+    "isStock": true
+  },
+  {
+    "id": "stock-issyk-kul",
+    "title": "Issyk-Kul",
+    "file": "stock-issyk-kul.jpg",
+    "credit": "Bgag",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Lake_Issyk-Kul,_Kyrgyzstan.jpg",
+    "focalX": 0.42,
+    "focalY": 0.58,
+    "isStock": true
+  },
+  {
+    "id": "stock-khovsgol",
+    "title": "Lake Khövsgöl",
+    "file": "stock-khovsgol.jpg",
+    "credit": "Bernard Gagnon",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Lake_Kh%C3%B6vsg%C3%B6l,_Mongolia.jpg",
+    "focalX": 0.6,
+    "focalY": 0.6,
+    "isStock": true
+  },
+  {
+    "id": "stock-wood-sorrel",
+    "title": "Wood sorrel",
+    "file": "stock-wood-sorrel.jpg",
+    "credit": "W.carter",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Wood_sorrel_after_rain.jpg",
+    "focalX": 0.62,
+    "focalY": 0.4,
+    "isStock": true
+  },
+  {
+    "id": "stock-beech-ferns",
+    "title": "Forest floor",
+    "file": "stock-beech-ferns.jpg",
+    "credit": "W.carter",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Beech_and_ferns_in_Gullmarsskogen.jpg",
+    "focalX": 0.55,
+    "focalY": 0.55,
+    "isStock": true
+  },
+  {
+    "id": "stock-wadi-rum",
+    "title": "Wadi Rum",
+    "file": "stock-wadi-rum.jpg",
+    "credit": "Peter Chisholm",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Wadi_rum_desert.jpg",
+    "focalX": 0.5,
+    "focalY": 0.45,
+    "isStock": true
+  },
+  {
+    "id": "stock-water-lily",
+    "title": "Water lily",
+    "file": "stock-water-lily.jpg",
+    "credit": "Jebulon",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Nymphaea_alba,_Alhambra,_Granada,_Spain.jpg",
+    "focalX": 0.58,
+    "focalY": 0.55,
+    "isStock": true
+  },
+  {
+    "id": "stock-gazania",
+    "title": "Gazania",
+    "file": "stock-gazania.jpg",
+    "credit": "Wilfredor",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Gazania_krebsiana,_Quebec_city,_Quebec,_Canada_131.jpg",
+    "focalX": 0.5,
+    "focalY": 0.52,
+    "isStock": true
+  },
+  {
+    "id": "stock-red-fox",
+    "title": "Red fox",
+    "file": "stock-red-fox.jpg",
+    "credit": "Peter Cooper Jr.",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Red_fox_in_yard,_Charlton_MA_2025-12-26.jpg",
+    "focalX": 0.34,
+    "focalY": 0.5,
+    "isStock": true
+  },
+  {
+    "id": "stock-cirrus",
+    "title": "Cirrus",
+    "file": "stock-cirrus.jpg",
+    "credit": "W.carter",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Quill-shaped_cirrus_cloud.jpg",
+    "focalX": 0.58,
+    "focalY": 0.35,
+    "isStock": true
+  },
+  {
+    "id": "stock-sea-rocks",
+    "title": "Cretan cliffs",
+    "file": "stock-sea-rocks.jpg",
+    "credit": "Jebulon",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Rocks_in_sea_Crete.jpg",
+    "focalX": 0.7,
+    "focalY": 0.45,
+    "isStock": true
+  },
+  {
+    "id": "stock-dune-beach",
+    "title": "Dunes",
+    "file": "stock-dune-beach.jpg",
+    "credit": "DimiTalen",
+    "licence": "CC0 1.0 Universal (Public Domain Dedication)",
+    "source": "https://commons.wikimedia.org/wiki/File:Beach,_Marker_Wadden,_2022.jpg",
+    "focalX": 0.45,
+    "focalY": 0.6,
+    "isStock": true
+  }
+]

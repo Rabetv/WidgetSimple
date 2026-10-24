@@ -4,13 +4,35 @@ import UIKit
 /// out of the wallpaper screenshot (see SeeThrough.swift).
 enum SeeThroughMaker {
 
-    /// Every pink widget in `image` whose key could be read.
+    struct SizeMismatch: Hashable {
+        var family: SpotFamily
+        var found: CGSize
+        var expected: CGSize
+    }
+
+    struct ScanResult {
+        /// Widgets found and read, with their final frames in screenshot pixels.
+        var spots: [Spot] = []
+        /// Pink widgets whose code couldn't be read (shadow, tint, partly covered).
+        var unread: [CGRect] = []
+        /// Keys seen on more than one widget in this screenshot.
+        var duplicates: Set<UInt32> = []
+        /// Widgets whose measured size is more than 2 % off the size they reported.
+        var mismatches: [SizeMismatch] = []
+    }
+
+    /// The largest disagreement between a widget's measured and reported size that is
+    /// still treated as the glass rim eating into the pink, not a different scale.
+    static let sizeTolerance: CGFloat = 0.02
+
+    /// Every pink widget in `image`.
     /// - Parameters:
-    ///   - sizes: real widget sizes in points, reported by the widget.
-    ///   - pointsWide: screen width in points, to turn those sizes into pixels.
-    static func findSpots(in image: CGImage, sizes: [SpotFamily: CGSize], pointsWide: CGFloat) -> [Spot] {
-        guard let bmp = Bitmap(image) else { return [] }
-        let pixelsPerPoint = CGFloat(bmp.width) / max(pointsWide, 1)
+    ///   - sizes: real widget sizes in points, reported by each widget family.
+    ///   - pixelsPerPoint: screenshot pixels per screen point (screenshot width ÷ screen
+    ///     width in points; not UIScreen.scale, which ignores Display Zoom).
+    static func scan(_ image: CGImage, sizes: [SpotFamily: CGSize], pixelsPerPoint: CGFloat) -> ScanResult {
+        var result = ScanResult()
+        guard let bmp = Bitmap(image) else { return result }
 
         // Mark pink on a coarse grid, then group touching cells into widgets.
         let step = 4
@@ -24,7 +46,7 @@ enum SeeThroughMaker {
         }
 
         var seen = [Bool](repeating: false, count: gw * gh)
-        var spots: [Spot] = []
+        var keyCounts: [UInt32: Int] = [:]
         for start in pink.indices where pink[start] && !seen[start] {
             var queue = [start]
             seen[start] = true
@@ -50,7 +72,7 @@ enum SeeThroughMaker {
             // A widget is far bigger than 300 cells (about 70 × 70 pixels of pink).
             guard queue.count >= 300 else { continue }
 
-            // The exact frame: walk outward from inside the pink to each edge, on a few
+            // The pink's extent: walk outward from inside the pink to each edge, on a few
             // lines between the corners and the code, and take the middle result.
             // Walking from inside stops at the widget's edge even on a pink wallpaper.
             let ax = CGFloat(minX * step), ay = CGFloat(minY * step)
@@ -61,17 +83,42 @@ enum SeeThroughMaker {
                   let top = median(lines.map { bmp.walk(from: Int(ax + aw * $0), Int(ay + ah * 0.1), dx: 0, dy: -1) }),
                   let bottom = median(lines.map { bmp.walk(from: Int(ax + aw * $0), Int(ay + ah * 0.9), dx: 0, dy: 1) }),
                   right > left, bottom > top else { continue }
-            var rect = CGRect(x: left, y: top, width: right - left + 1, height: bottom - top + 1)
-            guard let key = readKey(bmp, in: rect) else { continue }
+            let found = CGRect(x: left, y: top, width: right - left + 1, height: bottom - top + 1)
 
-            // The glass edge iOS draws can hide a few pixels of pink; the size the
-            // widget reported can't, so use it around the found center when it fits.
-            if let family = SpotKey.family(of: key), let points = sizes[family] {
-                rect = snap(rect, to: CGSize(width: points.width * pixelsPerPoint, height: points.height * pixelsPerPoint))
+            // Found a widget but couldn't read its ID: keep it so the app can say so,
+            // instead of silently dropping it (it used to fall back to a borrowed piece).
+            guard let key = readKey(bmp, in: found) else {
+                result.unread.append(found.integral)
+                continue
             }
-            spots.append(Spot(key: key, rect: rect))
+            keyCounts[key, default: 0] += 1
+
+            guard let family = SpotKey.family(of: key), let points = sizes[family] else {
+                // The family never reported its size: the pink is the best we have.
+                result.spots.append(Spot(key: key, rect: found.integral))
+                continue
+            }
+            // The size the widget reported is the authority; the pink only gives the
+            // centre. The glass rim hides a pixel or two of pink on each side, evenly,
+            // so the centre is exact while the pink's size is not.
+            let expected = CGSize(width: points.width * pixelsPerPoint, height: points.height * pixelsPerPoint)
+            let dw = abs(found.width - expected.width) / max(expected.width, 1)
+            let dh = abs(found.height - expected.height) / max(expected.height, 1)
+            guard dw <= sizeTolerance, dh <= sizeTolerance else {
+                result.mismatches.append(SizeMismatch(family: family, found: found.size, expected: expected))
+                continue
+            }
+            let rect = CGRect(x: (found.midX - expected.width / 2).rounded(),
+                              y: (found.midY - expected.height / 2).rounded(),
+                              width: expected.width.rounded(),
+                              height: expected.height.rounded())
+            result.spots.append(Spot(key: key, rect: rect))
         }
-        return spots
+
+        // Two widgets drawing the same key can't be told apart: neither gets a piece.
+        result.duplicates = Set(keyCounts.filter { $0.value > 1 }.keys)
+        result.spots.removeAll { result.duplicates.contains($0.key) }
+        return result
     }
 
     /// The wallpaper piece for one widget, as PNG.
@@ -82,51 +129,84 @@ enum SeeThroughMaker {
         return UIImage(cgImage: piece).pngData()
     }
 
-    // MARK: Helpers
-
-    /// Reads the 4 × 4 squares SpotCode draws in the middle of the widget.
-    private static func readKey(_ bmp: Bitmap, in rect: CGRect) -> Int? {
-        let side = min(rect.width, rect.height) * SpotCode.sideRatio
-        let cell = side / 4
-        let originX = rect.midX - side / 2
-        let originY = rect.midY - side / 2
-        var key = 0
-        for index in 0..<16 {
-            let cx = Int(originX + (CGFloat(index % 4) + 0.5) * cell)
-            let cy = Int(originY + (CGFloat(index / 4) + 0.5) * cell)
-            var sum = 0, count = 0
-            for dy in -2...2 {
-                for dx in -2...2 {
-                    let x = cx + dx, y = cy + dy
-                    if bmp.isMarker(x, y) { return nil }
-                    let (r, g, b) = bmp.rgb(x, y)
-                    sum += (r + g + b) / 3
-                    count += 1
-                }
-            }
-            let brightness = sum / max(count, 1)
-            if brightness < 90 {
-                key |= 1 << (15 - index)
-            } else if brightness < 165 {
-                return nil // Neither black nor white: not a code square.
+    /// The wallpaper's average colour, for the "match wallpaper" word colour.
+    static func averageColor(of image: CGImage) -> UIColor? {
+        guard let bmp = Bitmap(image, maxSide: 64) else { return nil }
+        var r = 0, g = 0, b = 0
+        for y in 0..<bmp.height {
+            for x in 0..<bmp.width {
+                let p = bmp.rgb(x, y)
+                r += p.0; g += p.1; b += p.2
             }
         }
-        return key
+        let n = CGFloat(max(bmp.width * bmp.height, 1)) * 255
+        return UIColor(red: CGFloat(r) / n, green: CGFloat(g) / n, blue: CGFloat(b) / n, alpha: 1)
+    }
+
+    // MARK: Helpers
+
+    /// Reads the 6 × 6 squares SpotCode draws in the middle of the widget.
+    ///
+    /// The code square is located from the pixels themselves (the non-pink block in the
+    /// middle), not from an assumed widget size. Each square is the median of nine
+    /// samples spread over its inner half, with wide black/white bands (0.35 / 0.65), so
+    /// a shadowed or glass-tinted square still reads. The CRC rejects anything misread.
+    private static func readKey(_ bmp: Bitmap, in rect: CGRect) -> UInt32? {
+        let region = rect.insetBy(dx: rect.width * 0.12, dy: rect.height * 0.12)
+        let x0 = max(Int(region.minX), 0), x1 = min(Int(region.maxX), bmp.width - 1)
+        let y0 = max(Int(region.minY), 0), y1 = min(Int(region.maxY), bmp.height - 1)
+        guard x1 - x0 > 24, y1 - y0 > 24 else { return nil }
+
+        var columns = [Int](repeating: 0, count: x1 - x0 + 1)
+        var rows = [Int](repeating: 0, count: y1 - y0 + 1)
+        for y in y0...y1 {
+            for x in x0...x1 where !bmp.isMarker(x, y) {
+                columns[x - x0] += 1
+                rows[y - y0] += 1
+            }
+        }
+        // Rows and columns through the code are mostly not pink; a stray highlight isn't.
+        let columnFloor = max((columns.max() ?? 0) * 3 / 10, 1)
+        let rowFloor = max((rows.max() ?? 0) * 3 / 10, 1)
+        guard let left = columns.firstIndex(where: { $0 >= columnFloor }),
+              let right = columns.lastIndex(where: { $0 >= columnFloor }),
+              let top = rows.firstIndex(where: { $0 >= rowFloor }),
+              let bottom = rows.lastIndex(where: { $0 >= rowFloor }) else { return nil }
+        let box = CGRect(x: x0 + left, y: y0 + top, width: right - left + 1, height: bottom - top + 1)
+        guard box.width > 18, box.height > 18,
+              abs(box.width - box.height) / max(box.width, box.height) < 0.12 else { return nil }
+
+        let side = SpotKey.codeSide
+        let cellW = box.width / CGFloat(side), cellH = box.height / CGFloat(side)
+        let offsets: [CGFloat] = [-0.25, 0, 0.25]
+        var bits: [Bool] = []
+        for index in 0..<SpotKey.codeBits {
+            let cx = box.minX + (CGFloat(index % side) + 0.5) * cellW
+            let cy = box.minY + (CGFloat(index / side) + 0.5) * cellH
+            var samples: [Double] = []
+            for dy in offsets {
+                for dx in offsets {
+                    let x = Int(cx + dx * cellW), y = Int(cy + dy * cellH)
+                    if bmp.isMarker(x, y) { continue } // pink would read as dark
+                    samples.append(bmp.luminance(x, y))
+                }
+            }
+            guard samples.count >= 5 else { return nil }
+            let middle = samples.sorted()[samples.count / 2]
+            if middle < 0.35 {
+                bits.append(true)
+            } else if middle > 0.65 {
+                bits.append(false)
+            } else {
+                return nil // neither black nor white
+            }
+        }
+        return SpotKey.decode(bits)
     }
 
     private static func median(_ values: [Int?]) -> Int? {
         let found = values.compactMap { $0 }.sorted()
         return found.isEmpty ? nil : found[found.count / 2]
-    }
-
-    private static func snap(_ found: CGRect, to expected: CGSize) -> CGRect {
-        guard expected.width > 0, expected.height > 0,
-              abs(expected.width - found.width) / expected.width < 0.08,
-              abs(expected.height - found.height) / expected.height < 0.08 else { return found.integral }
-        return CGRect(x: (found.midX - expected.width / 2).rounded(),
-                      y: (found.midY - expected.height / 2).rounded(),
-                      width: expected.width.rounded(),
-                      height: expected.height.rounded())
     }
 
     /// RGBA pixels in sRGB.
@@ -135,15 +215,22 @@ enum SeeThroughMaker {
         let height: Int
         let bytes: [UInt8]
 
-        init?(_ image: CGImage) {
-            let w = image.width, h = image.height
+        /// - Parameter maxSide: draws the image smaller when set (for averages).
+        init?(_ image: CGImage, maxSide: Int? = nil) {
+            var w = image.width, h = image.height
             guard w > 0, h > 0 else { return nil }
+            if let maxSide, max(w, h) > maxSide {
+                let scale = Double(maxSide) / Double(max(w, h))
+                w = max(Int(Double(w) * scale), 1)
+                h = max(Int(Double(h) * scale), 1)
+            }
             var buffer = [UInt8](repeating: 0, count: w * h * 4)
             let ok: Bool = buffer.withUnsafeMutableBytes { raw in
                 guard let ctx = CGContext(data: raw.baseAddress, width: w, height: h,
                                           bitsPerComponent: 8, bytesPerRow: w * 4,
                                           space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
                                           bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+                ctx.interpolationQuality = .medium
                 ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
                 return true
             }
@@ -160,10 +247,17 @@ enum SeeThroughMaker {
             return (Int(bytes[i]), Int(bytes[i + 1]), Int(bytes[i + 2]))
         }
 
-        /// Pure pink (SpotCode.marker); photos almost never have it.
+        /// Relative luminance, 0…1.
+        func luminance(_ x: Int, _ y: Int) -> Double {
+            let (r, g, b) = rgb(x, y)
+            return (0.2126 * Double(r) + 0.7152 * Double(g) + 0.0722 * Double(b)) / 255
+        }
+
+        /// The marker pink (SpotCode.marker), allowing for the ~10 % white veil the
+        /// system glass lays over the container; photos almost never have it.
         func isMarker(_ x: Int, _ y: Int) -> Bool {
             let (r, g, b) = rgb(x, y)
-            return r > 215 && b > 215 && g < 60
+            return r > 200 && b > 200 && g < 90 && abs(r - b) < 45
         }
 
         /// From a pink pixel, steps in (dx, dy) while the next pixel is pink too.

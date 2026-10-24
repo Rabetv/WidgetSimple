@@ -31,9 +31,9 @@ struct WidgetType: Identifiable {
         WidgetType(id: "launcher", glyph: "Aa", name: "Launcher",
                    detail: "Apps as words. Tap a word, open the app.",
                    surfaces: [.home, .lock, .standby], pro: false, available: true),
-        WidgetType(id: "clock", glyph: "◷", name: "Clock",
-                   detail: "14 styles, digital and analog, 12 or 24 h.",
-                   surfaces: [.home, .lock, .standby], pro: false, available: false),
+        WidgetType(id: "clock", glyph: "◷", name: "Date & Time",
+                   detail: "Time, date or a calendar page, with a second city.",
+                   surfaces: [.home, .lock, .standby], pro: false, available: true),
         WidgetType(id: "wordclock", glyph: "ten", name: "Word Clock",
                    detail: "The time in words: quarter past ten.",
                    surfaces: [.home, .lock, .standby], pro: false, available: false),
@@ -41,8 +41,8 @@ struct WidgetType: Identifiable {
                    detail: "Up to four cities, by name.",
                    surfaces: [.home, .lock, .standby], pro: true, available: true),
         WidgetType(id: "photo", glyph: "▣", name: "Photo",
-                   detail: "Shuffle an album, pin one, add stickers.",
-                   surfaces: [.home, .standby], pro: true, available: false),
+                   detail: "A photo from the library, or shuffle every hour.",
+                   surfaces: [.home, .standby], pro: true, available: true),
         WidgetType(id: "countdown", glyph: "12", name: "Countdown",
                    detail: "Days until, or since, any date.",
                    surfaces: [.home, .lock, .standby], pro: false, available: true),
@@ -60,18 +60,23 @@ struct WidgetType: Identifiable {
                    surfaces: [.home, .lock], pro: false, available: true),
         WidgetType(id: "greeting", glyph: "Hi", name: "Greeting",
                    detail: "Changes with the time of day.",
-                   surfaces: [.home, .standby], pro: false, available: false),
+                   surfaces: [.home, .standby], pro: false, available: true),
+        WidgetType(id: "zen", glyph: "◯", name: "Zen",
+                   detail: "A slow breath and a quiet line, every minute.",
+                   surfaces: [.home, .standby], pro: false, available: true),
+        // Not built: a widget can't read what another app is playing. The Launcher
+        // already opens Music with one tap if it is picked there.
         WidgetType(id: "music", glyph: "♪", name: "Music",
                    detail: "Apple Music playlists, one tap to play.",
                    surfaces: [.home, .standby], pro: true, available: false),
         WidgetType(id: "battery", glyph: "▮", name: "Battery",
                    detail: "Your iPhone’s charge at a glance.",
-                   surfaces: [.home, .lock], pro: true, available: false),
+                   surfaces: [.home, .lock], pro: true, available: true),
         WidgetType(id: "dashboard", glyph: "⊞", name: "Dashboard",
-                   detail: "Clock, weather, events, battery.",
-                   surfaces: [.home, .standby], pro: true, available: false),
+                   detail: "Clock, battery and free storage.",
+                   surfaces: [.home, .standby], pro: true, available: true),
         WidgetType(id: "spacer", glyph: "⬚", name: "Spacer",
-                   detail: "An invisible blank, any size, no label.",
+                   detail: "A blank that shows your wallpaper once matched.",
                    surfaces: [.home], pro: false, available: true),
         WidgetType(id: "appcontrol", glyph: "◉", name: "App Control",
                    detail: "Open any app from Control Center.",
@@ -89,6 +94,11 @@ struct WidgetType: Identifiable {
     var galleryName: String? {
         switch id {
         case "launcher": return "Apps"
+        case "clock": return "Date & Time"
+        case "photo": return "Photo"
+        case "greeting": return "Greeting"
+        case "zen": return "Zen"
+        case "battery", "dashboard": return "Dashboard"
         case "text": return "Text"
         case "countdown": return "Countdown"
         case "worldclock": return "World Clock"
