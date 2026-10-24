@@ -177,7 +177,9 @@ struct Look: Codable, Hashable {
     /// Word size in points. Replaces the old small/medium/big steps.
     var size: Double = 21
     var align: TextAlign = .left
-    var vAlign: TextVAlign = .top
+    /// Middle by default: a block that fills the widget looks the same as Top, and a few
+    /// names sit centred instead of hugging the top edge.
+    var vAlign: TextVAlign = .middle
     var letterCase: LetterCase = .normal
     /// Soft shadow behind the words, for bright wallpapers.
     var shadow: Bool = false
@@ -205,6 +207,11 @@ struct Look: Codable, Hashable {
     var weight: NameWeight = .regular
     /// Letter spacing in points.
     var tracking: Double = 0
+    /// Extra inset inside the system's content margins, in points (negative pulls in).
+    var inset: Double = 0
+    /// Columns for the names: 0 picks automatically, 1…4 forces it. A layout picked in
+    /// Edit Widget overrides this for that widget.
+    var columns: Int = 0
 
     init() {}
 
@@ -212,7 +219,7 @@ struct Look: Codable, Hashable {
         case tone, customHex, fontID, size, align, vAlign, letterCase, shadow, spacing
         case arrangement, clockPosition, appsPosition
         case clockDX, clockDY, appsDX, appsDY
-        case perWordPlacement, wordAnchors, background, weight, tracking
+        case perWordPlacement, wordAnchors, background, weight, tracking, inset, columns
     }
 
     /// The key an old look stored the size under; decode only, never encoded.
@@ -241,6 +248,8 @@ struct Look: Codable, Hashable {
         background = (try? c.decodeIfPresent(WidgetBackground.self, forKey: .background)) ?? d.background
         weight = (try? c.decodeIfPresent(NameWeight.self, forKey: .weight)) ?? d.weight
         tracking = min(max(try c.decodeIfPresent(Double.self, forKey: .tracking) ?? d.tracking, -2), 8)
+        inset = min(max(try c.decodeIfPresent(Double.self, forKey: .inset) ?? d.inset, -8), 24)
+        columns = min(max(try c.decodeIfPresent(Int.self, forKey: .columns) ?? d.columns, 0), 4)
 
         if let legacy = try? decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent(TextSize.self, forKey: .textSize) {
             size = legacy.points // old small/medium/big values

@@ -80,7 +80,7 @@ struct WidgetType: Identifiable {
                    surfaces: [.home], pro: false, available: true),
         WidgetType(id: "appcontrol", glyph: "◉", name: "App Control",
                    detail: "Open any app from Control Center.",
-                   surfaces: [.controls], pro: false, available: false),
+                   surfaces: [.controls, .lock], pro: false, available: true),
         WidgetType(id: "shortcutcontrol", glyph: "⟳", name: "Shortcut Control",
                    detail: "Run a shortcut with one tap.",
                    surfaces: [.controls, .lock], pro: true, available: false)
@@ -103,6 +103,7 @@ struct WidgetType: Identifiable {
         case "countdown": return "Countdown"
         case "worldclock": return "World Clock"
         case "spacer": return "Spacer"
+        case "appcontrol": return "Open App"
         default: return nil
         }
     }

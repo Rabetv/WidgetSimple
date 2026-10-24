@@ -258,3 +258,5 @@ als Wörter.";
 "Couldn't save the wallpaper pieces. Free some storage and try again." = "Die Hintergrundstücke konnten nicht gespeichert werden. Gib Speicher frei und versuche es erneut.";
 "This wallpaper screenshot has a different size from the pink one. Match the widgets again." = "Dieser Hintergrund-Screenshot hat eine andere Größe als der pinke. Gleiche die Widgets erneut ab.";
 "The pink screenshot and the wallpaper screenshot have different sizes. Take both on this iPhone, held upright, with the same Display Zoom." = "Der pinke Screenshot und der Hintergrund-Screenshot haben verschiedene Größen. Mach beide auf diesem iPhone, aufrecht, mit demselben Display-Zoom.";
+"Inset from the edges" = "Abstand zum Rand";
+"%+.0f pt" = "%+.0f pt";

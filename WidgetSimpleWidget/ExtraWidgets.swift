@@ -24,19 +24,22 @@ struct LookStyle: ViewModifier {
     }
 }
 
-/// The system's content margins. Every kind disables WidgetKit's own margins (the
-/// wallpaper piece is full-bleed) and puts them back on the content with this.
+/// The system's content margins, plus the look's inset. Every kind disables WidgetKit's
+/// own margins (the wallpaper piece is full-bleed) and puts them back with this.
 struct SystemMargins: ViewModifier {
+    var extra: Double = 0
     @Environment(\.widgetContentMargins) private var margins
 
     func body(content: Content) -> some View {
-        content.padding(margins)
+        content
+            .padding(margins)
+            .padding(CGFloat(extra))
     }
 }
 
 extension View {
     func lookStyle(_ look: Look) -> some View { modifier(LookStyle(look: look)) }
-    func systemMargins() -> some View { modifier(SystemMargins()) }
+    func systemMargins(extra: Double = 0) -> some View { modifier(SystemMargins(extra: extra)) }
 }
 
 /// Lines of text in the app's look, inside the margins and clipped to the widget.
@@ -59,7 +62,7 @@ struct TextStyleBlock: View {
         }
         .lookStyle(look)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.alignment)
-        .systemMargins()
+        .systemMargins(extra: look.inset)
         .clipped()
     }
 }
@@ -254,7 +257,7 @@ struct CountdownWidgetView: View {
                 }
                 .lookStyle(entry.look)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: entry.look.alignment)
-                .systemMargins()
+                .systemMargins(extra: entry.look.inset)
                 .clipped()
             }
         }
@@ -369,7 +372,7 @@ struct WorldClockWidgetView: View {
         }
         .lookStyle(entry.look)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: entry.look.alignment)
-        .systemMargins()
+        .systemMargins(extra: entry.look.inset)
         .clipped()
         .seeThroughBackground(entry.backdrop, look: entry.look)
     }

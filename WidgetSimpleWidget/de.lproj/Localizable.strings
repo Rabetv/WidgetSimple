@@ -83,3 +83,11 @@
 "Medium" = "Mittel";
 "Semibold" = "Halbfett";
 "Bold" = "Fett";
+
+/* Control Center */
+"Open App" = "App öffnen";
+"Opens the app you pick." = "Öffnet die App, die du wählst.";
+"App" = "App";
+"Choose an app" = "App wählen";
+"Pick an app in the control's settings first." = "Wähle zuerst in den Einstellungen der Steuerung eine App.";
+"Open any app from Control Center." = "Öffne jede App aus dem Kontrollzentrum.";

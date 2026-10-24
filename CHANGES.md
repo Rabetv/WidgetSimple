@@ -87,8 +87,10 @@ margins (the piece is full-bleed; content re-applies the system margins).
 | Dashboard (`WidgetSimpleDashboard`) — new | S M L, Lock circular | clock, battery %, free storage |
 | Zen (`WidgetSimpleZen`) — new | S M | a step per minute + a live `ProgressView(timerInterval:)` ring |
 | Spacer (`WidgetSimpleSpacer`) | S M L | shows its wallpaper piece |
+| Open App control (`WidgetSimpleOpenAppControl`) — new | Control Center, Lock Screen controls | MD's "Control Widget": pick an app in the control's settings; a tap chains to the system's `RunSystemShortcutIntent` |
 | Weather — stub, **not built** | S | behind `WEATHER`; placeholder data only (see decisions) |
 | Music — **skipped** | | a widget can't read another app's playback; the Launcher opens Music |
+| Live Wallpaper — **not a widget** | | MD's Live Wallpaper is an app feature that makes a Live Photo the wallpaper; no public API sets the wallpaper, so it is out of scope |
 
 **4.2 Stock photos.** 14 photos in `WidgetSimple/Stock/`, every one **CC0 1.0**
 (Wikimedia Commons Quality Images; licence and "no restrictions" checked per file through
@@ -111,8 +113,10 @@ last showed (the widget records them), else samples.
 
 **4.4 Editor.** Grouped into See-through, Background, Apps, Clock, Typography (font,
 weight, size, letter spacing, case), Colour (white/black/custom, "match my wallpaper",
-shadow) and Layout (alignment, position, spacing, arrangement, Layouts, "Check every
-size"). See-through has the three steps, status (matched / unread / shared IDs), a map
+shadow) and Layout (alignment, position, spacing, columns auto/1–4, inset from the edges
+−8…+24 pt on top of the system margins, arrangement, Layouts, "Check every size").
+The vertical position now defaults to Middle for new installs, so a few names sit
+centred and a full block looks the same as Top; stored looks keep their choice. See-through has the three steps, status (matched / unread / shared IDs), a map
 of where each widget was matched (the seam explanation) and Start over.
 
 ## Also changed
@@ -154,6 +158,29 @@ project object → fail naming the object; no map → fail.
 - README, RELEASES, WIDGETS-SPEC and the App Store listing no longer claim the container
   is removed. The **review notes** now describe the matching honestly.
 
+## Handoff coverage
+
+| Handoff | Status |
+|---|---|
+| §0 no private API, grep clean | done — hook deleted; repo grep empty; CI source grep + binary audit block |
+| §0 don't remove the container | done — see-through is drawn inside it |
+| §0 bundle ids, App Group, team, iOS 27, Swift 5, no dependencies | unchanged |
+| §0 preview pixel-identical through `LauncherFace` | done — preview, layout editor, thumbnails and Date & Time all draw `LauncherFace` from the same plan at real size |
+| §1 audit DeepSeek's work | done — see "Where the handoff and the repository disagreed" |
+| §3.1 a/b/c | done — identity keys, exact lookup, atomic generations |
+| §3.2 reported size authority, record pixel size + scale, 2 % reject | done — `pixelsPerPoint` = screenshot width ÷ screen points, validated against the native pixel width |
+| §3.3 tolerant decoder, keep unread spots | done |
+| §3.4 Spacing, Typography, measured columns, balanced rows, centred when few, Dynamic Type, content margins, harness | done (centred via the Middle default) |
+| §3.5 preview wallpaper, error surface, same-size note, atomic swap, debounce, VoiceOver | done |
+| §4.1 catalogue incl. Control Widget | done; Weather stub (needs a source decision), Music skipped, Live Wallpaper not a widget |
+| §4.2 stock photos, CREDITS, offline | done — 14 CC0 |
+| §4.3 LayoutEditor, LayoutEntity, freeform, migration, per-layout options | done |
+| §4.4 grouped editor, debounced reloads | done |
+| §5 acceptance | grep, `nm`/linked frameworks, display name, warnings-as-errors, no force unwraps: verified on CI. Layout matrix: verified by the planner port + in-app harness. Seam, identical widgets, ±1 pt freeform, VoiceOver: device only |
+| §6 before/after screenshots on three wallpapers | not done — needs the iPhone |
+| §7 don'ts | respected |
+| §8 deliverables | this file, one branch |
+
 ## Verified here (Windows, no Mac)
 
 - Repo-wide grep from the handoff: no matches. No `.m/.mm/.h` files remain.
@@ -194,6 +221,9 @@ project object → fail naming the object; no map → fail.
 5. `UIDevice.batteryLevel` in the extension may report "–" on some iOS versions.
 6. The magenta threshold was widened for the glass veil (r,b > 200, g < 90); check a scan
    on a pink or purple wallpaper.
+7. The Open App control: that `RunSystemShortcutIntent` runs when chained from a control
+   (`opensIntent`). If it doesn't, the control needs another route (WIDGETS-SPEC called
+   for a spike).
 
 ## How to test each fix on the device
 

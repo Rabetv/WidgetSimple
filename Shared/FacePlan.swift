@@ -118,7 +118,8 @@ enum FacePlanner {
         let sideGap = base * CGFloat(Typography.columnGapRatio)
         let clock = input.clock.map { metrics.clock($0, base: base) }
 
-        let forced = layout?.columns ?? 0
+        // A layout picked in Edit Widget decides; otherwise the look's column setting.
+        let forced = layout?.columns ?? look.columns
         let columnChoices: [Int] = n == 0 ? [0] : (forced > 0 ? [min(forced, n)] : Array(1...min(4, n)))
         let placements: [ClockPlacement]
         if clock == nil {
@@ -315,7 +316,8 @@ enum FacePlanner {
         let columnGap = base * CGFloat(Typography.columnGapRatio)
         var best: (scale: CGFloat, grid: Grid)?
         if !input.names.isEmpty {
-            for count in 1...min(4, input.names.count) {
+            let counts = look.columns > 0 ? [min(look.columns, input.names.count)] : Array(1...min(4, input.names.count))
+            for count in counts {
                 let grid = makeGrid(widths: metrics.nameWidths, lineHeight: metrics.lineHeight,
                                     columns: count, rowGap: rowGap, columnGap: columnGap)
                 let fit = scaleToFit(grid.size, in: content.size)
@@ -345,11 +347,13 @@ enum FacePlanner {
                              colorHex: style?.colorHex)
     }
 
+    /// Inside the system margins, plus the look's own inset.
     static func contentRect(_ input: FacePlanInput) -> CGRect {
         let i = input.insets
-        return CGRect(x: i.leading, y: i.top,
-                      width: max(input.canvas.width - i.leading - i.trailing, 1),
-                      height: max(input.canvas.height - i.top - i.bottom, 1))
+        let extra = CGFloat(input.look.inset)
+        return CGRect(x: i.leading + extra, y: i.top + extra,
+                      width: max(input.canvas.width - i.leading - i.trailing - 2 * extra, 1),
+                      height: max(input.canvas.height - i.top - i.bottom - 2 * extra, 1))
     }
 
     private static func scaleToFit(_ size: CGSize, in available: CGSize) -> CGFloat {

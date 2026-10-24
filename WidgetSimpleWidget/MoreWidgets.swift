@@ -142,7 +142,7 @@ struct DateTimeWidgetView: View {
         .lineLimit(1)
         .lookStyle(entry.look)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: entry.look.alignment)
-        .systemMargins()
+        .systemMargins(extra: entry.look.inset)
         .clipped()
     }
 
@@ -429,7 +429,7 @@ struct GreetingWidgetView: View {
         }
         .lookStyle(entry.look)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: entry.look.alignment)
-        .systemMargins()
+        .systemMargins(extra: entry.look.inset)
         .clipped()
         .seeThroughBackground(entry.backdrop, look: entry.look)
     }
@@ -568,7 +568,7 @@ struct DashboardWidgetView: View {
             .minimumScaleFactor(0.7)
             .lookStyle(entry.look)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: entry.look.alignment)
-            .systemMargins()
+            .systemMargins(extra: entry.look.inset)
             .clipped()
         }
     }
@@ -700,7 +700,7 @@ struct ZenWidgetView: View {
         }
         .lookStyle(entry.look)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .systemMargins()
+        .systemMargins(extra: entry.look.inset)
         .clipped()
         .seeThroughBackground(entry.backdrop, look: entry.look)
     }
@@ -802,7 +802,7 @@ struct WeatherWidgetView: View {
         }
         .lookStyle(entry.look)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: entry.look.alignment)
-        .systemMargins()
+        .systemMargins(extra: entry.look.inset)
         .seeThroughBackground(entry.backdrop, look: entry.look)
     }
 }

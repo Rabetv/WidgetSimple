@@ -400,6 +400,17 @@ struct EditorView: View {
                 Slider(value: $model.look.spacing, in: 0.6...2.0, step: 0.1)
             }
 
+            Picker("Columns", selection: $model.look.columns) {
+                Text("Auto").tag(0)
+                ForEach(1...4, id: \.self) { Text("\($0)").tag($0) }
+            }
+            .pickerStyle(.segmented)
+
+            VStack(alignment: .leading, spacing: 6) {
+                LabeledContent("Inset from the edges", value: String(format: "%+.0f pt", model.look.inset))
+                Slider(value: $model.look.inset, in: -8...24, step: 1)
+            }
+
             Picker("Arrangement", selection: $model.look.arrangement) {
                 ForEach(Arrangement.allCases) { Text($0.title).tag($0) }
             }
