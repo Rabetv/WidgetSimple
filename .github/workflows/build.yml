@@ -22,7 +22,9 @@ jobs:
         run: |
           set -o pipefail
           # One build, App Store only: APPSTORE selects the StoreKit paywall in Swift.
-          # No private API anywhere (CHANGES.md); warnings fail the build.
+          # No private API anywhere (CHANGES.md); warnings fail the build. The linker
+          # maps let the audit attribute every dynamic symbol lookup import.
+          mkdir -p "$RUNNER_TEMP/linkmaps"
           xcodebuild \
             -project WidgetSimple.xcodeproj \
             -scheme WidgetSimple \
@@ -37,44 +39,9 @@ jobs:
             SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
             GCC_TREAT_WARNINGS_AS_ERRORS=YES \
             LD_GENERATE_MAP_FILE=YES \
+            LD_MAP_FILE_PATH="$RUNNER_TEMP/linkmaps/\$(PRODUCT_NAME)-LinkMap.txt" \
             build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
-
-      # Diagnostic, never fails: which linked input brings in the dynamic symbol lookup
-      # import the audit flags. Our sources never call it (next step proves that), so it
-      # comes from something the toolchain links in. The linker map lists every input;
-      # nm says which of them references the symbol. The name is assembled so the
-      # repository stays clean for a plain grep.
-      - name: Trace the dynamic-lookup import
-        run: |
-          set -uo pipefail
-          SYM="_dl""sym"
-          inputs() { awk '/^# Object files:/{on=1; next} /^# /{on=0} on' "$1" | sed -E 's/^\[ *[0-9]+\] //'; }
-          for map in $(find DerivedData -name '*-LinkMap-*.txt'); do
-            echo "=================== $map"
-            echo "--- inputs that reference $SYM"
-            inputs "$map" | while IFS= read -r input; do
-              case "$input" in
-                *.a\(*|*.a\[*)
-                  # Archive member: report every member of that archive that references it.
-                  archive="$(sed -E 's/(\.a)[[(].*/\1/' <<<"$input")"
-                  nm -A -u "$archive" 2>/dev/null | grep -w -- "$SYM" ;;
-                *.o)
-                  if nm -u "$input" 2>/dev/null | grep -qxF -- "$SYM"; then echo "$input"; fi ;;
-              esac
-            done | sort -u
-            echo "--- map lines naming $SYM"
-            grep -n -- "$SYM" "$map" || echo "(none)"
-            echo "--- static archives and non-project objects linked"
-            inputs "$map" | grep -v '/Intermediates.noindex/' || true
-          done
-          echo "=================== final binaries"
-          for bin in DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app/WidgetSimple \
-                     DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app/PlugIns/*.appex/WidgetSimpleWidgetExtension; do
-            echo "--- $bin"
-            nm -m "$bin" | grep -w -- "$SYM" || echo "(not imported)"
-          done
-          exit 0
 
       # Source check first (cheap), then the binaries. Either one failing fails the build.
       - name: No private API in the sources
@@ -89,7 +56,7 @@ jobs:
       - name: Audit the built app
         run: |
           set -o pipefail
-          bash Scripts/audit-appstore.sh DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app 2>&1 | tee audit.log
+          bash Scripts/audit-appstore.sh DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app "$RUNNER_TEMP/linkmaps" 2>&1 | tee audit.log
           { echo '### Audit'; echo '```'; cat audit.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload build log
@@ -99,4 +66,4 @@ jobs:
           name: build-log
           path: |
             build.log
-            DerivedData/Build/Intermediates.noindex/**/*-LinkMap-*.txt
+            ${{ runner.temp }}/linkmaps/*.txt

@@ -2,8 +2,9 @@
 
 Bug fixes for the matched-wallpaper see-through, a layout engine with a design system,
 the freeform layout editor, seven more widget kinds, a CC0 stock library, and the
-removal of the private-API hook. Public API only. **Nothing here has been compiled yet**
-— there is no Mac on this machine; see "Not verified" before merging.
+removal of the private-API hook. Public API only. It compiles on CI (Xcode 27.1, Release,
+warnings as errors, no warnings); nothing has run on a device yet — see "Not verified"
+before merging.
 
 ## Where the handoff and the repository disagreed
 
@@ -120,8 +121,33 @@ of where each widget was matched (the seam explanation) and Start over.
   the binaries, prints linked frameworks and fails on a private one, and checks
   `CFBundleDisplayName` is a single space. The private names are assembled from pieces,
   so the script itself passes the repo grep.
-- CI (`build.yml`): warnings as errors, a source grep step, and the audit now **blocks**.
-  `testflight.yml`: the audit blocks the upload.
+- CI (`build.yml`): warnings as errors, a source grep step, linker maps, and the audit
+  now **blocks**. `testflight.yml`: linker maps for the archive, and the audit blocks the
+  upload.
+
+### The audit and the dynamic symbol lookup import
+
+Both binaries import the libSystem symbol-lookup function the handoff's grep bans
+(`_dl` + `sym`), although no source calls it. Build run 40080516837 traced it with
+the linker map. The only linked input that references it, in the app and in the widget
+extension, is `libclang_rt.ios.a(os_version_check.c.o)`: clang's compiler runtime
+behind `#available` / `@available`, which looks up the system's OS-version check by
+name. Every Swift binary with an availability check carries it, and it is not private
+API.
+
+The rule (`check_lookup` in the audit) is exact, not a blanket allowance:
+
+- both workflows link with `LD_GENERATE_MAP_FILE=YES` and pass the map folder to the
+  audit as its second argument;
+- the import passes only if the binary's map shows `libclang_rt.*.a(os_version_check.c.o)`
+  as its **sole** referencer (archive members that aren't linked don't count);
+- it fails if any other object references it (and names that object), if no linked input
+  references it, or if no map was given;
+- the dynamic library loader import, class lookup by name and every method-swizzling
+  call stay hard failures with no exception.
+
+Tested against a fake `nm` and fabricated link maps: clang only → pass; clang plus a
+project object → fail naming the object; no map → fail.
 - Privacy manifests: widget declares disk space (85F4.1, shown to the person); app
   declares UserDefaults (CA92.1, already used by `@AppStorage`).
 - German strings for everything new; the widget extension gets its first `de.lproj`.
@@ -144,18 +170,26 @@ of where each widget was matched (the seam explanation) and Start over.
   26 pt, 12 apps with a clock, at 43 % scale. That is why the floor is 0.4.
 - Plists and both privacy manifests parse; strings files have no duplicate keys.
 
+## Verified on CI (GitHub Actions, Xcode 27.1, iOS 27.1 SDK)
+
+- Release build of the app and the widget for the device: **BUILD SUCCEEDED, no errors
+  and no warnings**, with warnings as errors.
+- Source grep for private symbols: clean.
+- Binary audit: no hook traces, no swizzling imports, no external payment code, only
+  public system frameworks linked, the StoreKit product compiled in, and
+  `CFBundleDisplayName` a single space (so the xcconfig space trick works). The
+  symbol-lookup import is attributed to clang's runtime as described above.
+
 ## Not verified — needs CI and the device
 
-1. **It has not compiled.** Run the Build workflow (push the branch). Most likely
-   friction: Swift API signatures I couldn't check against the iOS 27 SDK; warnings as
-   errors catching warnings that already exist in untouched files (turn the flag off in
-   `build.yml` if so and fix them separately).
+1. **Nothing has run on a device.** It compiles; the behaviour below still needs the
+   iPhone. The TestFlight workflow has not run with these changes.
 2. `WidgetIdentity.defaultResult()` gives each **new** widget its own UUID. If the system
    reuses one default, the scan reports the shared ID instead of mis-matching; the fix is
    "New ID" in Edit Widget. Confirm on device that two freshly added identical widgets
    get different IDs (Edit Widget shows "Widget XXXX").
-3. The `$(EMPTY) $(EMPTY)` xcconfig trick for the single space — the audit checks the
-   built plist.
+3. The blank name is verified in the built plist; that iOS shows no label under the
+   widget with it is still to be seen on the device.
 4. Content margins are recorded from the widget's body; check the preview matches.
 5. `UIDevice.batteryLevel` in the extension may report "–" on some iOS versions.
 6. The magenta threshold was widened for the glass veil (r,b > 200, g < 90); check a scan
