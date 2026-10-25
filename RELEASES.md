@@ -24,17 +24,7 @@ that carries the container is the one the hook replaces, and it cannot be fetche
 per widget. The background picker is **Clear** and **Photo**; a stored `glass` value from
 builds 35–37 decodes as Clear.
 
-## The risk, written down
 
-App Review can reject this build under **guideline 2.5.1** (private API). The binary
-contains the private selectors in plain text — `setTransparent:`,
-`setBackgroundRemovable:`, `setPreferredBackgroundStyle:`,
-`getAllCurrentDescriptorsWithCompletion:` — and `Scripts/audit-appstore.sh` prints them on
-every run. Nothing here is obfuscated.
-
-If a rejection arrives: resubmit a build with the hook removed (matched wallpaper only),
-or ship that variant from the start. Concealing the calls is not an option — it converts a
-rejection into an account-level problem.
 
 ## TestFlight unlock (never in the App Store build)
 
