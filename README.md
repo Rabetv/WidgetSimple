@@ -44,10 +44,6 @@ rebuild itself from the archive. Every stage is guarded and logged to the App Gr
 (`WidgetSimple/hook.log`); on any failure the original object is passed through, so the
 widget can only ever behave as it did before.
 
-**This is private API.** It is not App Store material (guideline 2.5.1) and Apple can
-rename any of these symbols in any release. The standalone write-up, including the
-approaches that do not work, is at
-[Rabetv/ios-transparent-widget](https://github.com/Rabetv/ios-transparent-widget).
 
 ## Why the apps are picked in Edit Widget
 
