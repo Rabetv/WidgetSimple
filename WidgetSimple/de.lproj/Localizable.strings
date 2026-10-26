@@ -1,0 +1,175 @@
+/* WidgetSimple — German. Keys are the English strings used in the code. */
+
+/* Sections */
+"Preview" = "Vorschau";
+"Apps" = "Apps";
+"Clock" = "Uhr";
+"Style" = "Stil";
+
+/* Preview */
+"The widget is see-through — the wallpaper shows behind the words. Add it once from the Home Screen and style it here." = "Das Widget ist transparent – das Hintergrundbild scheint hinter den Wörtern durch. Einmal zum Home-Bildschirm hinzufügen, hier gestalten.";
+"Small" = "Klein";
+"Medium" = "Mittel";
+"Large" = "Groß";
+
+/* Apps */
+"Hold the widget › Edit Widget to pick the apps." = "Widget gedrückt halten › Widget bearbeiten, um die Apps zu wählen.";
+"A tap on a word opens that app directly." = "Ein Tippen auf ein Wort öffnet die App direkt.";
+"Every widget can open a different set." = "Jedes Widget kann eine andere Auswahl öffnen.";
+"iOS only lets the system fill the app list, so it lives in Edit Widget." = "iOS lässt die App-Liste nur vom System füllen, deshalb liegt sie unter „Widget bearbeiten“.";
+
+/* Clock */
+"No clock" = "Keine Uhr";
+"Time" = "Uhrzeit";
+"Time and date" = "Uhrzeit und Datum";
+"Date" = "Datum";
+
+/* Style rows */
+"Font" = "Schrift";
+"Size" = "Größe";
+"Alignment" = "Ausrichtung";
+"Position" = "Position";
+"Arrangement" = "Anordnung";
+"Clock position" = "Position der Uhr";
+"Apps position" = "Position der Apps";
+"Clock nudge" = "Uhr verschieben";
+"Apps nudge" = "Apps verschieben";
+"Place every word separately" = "Jedes Wort einzeln platzieren";
+"Word placement" = "Wortpositionen";
+"Word %lld" = "Wort %lld";
+"Words you haven't picked in Edit Widget are ignored." = "Wörter, die du nicht unter „Widget bearbeiten“ gewählt hast, werden ignoriert.";
+"Letter case" = "Groß-/Kleinschreibung";
+"Color" = "Farbe";
+"Custom color" = "Eigene Farbe";
+"Shadow" = "Schatten";
+"Spacing" = "Abstand";
+
+/* Alignment values */
+"Left" = "Links";
+"Center" = "Mitte";
+"Right" = "Rechts";
+"Top" = "Oben";
+"Middle" = "Mittig";
+"Bottom" = "Unten";
+
+/* Placement values */
+"Top Left" = "Oben links";
+"Top Right" = "Oben rechts";
+"Bottom Left" = "Unten links";
+"Bottom Right" = "Unten rechts";
+
+/* Arrangement */
+"Stacked" = "Gestapelt";
+"Free" = "Frei";
+
+/* Colours */
+"White" = "Weiß";
+"Black" = "Schwarz";
+"Custom" = "Eigene";
+
+/* Values with numbers */
+"%lld pt" = "%lld pt";
+"%lld, %lld pt" = "%lld, %lld pt";
+"%.1f×" = "%.1f×";
+
+/* Font picker */
+"Fonts" = "Schriften";
+"System" = "System";
+"Your fonts" = "Deine Schriften";
+"Built into iOS" = "In iOS enthalten";
+"Add a font file (.ttf / .otf)" = "Schriftdatei hinzufügen (.ttf / .otf)";
+"Done" = "Fertig";
+"OK" = "OK";
+"Font import failed" = "Import der Schrift fehlgeschlagen";
+"Search" = "Suchen";
+
+/* Account */
+"Account" = "Konto";
+"Subscription" = "Abo";
+"Manage subscription" = "Abo verwalten";
+"Sign out on this iPhone" = "Auf diesem iPhone abmelden";
+"About" = "Über";
+"Version" = "Version";
+"Widgets stay see-through when the app is locked; the subscription unlocks the editor." = "Widgets bleiben transparent, auch wenn die App gesperrt ist; das Abo schaltet den Editor frei.";
+
+/* Paywall */
+"Your apps as words, see-through." = "Deine Apps als Wörter, transparent.";
+"One subscription, every widget. %@." = "Ein Abo, alle Widgets. %@.";
+"Up to 12 apps per widget, tap to open" = "Bis zu 12 Apps pro Widget, antippen zum Öffnen";
+"Truly transparent — no glass, no frames" = "Wirklich transparent – kein Glas, keine Rahmen";
+"Fonts, colours, placement, clock" = "Schriften, Farben, Position, Uhr";
+"Updates and new features included" = "Updates und neue Funktionen inklusive";
+"Subscribe — %@" = "Abonnieren – %@";
+"After paying you get a licence key by email. Enter it below." = "Nach der Zahlung kommt der Lizenzschlüssel per E-Mail. Gib ihn unten ein.";
+"Already subscribed?" = "Schon abonniert?";
+"Licence key" = "Lizenzschlüssel";
+"Activate" = "Aktivieren";
+"The licence is checked online and works offline for a week." = "Die Lizenz wird online geprüft und funktioniert eine Woche offline.";
+"Widgets keep working even if the app is locked." = "Widgets funktionieren weiter, auch wenn die App gesperrt ist.";
+"The licence could not be checked. Connect to the internet and try again." = "Die Lizenz konnte nicht geprüft werden. Verbinde dich mit dem Internet und versuche es erneut.";
+"Enter the licence key from your receipt." = "Gib den Lizenzschlüssel aus deiner Bestellung ein.";
+"Could not reach the licence server." = "Der Lizenzserver war nicht erreichbar.";
+"That key was not accepted." = "Dieser Schlüssel wurde nicht akzeptiert.";
+
+/* App Store subscription (StoreKit, APPSTORE builds) */
+"Your apps as words." = "Deine Apps als Wörter.";
+"Words over your wallpaper, on the system glass" = "Wörter über deinem Hintergrundbild, auf dem Systemglas";
+"%@ per year" = "%@ pro Jahr";
+"Loading…" = "Wird geladen …";
+"Try Again" = "Erneut versuchen";
+"WidgetSimple Pro, 1 year. Renews automatically each year until cancelled. Cancel any time in Settings › Apple Account › Subscriptions, at least 24 hours before the renewal date." = "WidgetSimple Pro, 1 Jahr. Verlängert sich jedes Jahr automatisch, bis du kündigst. Kündigen jederzeit unter Einstellungen › Apple Account › Abonnements, spätestens 24 Stunden vor der Verlängerung.";
+"Restore Purchases" = "Käufe wiederherstellen";
+"Terms of Use" = "Nutzungsbedingungen";
+"Privacy Policy" = "Datenschutzerklärung";
+"The subscription is not available right now." = "Das Abo ist gerade nicht verfügbar.";
+"Could not reach the App Store. Check your connection and try again." = "Der App Store war nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.";
+"The App Store could not verify this purchase." = "Der App Store konnte diesen Kauf nicht bestätigen.";
+"The purchase is waiting for approval." = "Der Kauf wartet auf Freigabe.";
+"The purchase did not go through. Try again." = "Der Kauf hat nicht geklappt. Versuche es erneut.";
+"No active subscription was found for this Apple Account." = "Für diesen Apple Account wurde kein aktives Abo gefunden.";
+"Widgets keep working when the subscription ends; the subscription unlocks the editor." = "Widgets funktionieren weiter, wenn das Abo endet; das Abo schaltet den Editor frei.";
+
+/* Free trial (introductory offer) */
+"Start Free Trial" = "Gratis testen";
+"%@, then %@" = "%1$@, danach %2$@";
+"1 day free" = "1 Tag gratis";
+"%lld days free" = "%lld Tage gratis";
+"1 week free" = "1 Woche gratis";
+"%lld weeks free" = "%lld Wochen gratis";
+"1 month free" = "1 Monat gratis";
+"%lld months free" = "%lld Monate gratis";
+"1 year free" = "1 Jahr gratis";
+"%lld years free" = "%lld Jahre gratis";
+"Free trial" = "Gratis-Testzeitraum";
+"WidgetSimple Pro, 1 year. When the free trial ends, the price above is charged to your Apple Account and the subscription renews each year until cancelled. Cancel any time in Settings › Apple Account › Subscriptions, at least 24 hours before the trial or the current year ends." = "WidgetSimple Pro, 1 Jahr. Nach dem Gratis-Zeitraum wird der oben genannte Preis über deinen Apple Account abgerechnet, und das Abo verlängert sich jedes Jahr, bis du kündigst. Kündigen jederzeit unter Einstellungen › Apple Account › Abonnements, spätestens 24 Stunden vor Ende des Gratis-Zeitraums oder des laufenden Jahres.";
+
+/* Glass redesign: tabs, home, templates, tutorial */
+"Widgets" = "Widgets";
+"Templates" = "Vorlagen";
+"Settings" = "Einstellungen";
+"Launcher" = "Launcher";
+"On your Home Screen" = "Auf deinem Home-Bildschirm";
+"Every launcher widget uses this look." = "Alle Launcher-Widgets nutzen diesen Stil.";
+"Start from a template" = "Mit einer Vorlage starten";
+"Add a widget" = "Widget hinzufügen";
+"Add a Widget" = "Widget hinzufügen";
+"Apps as words. Tap a word, open the app." = "Apps als Wörter. Wort antippen, App öffnet sich.";
+"Touch and hold the Home Screen, then tap **Edit › Add Widget**." = "Halte den Home-Bildschirm gedrückt und tippe auf **Bearbeiten › Widget hinzufügen**.";
+"Search **WidgetSimple** and pick a size." = "Suche **WidgetSimple** und wähle eine Größe.";
+"Tap the widget's **Edit Widget** and choose your apps." = "Tippe beim Widget auf **Widget bearbeiten** und wähle deine Apps.";
+"Your apps,
+as words." = "Deine Apps,
+als Wörter.";
+"Three steps, once. After that you style everything here." = "Drei Schritte, einmalig. Danach gestaltest du alles hier.";
+"Continue" = "Weiter";
+"Thin clock" = "Schmale Uhr";
+"Serif list" = "Serifen-Liste";
+"Amber caps" = "Bernstein, groß";
+"Centred" = "Zentriert";
+"Mono" = "Mono";
+"Big words" = "Große Wörter";
+"Use this template?" = "Diese Vorlage verwenden?";
+"Apply to all launcher widgets" = "Für alle Launcher-Widgets übernehmen";
+"Your current font, colour and layout are replaced." = "Deine aktuelle Schrift, Farbe und Anordnung werden ersetzt.";
+"Show the tutorial again" = "Anleitung erneut zeigen";
+"Your words on the widget background iOS draws. Add the widget once from the Home Screen and style it here." = "Deine Wörter auf dem Widget-Hintergrund von iOS. Füge das Widget einmal vom Home-Bildschirm hinzu und gestalte es hier.";

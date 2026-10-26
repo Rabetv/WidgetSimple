@@ -1,0 +1,279 @@
+# Builds, signs and uploads WidgetSimple to App Store Connect / TestFlight
+# on a GitHub-hosted Mac. Start it from the Actions tab (no Mac needed).
+#
+# Same setup as JAAPP: codemagic-cli-tools creates (or reuses) the Apple
+# Distribution certificate and the App Store provisioning profiles through
+# the App Store Connect API, so no signing files have to be made by hand.
+#
+# Repository secrets (Settings › Secrets and variables › Actions). The values
+# are the same ones JAAPP uses, so the existing certificate is reused:
+#   APP_STORE_CONNECT_ISSUER_ID       Issuer ID shown above the API key list
+#   APP_STORE_CONNECT_KEY_IDENTIFIER  Key ID of the API key (Admin role)
+#   APP_STORE_CONNECT_PRIVATE_KEY     Full contents of the AuthKey_XXXX.p8 file
+#   CERTIFICATE_PRIVATE_KEY           RSA private key (PEM) of the distribution certificate
+
+name: TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Build number (leave empty to use the run number)"
+        required: false
+        default: ""
+      paywall_unlock:
+        description: "TestFlight-only unlock button. Leave ON for tester builds; turn OFF for the build submitted to App Review (it is compiled out, not hidden)."
+        type: boolean
+        default: true
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+      CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fails fast if a secret is missing. Only prints lengths, never the values.
+      - name: Check required secrets are present
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_KEY_IDENTIFIER APP_STORE_CONNECT_PRIVATE_KEY CERTIFICATE_PRIVATE_KEY; do
+            value="${!name:-}"
+            echo "$name length=${#value}"
+            if [ -z "$value" ]; then
+              echo "::error::Secret $name is empty or not set (Settings › Secrets and variables › Actions)."
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ]
+
+      - name: Read project settings
+        run: |
+          read_setting() { sed -n "s/^$1 *= *//p" Config/Base.xcconfig | tr -d '[:space:]'; }
+          PREFIX=$(read_setting BUNDLE_ID_PREFIX)
+          if [ -z "$PREFIX" ]; then
+            echo "::error::Set BUNDLE_ID_PREFIX in Config/Base.xcconfig."
+            exit 1
+          fi
+          {
+            echo "APP_ID=$PREFIX.widgetsimple"
+            echo "WIDGET_ID=$PREFIX.widgetsimple.widget"
+            echo "APP_GROUP=group.$PREFIX.widgetsimple"
+          } >> "$GITHUB_ENV"
+          echo "App $PREFIX.widgetsimple · widget $PREFIX.widgetsimple.widget · group group.$PREFIX.widgetsimple"
+
+      # The image's default Xcode is a release; the newest installed one can be a
+      # beta, and App Store Connect rejects builds made with a beta.
+      - name: Xcode version
+        run: |
+          xcodebuild -version
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install codemagic-cli-tools
+        run: pip install codemagic-cli-tools
+
+      - name: Set up keychain to be used for code signing
+        run: |
+          set -euo pipefail
+          keychain initialize
+          echo "KEYCHAIN_PATH=$(keychain get-default)" >> "$GITHUB_ENV"
+
+      - name: Fetch signing files for the app and the widget
+        run: |
+          set -euo pipefail
+          for id in "$APP_ID" "$WIDGET_ID"; do
+            app-store-connect fetch-signing-files "$id" \
+              --type IOS_APP_STORE \
+              --strict-match-identifier \
+              --create
+          done
+          keychain add-certificates
+
+      # Picks the installed profile for each bundle ID and checks it carries the
+      # App Group: that part can only be set up in the developer portal.
+      - name: Find provisioning profiles and signing identity
+        run: |
+          set -euo pipefail
+          PLIST="$RUNNER_TEMP/profile.plist"
+          # Sets PROFILE_UUID and PROFILE_TEAM for the bundle ID in $1.
+          find_profile() {
+            local bundle="$1" without_group=""
+            PROFILE_UUID=""
+            for f in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision \
+                     "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"/*.mobileprovision; do
+              [ -f "$f" ] || continue
+              security cms -D -i "$f" > "$PLIST" 2>/dev/null || continue
+              appid=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PLIST" 2>/dev/null || true)
+              [ "${appid#*.}" = "$bundle" ] || continue
+              groups=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.security.application-groups' "$PLIST" 2>/dev/null || true)
+              if grep -qF "$APP_GROUP" <<< "$groups"; then
+                PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PLIST")
+                PROFILE_TEAM=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PLIST")
+              else
+                without_group=1
+              fi
+            done
+            if [ -n "$PROFILE_UUID" ]; then return; fi
+            if [ -n "$without_group" ]; then
+              echo "::error::The profile for $bundle has no App Group $APP_GROUP. developer.apple.com › Certificates, Identifiers & Profiles › Identifiers: create the App Group $APP_GROUP if needed, then open $bundle › App Groups › Configure, tick it, save, and run this workflow again."
+            else
+              echo "::error::No App Store provisioning profile for $bundle was installed."
+            fi
+            exit 1
+          }
+          find_profile "$APP_ID"
+          APP_PROFILE="$PROFILE_UUID"
+          find_profile "$WIDGET_ID"
+          WIDGET_PROFILE="$PROFILE_UUID"
+          # Line 1 of find-identity: '  1) <SHA-1> "Apple Distribution: Name (TEAM)"'
+          IDENTITY_LINE=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | sed -n 1p)
+          IDENTITY_NAME=$(sed -n 's/.*"\(.*\)".*/\1/p' <<< "$IDENTITY_LINE")
+          IDENTITY_SHA1=$(awk '{print $2}' <<< "$IDENTITY_LINE")
+          if [ -z "$IDENTITY_NAME" ] || [ ${#IDENTITY_SHA1} -ne 40 ]; then
+            echo "::error::No signing certificate in the keychain."
+            exit 1
+          fi
+          {
+            echo "APP_PROFILE=$APP_PROFILE"
+            echo "WIDGET_PROFILE=$WIDGET_PROFILE"
+            echo "TEAM_ID=$PROFILE_TEAM"
+            echo "SIGNING_IDENTITY=$IDENTITY_NAME"
+            echo "SIGNING_SHA1=$IDENTITY_SHA1"
+          } >> "$GITHUB_ENV"
+          echo "Team $PROFILE_TEAM · app profile $APP_PROFILE · widget profile $WIDGET_PROFILE · $IDENTITY_NAME"
+
+      - name: Archive
+        env:
+          BUILD_INPUT: ${{ github.event.inputs.build_number }}
+          RUN_NUMBER: ${{ github.run_number }}
+          PAYWALL_UNLOCK: ${{ github.event.inputs.paywall_unlock }}
+        run: |
+          set -euo pipefail
+          BUILD="${BUILD_INPUT:-$RUN_NUMBER}"
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          echo "Archiving App Store build $BUILD"
+          # TESTFLIGHT only adds the visible unlock button used while the subscription
+          # is still in review; without it the paywall has no way past StoreKit.
+          # APPSTORE builds (including TestFlight) keep the private descriptor hook
+          # active. Its private names are runtime-decoded and the audited runtime
+          # calls are dlsym-resolved, so the static trace check can pass.
+          DEFINES="APPSTORE=1"
+          CONDITIONS="APPSTORE"
+          if [ "${PAYWALL_UNLOCK:-true}" = "true" ]; then
+            DEFINES="APPSTORE=1 TESTFLIGHT=1"
+            CONDITIONS="APPSTORE TESTFLIGHT"
+            echo "PAYWALL_UNLOCK=on" >> "$GITHUB_ENV"
+            echo "Including the TestFlight unlock button."
+          else
+            echo "PAYWALL_UNLOCK=off" >> "$GITHUB_ENV"
+            echo "No unlock button: this binary can be submitted to App Review."
+          fi
+          EXTRA=(GCC_PREPROCESSOR_DEFINITIONS="$DEFINES" SWIFT_ACTIVE_COMPILATION_CONDITIONS="$CONDITIONS")
+          xcodebuild -quiet \
+            -project WidgetSimple.xcodeproj -scheme WidgetSimple -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/WidgetSimple.xcarchive" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            APP_PROFILE_SPECIFIER="$APP_PROFILE" \
+            WIDGET_PROFILE_SPECIFIER="$WIDGET_PROFILE" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            ${EXTRA[@]+"${EXTRA[@]}"} \
+            archive
+
+      # Every build must pass the static trace check; the hook resolves its private
+      # names at runtime. Gate before anything reaches App Store Connect.
+      - name: "Audit App Store archive (must pass static trace check)"
+        run: |
+          set -euo pipefail
+          Scripts/audit-appstore.sh "$RUNNER_TEMP/WidgetSimple.xcarchive/Products/Applications/WidgetSimple.app" 2>&1 | tee "$RUNNER_TEMP/audit.log"
+          { echo '### App Store archive audit'; echo '```'; cat "$RUNNER_TEMP/audit.log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Export ipa
+        run: |
+          set -euo pipefail
+          OPTS="$RUNNER_TEMP/ExportOptions.plist"
+          pb() { /usr/libexec/PlistBuddy -c "$1" "$OPTS" > /dev/null; }
+          pb "Add :method string app-store-connect"
+          pb "Add :destination string export"
+          pb "Add :signingStyle string manual"
+          pb "Add :teamID string $TEAM_ID"
+          pb "Add :signingCertificate string $SIGNING_SHA1"
+          pb "Add :provisioningProfiles dict"
+          pb "Add :provisioningProfiles:$APP_ID string $APP_PROFILE"
+          pb "Add :provisioningProfiles:$WIDGET_ID string $WIDGET_PROFILE"
+          pb "Add :uploadSymbols bool true"
+          pb "Add :manageAppVersionAndBuildNumber bool false"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/WidgetSimple.xcarchive" \
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -exportOptionsPlist "$OPTS"
+          ls -l "$RUNNER_TEMP/ipa"
+
+      # Retries only on transient Apple server errors; anything else
+      # (credentials, missing app record, validation) fails right away.
+      - name: Publish to App Store Connect
+        run: |
+          set -euo pipefail
+          max_attempts=4
+          attempt=1
+          while :; do
+            echo "Publish attempt $attempt of $max_attempts"
+            log=$(mktemp)
+            set +e
+            app-store-connect publish --path "$RUNNER_TEMP/ipa/*.ipa" 2>&1 | tee "$log"
+            status=${PIPESTATUS[0]}
+            set -e
+            [ "$status" -eq 0 ] && break
+            if grep -Eqi '(502|500|UNEXPECTED_ERROR|Bad Gateway)' "$log" && [ "$attempt" -lt "$max_attempts" ]; then
+              echo "Transient error, retrying in 120s..."
+              attempt=$((attempt + 1))
+              sleep 120
+              continue
+            fi
+            if grep -Eqi "no suitable application records|Cannot determine the Apple ID" "$log"; then
+              echo "::error::App Store Connect has no app with bundle ID $APP_ID yet. Create it: App Store Connect › Apps › + › New App, bundle ID $APP_ID."
+            fi
+            echo "::error::app-store-connect publish failed"
+            exit "$status"
+          done
+          {
+            echo "### Uploaded build $BUILD"
+            echo "It appears in App Store Connect › TestFlight after Apple finishes processing (usually 5–30 minutes)."
+            if [ "${PAYWALL_UNLOCK:-off}" = "on" ]; then
+              echo ""
+              echo "**TestFlight unlock: ON.** Do not submit this build to App Review; dispatch again with \`paywall_unlock\` off for the review build."
+            else
+              echo ""
+              echo "**TestFlight unlock: OFF.** This build contains no unlock path and can be submitted."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clean up keychain and signing files
+        if: always()
+        run: |
+          set +e
+          if [ -n "${KEYCHAIN_PATH:-}" ]; then keychain delete -p "$KEYCHAIN_PATH"; fi
+          rm -rf "$HOME/Library/MobileDevice/Provisioning Profiles" \
+                 "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+                 "$HOME/Library/MobileDevice/Certificates"
+          exit 0

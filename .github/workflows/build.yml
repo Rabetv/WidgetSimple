@@ -1,0 +1,55 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The image's default Xcode is a release; the newest installed one can be a
+      # beta, and App Store Connect rejects builds made with a beta.
+      - name: Xcode version
+        run: |
+          xcodebuild -version
+
+      - name: Build app + widget (unsigned, device SDK)
+        run: |
+          set -o pipefail
+          # One build, App Store only: APPSTORE selects the StoreKit paywall in Swift.
+          # The private descriptor hook stays active; its class/selector names are
+          # decoded at runtime and the audited runtime calls are dlsym-resolved, so
+          # the static trace check below has nothing to match.
+          xcodebuild \
+            -project WidgetSimple.xcodeproj \
+            -scheme WidgetSimple \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1 \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE \
+            build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      # The static trace check must find no hook symbols, strings, or imports, and
+      # the app must have a visible display name. This gate is not continue-on-error.
+      - name: "Audit App Store build (must pass static trace check)"
+        run: |
+          set -euo pipefail
+          bash Scripts/audit-appstore.sh DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app 2>&1 | tee audit.log
+          { echo '### Audit'; echo '```'; cat audit.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log

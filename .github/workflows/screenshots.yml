@@ -1,0 +1,74 @@
+name: Screenshots
+
+# Captures real app screens on a simulator, so the App Store listing never needs
+# hand-made artwork. Runs the Debug build with `-screenshot`, which skips onboarding
+# and the paywall and opens the editor (the real widget preview).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  shoot:
+    runs-on: xcode-27
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick a simulator
+        id: pick
+        run: |
+          NAME=$(xcrun simctl list devices available | grep -oE "iPhone [^(]*Pro Max" | head -1 | sed -E 's/[[:space:]]+$//')
+          if [ -z "$NAME" ]; then NAME=$(xcrun simctl list devices available | grep -oE "iPhone [^(]*" | head -1 | sed -E 's/[[:space:]]+$//'); fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Using simulator: $NAME"
+
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project WidgetSimple.xcodeproj \
+            -scheme WidgetSimple \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,name=${{ steps.pick.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            GCC_PREPROCESSOR_DEFINITIONS=APPSTORE=1 \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS=APPSTORE \
+            build 2>&1 | tee build.log | tail -40
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Boot, install, launch
+        run: |
+          set -euo pipefail
+          NAME="${{ steps.pick.outputs.name }}"
+          xcrun simctl boot "$NAME" || true
+          xcrun simctl bootstatus "$NAME" -b
+          xcrun simctl status_bar booted override --time "9:41" --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
+          APP="DerivedData/Build/Products/Debug-iphonesimulator/WidgetSimple.app"
+          xcrun simctl install booted "$APP"
+          xcrun simctl launch booted com.rabetv.widgetsimple -screenshot -screen editor
+          sleep 8
+
+      - name: Capture
+        run: |
+          set -euo pipefail
+          mkdir -p shots
+          for screen in editor templates settings; do
+            xcrun simctl terminate booted com.rabetv.widgetsimple >/dev/null 2>&1 || true
+            xcrun simctl launch booted com.rabetv.widgetsimple -screenshot -screen "$screen"
+            sleep 6
+            xcrun simctl io booted screenshot --type=png "shots/$screen.png"
+          done
+          ls -l shots
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots/*.png
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-build-log
+          path: build.log
