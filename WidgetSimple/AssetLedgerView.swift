@@ -118,7 +118,7 @@ enum AssetCatalog {
                   ]),
         AssetItem(id: "MC-05", name: "Vinyl Deck", family: .mechanical, art: .module(.vinyl),
                   box: CGSize(width: 338, height: 158), span: (4, 2), version: "2.0", rules: [
-                      .init("Platter", "Circle, diameter = height"), .init("Rotation", "200°/s · 33⅓ rpm"),
+                      .init("Platter", "Circle, diameter = height"), .init("Shows", "What the Music app plays"),
                       .init("Tonearm", "Pivot 1.13 d, reach 0.75 d"), .init("Cue", "Drag the playback bar"),
                   ]),
         AssetItem(id: "MC-06", name: "Calendar", family: .mechanical, art: .module(.calendar),

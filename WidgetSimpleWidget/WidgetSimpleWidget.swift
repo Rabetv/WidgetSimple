@@ -202,6 +202,11 @@ struct LauncherProvider: AppIntentTimelineProvider {
                 }
             }
             entry.design = design
+            // Music and the vinyl show the Music app's song: read it now, so the widget
+            // follows Music even while the app stays closed.
+            if design.blocks.contains(where: { $0.kind == .music || $0.kind == .vinyl }) {
+                await NowPlayingStore.refreshFromMusic(reload: false)
+            }
             if design.blocks.contains(where: { $0.kind == .battery }) {
                 entry.battery = await Self.batteryLevel()
             }

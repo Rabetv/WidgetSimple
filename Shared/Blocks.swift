@@ -56,6 +56,8 @@ struct BlockFace: View {
             daysUntil
         case .moon:
             moon
+        case .music:
+            MusicBlock(look: look, box: box, placeholders: placeholders)
         case .analogClock, .countdownRing, .health, .battery, .vinyl, .calendarIcon:
             if let module = block.kind.module {
                 ModuleTile(kind: module, date: date, battery: battery, look: look,
@@ -264,6 +266,70 @@ struct ModuleTile: View {
         .frame(width: side, height: side)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(reading.map { "\(kind.title), \($0)" } ?? kind.title)
+    }
+}
+
+/// The Music block: the cover, the song and its artist, and three keys that skip, play
+/// and pause in the Music app. It shows what Music played when the widget last redrew:
+/// after every key tap, and every few minutes otherwise.
+private struct MusicBlock: View {
+    let look: Look
+    let box: CGSize
+    var placeholders = false
+
+    var body: some View {
+        let record = placeholders ? nil : NowPlayingStore.load()
+        let side = max(min(box.height, box.width * 0.42), 1)
+        HStack(spacing: side * 0.12) {
+            cover(side: side)
+            VStack(alignment: .leading, spacing: side * 0.05) {
+                Text(record?.title ?? (placeholders ? "Song title" : "Nothing playing"))
+                    .font(look.font(size: min(look.size, Double(side) * 0.22)))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(record?.artist ?? "Music app")
+                    .font(look.font(size: min(look.size * 0.75, Double(side) * 0.16)))
+                    .opacity(0.7)
+                    .lineLimit(1)
+                HStack(spacing: side * 0.18) {
+                    key(.previous, symbol: "backward.fill", label: "Previous")
+                    key(.playPause, symbol: record?.playing == true ? "pause.fill" : "play.fill",
+                        label: record?.playing == true ? "Pause" : "Play")
+                    key(.next, symbol: "forward.fill", label: "Next")
+                }
+                .font(.system(size: min(side * 0.2, 22), weight: .semibold))
+                .padding(.top, side * 0.04)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(width: box.width, height: box.height, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func cover(side: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: side * 0.14, style: .continuous)
+        if !placeholders, let image = NowPlayingStore.loadCover() {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: side, height: side)
+                .clipShape(shape)
+                .accessibilityHidden(true)
+        } else {
+            shape
+                .strokeBorder(.foreground.opacity(0.5), lineWidth: 1)
+                .frame(width: side, height: side)
+                .overlay { Image(systemName: "music.note").font(.system(size: side * 0.32)) }
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func key(_ action: MusicAction, symbol: String, label: String) -> some View {
+        Button(intent: MusicControlIntent(action)) {
+            Image(systemName: symbol)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 

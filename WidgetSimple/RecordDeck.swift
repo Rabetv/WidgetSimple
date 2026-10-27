@@ -1,10 +1,10 @@
 import MediaPlayer
 import SwiftUI
 
-/// The iBoard record player: a vinyl disc that turns at 33⅓ rpm, a tonearm that tracks
-/// the playhead from the outer groove to the label, a scrub bar and three keys. It is a
-/// mechanical study for the layout, so it plays silence. With Music access it puts the
-/// song the Music app is playing on the disc: its cover in the label, its title and artist.
+/// The iBoard record player: a turning disc, a tonearm that tracks the playhead from the
+/// outer groove to the label, a scrub bar and three keys. With Music access it puts the
+/// song the Music app is playing on the disc (cover, title, artist) and its keys play,
+/// pause and skip in the Music app. Without access it turns a silent sample side.
 struct RecordDeck: View {
     private struct Track {
         let title: String
@@ -18,7 +18,7 @@ struct RecordDeck: View {
         Track(title: "Quiet Index", length: 178),
         Track(title: "Hairline", length: 227),
     ]
-    /// 33⅓ revolutions a minute.
+    /// How fast the disc turns while playing.
     private static let degreesPerSecond = 200.0
 
     @State private var index = 0
@@ -39,17 +39,18 @@ struct RecordDeck: View {
     private var playing: Bool { startedAt != nil }
 
     var body: some View {
-        ModuleFrame("Deck · 33⅓", stamp: "Side A", foot: "Rpm 33.3", marks: [.topTrailing, .bottomLeading]) {
+        ModuleFrame("Music", stamp: nowPlaying.song == nil ? "Sample" : "Music app",
+                    foot: nowPlaying.song == nil ? "Silent sample side" : "Plays in the Music app",
+                    marks: [.topTrailing, .bottomLeading]) {
             TimelineView(.animation(minimumInterval: 1.0 / 60, paused: !playing)) { context in
                 deck(at: playhead(at: context.date))
             }
         }
         .task(id: startedAt) { await advanceAtEnd() }
-        .onChange(of: nowPlaying.song?.key) {
-            // A new record goes on from the outer groove.
+        .onChange(of: nowPlaying.song?.key, initial: true) {
+            // A new record goes on where Music is, playing if Music plays.
             index = 0
-            position = 0
-            if playing { startedAt = .now }
+            followMusic()
         }
         .sensoryFeedback(.impact(weight: .light), trigger: playing)
     }
@@ -135,7 +136,32 @@ struct RecordDeck: View {
 
     // MARK: Transport
 
+    /// With a Music song on the deck: the playhead and the play state Music reports.
+    private func followMusic() {
+        guard nowPlaying.song != nil else {
+            position = 0
+            if playing { startedAt = .now }
+            return
+        }
+        let player = MPMusicPlayerController.systemMusicPlayer
+        position = min(max(player.currentPlaybackTime, 0), track.length)
+        startedAt = player.playbackState == .playing ? .now : nil
+    }
+
+    /// Sends a key to the Music app when its song is on the deck; the sample side has
+    /// nothing to control.
+    private func control(_ action: MusicAction) {
+        guard nowPlaying.song != nil else { return }
+        let player = MPMusicPlayerController.systemMusicPlayer
+        switch action {
+        case .previous: player.skipToPreviousItem()
+        case .playPause: player.playbackState == .playing ? player.pause() : player.play()
+        case .next: player.skipToNextItem()
+        }
+    }
+
     private func toggle() {
+        control(.playPause)
         if let startedAt {
             position = min(position + Date.now.timeIntervalSince(startedAt), track.length)
             self.startedAt = nil
@@ -146,6 +172,7 @@ struct RecordDeck: View {
     }
 
     private func skip(_ step: Int) {
+        control(step < 0 ? .previous : .next)
         let wasPlaying = playing
         index = (index + step + side.count) % side.count
         position = 0
@@ -266,7 +293,8 @@ final class NowPlayingMonitor: ObservableObject {
     private func show(_ song: Song?) {
         self.song = song
         if let song {
-            NowPlayingStore.save(key: song.key, title: song.title, artist: song.artist, cover: song.cover)
+            NowPlayingStore.save(key: song.key, title: song.title, artist: song.artist, cover: song.cover,
+                                 playing: MPMusicPlayerController.systemMusicPlayer.playbackState == .playing)
         } else {
             NowPlayingStore.clear()
         }
@@ -406,7 +434,6 @@ private struct VinylDisc: View {
             context.stroke(ModuleDrawing.circle(c, r * 0.035), with: .foreground, lineWidth: 1)
             if cover == nil {
                 context.draw(Text("WS · 27").font(.micro(7)).tracking(1.4), at: CGPoint(x: c.x, y: c.y - r * 0.17))
-                context.draw(Text("33⅓").font(.micro(6.5)).foregroundStyle(.secondary), at: CGPoint(x: c.x, y: c.y + r * 0.17))
             }
         }
         .accessibilityHidden(true)

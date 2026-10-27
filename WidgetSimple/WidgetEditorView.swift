@@ -518,6 +518,7 @@ extension BlockKind {
         case .apps: return CGSize(width: 150, height: 90)
         case .digitalClock: return CGSize(width: 150, height: 60)
         case .analogClock, .countdownRing, .battery, .vinyl, .calendarIcon, .moon: return CGSize(width: 84, height: 84)
+        case .music: return CGSize(width: 200, height: 84)
         case .health: return CGSize(width: 150, height: 80)
         case .wordClock: return CGSize(width: 170, height: 70)
         case .worldClock: return CGSize(width: 170, height: 84)
@@ -945,6 +946,7 @@ struct BlockIcon: View {
         case .progress: return "circle.grid.3x3"
         case .daysUntil: return "hourglass"
         case .moon: return "moon"
+        case .music: return "music.note"
         default: return "rectangle.dashed"
         }
     }

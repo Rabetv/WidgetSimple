@@ -14,7 +14,7 @@ enum BlockKind: String, Codable, CaseIterable, Identifiable {
     case text, quote, greeting
     case digitalClock, analogClock, wordClock, worldClock
     case bigDate, weekStrip, monthGrid, progress, daysUntil, moon
-    case countdownRing, health, battery, vinyl, calendarIcon
+    case countdownRing, health, battery, vinyl, music, calendarIcon
     case spacer
 
     var id: String { rawValue }
@@ -39,6 +39,7 @@ enum BlockKind: String, Codable, CaseIterable, Identifiable {
         case .health: return "Health chart"
         case .battery: return "Battery"
         case .vinyl: return "Vinyl deck"
+        case .music: return "Music"
         case .calendarIcon: return "Calendar page"
         case .spacer: return "Empty space"
         }
@@ -63,7 +64,7 @@ enum BlockKind: String, Codable, CaseIterable, Identifiable {
         ("Time", [.digitalClock, .analogClock, .wordClock, .worldClock]),
         ("Date", [.bigDate, .weekStrip, .monthGrid, .progress, .daysUntil, .moon]),
         ("Words", [.text, .quote, .greeting]),
-        ("Modules", [.countdownRing, .battery, .health, .vinyl, .calendarIcon]),
+        ("Modules", [.countdownRing, .battery, .health, .vinyl, .music, .calendarIcon]),
         ("Space", [.spacer]),
     ]
 
@@ -354,6 +355,10 @@ struct WidgetDesign: Codable, Hashable, Identifiable {
         }
         if blocks.contains(where: { $0.kind == .battery }) {
             next = min(next, date.addingTimeInterval(30 * 60))
+        }
+        // The song changes on its own; the keys redraw at once, this catches the rest.
+        if blocks.contains(where: { $0.kind == .music || $0.kind == .vinyl }) {
+            next = min(next, date.addingTimeInterval(10 * 60))
         }
         return next
     }
