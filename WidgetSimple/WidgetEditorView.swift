@@ -608,9 +608,28 @@ private struct GridDots: View {
 /// One block's options: its own settings, the design's style, and Delete at the foot.
 private struct BlockSheet: View {
     @Binding var block: DesignBlock
+    /// The design's style, which every block without its own follows.
     @Binding var look: Look
     let delete: () -> Void
     @Environment(\.dismiss) private var dismiss
+    /// What the style controls change: this block (the default) or the whole design.
+    @State private var styleScope: StyleScope = .block
+
+    private enum StyleScope: CaseIterable {
+        case block, design
+
+        var title: String {
+            switch self {
+            case .block: return String(localized: "This block")
+            case .design: return String(localized: "Whole design")
+            }
+        }
+    }
+
+    /// This block's own style; the first change copies the design's style into it.
+    private var blockLook: Binding<Look> {
+        Binding(get: { block.look ?? look }, set: { block.look = $0 })
+    }
 
     var body: some View {
         ScrollView {
@@ -636,7 +655,20 @@ private struct BlockSheet: View {
                         }
                     }
                 }
-                TuningPanel(look: $look, clock: .constant(.off), showsClock: false, scope: "This design")
+                VStack(alignment: .leading, spacing: 10) {
+                    PillPicker(options: StyleScope.allCases.map { ($0, $0.title) }, selection: $styleScope)
+                    if styleScope == .block && block.look != nil {
+                        Button("Use the design's style again") { block.look = nil }
+                            .buttonStyle(PillStyle())
+                    }
+                }
+                switch styleScope {
+                case .block:
+                    TuningPanel(look: blockLook, clock: .constant(.off), showsClock: false, scope: "This block only")
+                case .design:
+                    TuningPanel(look: $look, clock: .constant(.off), showsClock: false,
+                                scope: "Every block without its own style")
+                }
                 Button(role: .destructive, action: delete) {
                     Label("Delete \(block.kind.title)", systemImage: "trash")
                 }

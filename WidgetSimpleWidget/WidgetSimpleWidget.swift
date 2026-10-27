@@ -194,7 +194,13 @@ struct LauncherProvider: AppIntentTimelineProvider {
         entry.tappable = configuration.tappable
         entry.dim = configuration.dim.opacity
         if var design {
-            if let tone = configuration.textColour.tone { design.look.tone = tone }
+            if let tone = configuration.textColour.tone {
+                design.look.tone = tone
+                // Blocks with their own style follow the widget's override too.
+                for index in design.blocks.indices where design.blocks[index].look != nil {
+                    design.blocks[index].look?.tone = tone
+                }
+            }
             entry.design = design
             if design.blocks.contains(where: { $0.kind == .battery }) {
                 entry.battery = await Self.batteryLevel()

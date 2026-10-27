@@ -216,6 +216,8 @@ struct DesignBlock: Codable, Hashable, Identifiable {
     var progressStyle: ProgressStyle
     /// Where the block sits, once the design is placed by hand; nil keeps it in rows.
     var frame: BlockFrame?
+    /// This block's own style (font, size, colour, alignment…); nil follows the design's.
+    var look: Look?
 
     init(_ kind: BlockKind) {
         id = UUID()
@@ -232,10 +234,11 @@ struct DesignBlock: Codable, Hashable, Identifiable {
         scope = .year
         progressStyle = .dots
         frame = nil
+        look = nil
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, width, height, slots, text, lines, zones, date, clock, dateStyle, scope, progressStyle, frame
+        case id, kind, width, height, slots, text, lines, zones, date, clock, dateStyle, scope, progressStyle, frame, look
     }
 
     /// Tolerant, like `Look`: an unknown value falls back to the default, and only a
@@ -256,6 +259,7 @@ struct DesignBlock: Codable, Hashable, Identifiable {
         d.scope = (try? c.decodeIfPresent(ProgressScope.self, forKey: .scope)) ?? d.scope
         d.progressStyle = (try? c.decodeIfPresent(ProgressStyle.self, forKey: .progressStyle)) ?? d.progressStyle
         d.frame = (try? c.decodeIfPresent(BlockFrame.self, forKey: .frame))?.inside
+        d.look = try? c.decodeIfPresent(Look.self, forKey: .look)
         self = d
     }
 
@@ -396,6 +400,8 @@ struct DesignFace<Cell: View>: View {
     var hint: String = ""
     @ViewBuilder let cell: (Int, AppName) -> Cell
 
+    @Environment(\.widgetRenderingMode) private var renderingMode
+
     private var look: Look { design.look }
     private var edge: CGFloat { size == .small ? 14 : 18 }
     private var rowGap: CGFloat { size == .small ? 6 : 8 }
@@ -468,14 +474,20 @@ struct DesignFace<Cell: View>: View {
 
     @ViewBuilder
     private func blockView(_ item: Placed) -> some View {
-        if item.block.kind == .apps {
-            LauncherFace(look: look, clock: .off, date: date, size: size, apps: slotNames(item),
-                         color: color, hint: item.slotStart == 0 && !placeholders ? hint : "",
-                         insets: EdgeInsets(), cell: { index, name in cell(item.slotStart + index, name) })
-        } else {
-            BlockFace(block: item.block, look: look, date: date, size: size, battery: battery,
-                      box: item.size, placeholders: placeholders)
+        // A block with its own style draws in it; the others follow the design.
+        let blockLook = item.block.look ?? look
+        let ink = item.block.look.map { renderingMode == .fullColor ? $0.color : .white } ?? color
+        Group {
+            if item.block.kind == .apps {
+                LauncherFace(look: blockLook, clock: .off, date: date, size: size, apps: slotNames(item),
+                             color: ink, hint: item.slotStart == 0 && !placeholders ? hint : "",
+                             insets: EdgeInsets(), cell: { index, name in cell(item.slotStart + index, name) })
+            } else {
+                BlockFace(block: item.block, look: blockLook, date: date, size: size, battery: battery,
+                          box: item.size, placeholders: placeholders)
+            }
         }
+        .foregroundStyle(ink)
     }
 
     /// The words an Open App block shows: its share of the picked apps, in order.

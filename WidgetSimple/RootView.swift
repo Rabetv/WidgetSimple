@@ -160,18 +160,16 @@ struct WidgetPreviewCard: View {
         }
         .aspectRatio(size.aspectRatio, contentMode: .fit)
         .padding(18)
-        .background {
-            Image("AppBackground").resizable().scaledToFill()
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
+        // The widget as iOS 27 draws it: words on the system's Liquid Glass.
+        .glassEffect(.regular, in: .rect(cornerRadius: 34, style: .continuous))
         .animation(.easeInOut(duration: 0.2), value: look)
         .frame(maxWidth: .infinity)
     }
 }
 
 /// A widget as it lands on the Home Screen, for the app's own pages: its real point
-/// size scaled to fit, in the real ink over the app's wallpaper. With a design, its Open
-/// App slots read App 1, App 2… — the apps themselves are picked in Edit Widget.
+/// size scaled to fit, in the real ink on the iOS 27 widget glass. With a design, its
+/// Open App slots read App 1, App 2… — the apps themselves are picked in Edit Widget.
 struct WidgetMockup: View {
     /// nil shows the Apps widget without a design, in the shared look and clock.
     let design: WidgetDesign?
@@ -190,9 +188,9 @@ struct WidgetMockup: View {
             }
         }
         .aspectRatio(real.width / real.height, contentMode: .fit)
-        .background { Image("AppBackground").resizable().scaledToFill() }
         .clipShape(shape)
-        .overlay { shape.strokeBorder(Color.white.opacity(0.18), lineWidth: 1) }
+        // The system widget container: Liquid Glass with its rim, not the app's artwork.
+        .glassEffect(.regular, in: shape)
         .animation(.easeInOut(duration: 0.2), value: design)
         .animation(.easeInOut(duration: 0.2), value: model.look)
         .accessibilityElement(children: .ignore)

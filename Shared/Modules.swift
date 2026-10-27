@@ -36,14 +36,15 @@ enum ModuleKind: String, Codable, CaseIterable, Identifiable {
     var followsTime: Bool { self == .clock || self == .countdown }
 
     /// The one reading under the drawing, or nil where there is nothing true to say:
-    /// the health chart is a sample line and never reads Health data.
+    /// the health chart is a sample line and never reads Health data, and the record
+    /// player has no real reading (it used to print "33⅓", which said nothing).
     func reading(at date: Date, battery: Double?) -> String? {
         switch self {
         case .clock: return Clockwork.hoursMinutes(date)
         case .countdown: return String(Clockwork.duration(Clockwork.untilMidnight(date)).prefix(5))
         case .health: return nil
         case .battery: return battery.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
-        case .vinyl: return "33⅓"
+        case .vinyl: return nil
         case .calendar: return date.formatted(.dateTime.month(.abbreviated).day())
         }
     }
