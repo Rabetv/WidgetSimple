@@ -390,9 +390,15 @@ struct LauncherWidgetView: View {
     /// What sits in the widget container. A matched wallpaper piece wins; otherwise the
     /// background picked in the app. Clear leaves the container to the system, which
     /// draws its own background there.
+    ///
+    /// On a Tinted or Clear Home Screen (Customize) iOS redraws every picture as a flat
+    /// silhouette in the tint, so a wallpaper piece or photo would turn the whole widget
+    /// into one solid block. There the container is left to the system's own tinted glass.
     @ViewBuilder
     private var widgetBackground: some View {
-        if let matched = entry.background {
+        if renderingMode != .fullColor {
+            Color.clear
+        } else if let matched = entry.background {
             Image(uiImage: colorScheme == .dark ? entry.darkBackground ?? matched : matched)
                 .resizable()
                 .scaledToFill()
