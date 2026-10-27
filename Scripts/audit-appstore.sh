@@ -1,6 +1,6 @@
 #!/bin/bash
 # Proves an `appstore`-flavour build is fit for App Review:
-#   - no trace of WidgetDescriptorHook.mm (symbols, selector names, class names, log text)
+#   - no trace of the descriptor hook removed from the project (a regression guard)
 #   - no Lemon Squeezy checkout / licence-key code (guideline 3.1.1)
 #   - the StoreKit store is compiled in (proves Swift saw APPSTORE)
 #   - a visible name under the icon (guideline 2.3.8)
@@ -12,7 +12,7 @@ set -euo pipefail
 APP="${1:?usage: $0 path/to/WidgetSimple.app}"
 fail=0
 
-# Everything the hook adds to a binary: its own functions, the private selectors it
+# Everything the removed hook would add to a binary: its own functions, the private selectors it
 # sends, the private classes it looks up, and its log lines.
 HOOK_PATTERNS=(
   InstallWidgetDescriptorHook
@@ -29,7 +29,7 @@ HOOK_PATTERNS=(
   'install: hooked'
   'XPC server class not found'
 )
-# Runtime calls only the hook makes in this project.
+# Runtime calls nothing in this project makes; their import means swizzling came back.
 HOOK_IMPORTS=(_method_setImplementation _method_getImplementation _class_copyMethodList _class_copyIvarList)
 EXTERNAL_PAYMENT=(lemonsqueezy YOURSTORE 'licence key' license_key)
 

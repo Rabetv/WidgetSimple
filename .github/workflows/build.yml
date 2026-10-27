@@ -22,9 +22,6 @@ jobs:
         run: |
           set -o pipefail
           # One build, App Store only: APPSTORE selects the StoreKit paywall in Swift.
-          # The private descriptor hook stays active; its class/selector names are
-          # decoded at runtime and the audited runtime calls are dlsym-resolved, so
-          # the static trace check below has nothing to match.
           xcodebuild \
             -project WidgetSimple.xcodeproj \
             -scheme WidgetSimple \
@@ -39,9 +36,9 @@ jobs:
             build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
 
-      # The static trace check must find no hook symbols, strings, or imports, and
+      # The audit must find no private-API traces or external payment code, and
       # the app must have a visible display name. This gate is not continue-on-error.
-      - name: "Audit App Store build (must pass static trace check)"
+      - name: "Audit App Store build"
         run: |
           set -euo pipefail
           bash Scripts/audit-appstore.sh DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app 2>&1 | tee audit.log

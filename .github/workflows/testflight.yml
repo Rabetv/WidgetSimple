@@ -171,9 +171,6 @@ jobs:
           echo "Archiving App Store build $BUILD"
           # TESTFLIGHT only adds the visible unlock button used while the subscription
           # is still in review; without it the paywall has no way past StoreKit.
-          # APPSTORE builds (including TestFlight) keep the private descriptor hook
-          # active. Its private names are runtime-decoded and the audited runtime
-          # calls are dlsym-resolved, so the static trace check can pass.
           DEFINES="APPSTORE=1"
           CONDITIONS="APPSTORE"
           if [ "${PAYWALL_UNLOCK:-true}" = "true" ]; then
@@ -200,9 +197,8 @@ jobs:
             ${EXTRA[@]+"${EXTRA[@]}"} \
             archive
 
-      # Every build must pass the static trace check; the hook resolves its private
-      # names at runtime. Gate before anything reaches App Store Connect.
-      - name: "Audit App Store archive (must pass static trace check)"
+      # Every build must pass the audit before anything reaches App Store Connect.
+      - name: "Audit App Store archive"
         run: |
           set -euo pipefail
           Scripts/audit-appstore.sh "$RUNNER_TEMP/WidgetSimple.xcarchive/Products/Applications/WidgetSimple.app" 2>&1 | tee "$RUNNER_TEMP/audit.log"

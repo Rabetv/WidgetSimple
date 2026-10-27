@@ -163,13 +163,6 @@ final class SharedStore: @unchecked Sendable {
         (try? String(contentsOf: viewLogURL, encoding: .utf8)) ?? "Nothing yet. Add the widget, then come back."
     }
 
-    /// What the descriptor hook wrote: install result and every descriptor it rewrote.
-    var hookLogURL: URL { rootURL.appendingPathComponent("hook.log") }
-
-    func loadHookLog() -> String {
-        (try? String(contentsOf: hookLogURL, encoding: .utf8)) ?? ""
-    }
-
     func clearViewLog() {
         try? FileManager.default.removeItem(at: viewLogURL)
     }

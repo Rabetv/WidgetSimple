@@ -190,11 +190,10 @@ struct WidgetMockup: View {
 }
 
 #if TESTFLIGHT
-/// TestFlight only: what the widget extension and the descriptor hook wrote into the
-/// App Group. Without a Mac or Console this is the only way to see a hook that failed
-/// to install, or an extension that cannot reach the shared container.
+/// TestFlight only: what the widget extension wrote into the App Group. Without a Mac
+/// or Console this is the only way to see an extension that cannot reach the shared
+/// container.
 struct DiagnosticsView: View {
-    @State private var hook = ""
     @State private var view = ""
 
     private var groupID: String {
@@ -211,15 +210,10 @@ struct DiagnosticsView: View {
             Section("Current look") {
                 LabeledContent("Background", value: SharedStore.shared.loadLook().background.title)
             }
-            Section("hook.log (widget extension)") {
-                Text(hook.isEmpty
+            Section("view.log (widget extension)") {
+                Text(view.isEmpty
                      ? "Empty. The extension has not run, or it cannot see the App Group."
-                     : hook)
-                    .font(.caption.monospaced())
-                    .textSelection(.enabled)
-            }
-            Section("view.log") {
-                Text(view.isEmpty ? "Nothing yet." : view)
+                     : view)
                     .font(.caption.monospaced())
                     .textSelection(.enabled)
             }
@@ -234,7 +228,6 @@ struct DiagnosticsView: View {
     }
 
     private func load() {
-        hook = SharedStore.shared.loadHookLog()
         view = SharedStore.shared.loadViewLog()
     }
 }

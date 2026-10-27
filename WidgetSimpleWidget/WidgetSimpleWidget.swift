@@ -210,42 +210,6 @@ enum WidgetLog {
     }
 }
 
-/// Reports the view chain the widget is hosted in, and blanks what looks like the
-/// system's glass or its background layer. Glass drawn by the host in another process
-/// can't be reached this way; anything that disappears from here was drawn in-process.
-private struct GlassProbe: UIViewRepresentable {
-    func makeUIView(context: Context) -> UIView {
-        let probe = UIView(frame: .zero)
-        probe.isUserInteractionEnabled = false
-        probe.backgroundColor = .clear
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak probe] in
-            var chain: [String] = []
-            var current = probe?.superview
-            var depth = 0
-            while let view = current, depth < 14 {
-                let name = String(describing: type(of: view))
-                let lower = name.lowercased()
-                chain.append("\(name)(r=\(Int(view.layer.cornerRadius)))")
-
-                if view is UIVisualEffectView || lower.contains("glass") {
-                    view.isHidden = true
-                    WidgetLog.write("hid \(name)")
-                } else if lower.contains("background") {
-                    view.backgroundColor = .clear
-                    WidgetLog.write("cleared background of \(name)")
-                }
-
-                current = view.superview
-                depth += 1
-            }
-            WidgetLog.write("chain: " + chain.joined(separator: " < "))
-        }
-        return probe
-    }
-
-    func updateUIView(_ uiView: UIView, context: Context) {}
-}
-
 extension SpotFamily {
     /// Bridges WidgetKit's family to the four sizes the wallpaper matching knows.
     init?(_ family: WidgetFamily) {
@@ -278,14 +242,11 @@ struct LauncherWidgetView: View {
                     .containerBackground(for: .widget) { widgetBackground }
             }
         }
-        #if !APPSTORE
-        .overlay { GlassProbe().frame(width: 0, height: 0) }
-        #endif
     }
 
     /// What sits in the widget container. A matched wallpaper piece wins; otherwise the
-    /// background picked in the app. Clear stays empty: the descriptor hook removes the
-    /// container, so the wallpaper behind the widget is what shows.
+    /// background picked in the app. Clear leaves the container to the system, which
+    /// draws its own background there.
     @ViewBuilder
     private var widgetBackground: some View {
         if let matched = entry.background {
@@ -328,9 +289,9 @@ struct LauncherWidgetView: View {
                              cell: appCell)
             }
         }
-        // Accented rendering tints every word white. Without the system glass behind it
-        // (the hook removed it) a white word on a light wallpaper is invisible, so keep
-        // a shadow under the text in every non-full-colour context.
+        // Accented rendering tints every word white, which is hard to read on a light
+        // wallpaper piece, so keep a shadow under the text in every non-full-colour
+        // context.
         .shadow(color: renderingMode == .fullColor ? .clear : .black.opacity(0.55),
                 radius: 4, x: 0, y: 1)
     }

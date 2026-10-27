@@ -147,11 +147,10 @@ enum TextTone: String, Codable, CaseIterable, Identifiable {
 }
 
 /// What sits behind the words.
-///  * `clear` — the app's default: the descriptor hook removes the system container,
-///    so the wallpaper shows through;
+///  * `clear` — the app's default: the matched wallpaper piece when the screenshots
+///    are set up, otherwise the system's own container background;
 ///  * `photo` — a picture the person picked, drawn in the container.
-/// A "glass" value from builds 35–37 no longer decodes; it falls back to clear, because
-/// the container it asked for is exactly what the hook removes.
+/// A "glass" value from builds 35–37 no longer decodes; it falls back to clear.
 /// Both options are part of the subscription; nothing here is sold separately.
 enum WidgetBackground: String, Codable, CaseIterable, Identifiable {
     case clear, photo
