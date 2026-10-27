@@ -109,8 +109,8 @@ struct NowPlayingArt: View {
     var body: some View {
         if let cover = NowPlayingStore.loadCover() {
             Image(uiImage: cover)
-                .widgetAccentedRenderingMode(.accentedDesaturated)
                 .resizable()
+                .widgetAccentedRenderingMode(.accentedDesaturated)
                 .scaledToFill()
                 .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                 .clipShape(Circle())

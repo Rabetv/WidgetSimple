@@ -284,8 +284,8 @@ private struct PhotoBlock: View {
         Group {
             if let image = SharedStore.shared.loadBlockPhoto(block.id) {
                 // Tinted and Clear Home Screens: a toned photo, not a solid silhouette.
-                framed(Image(uiImage: image).widgetAccentedRenderingMode(.accentedDesaturated)
-                    .resizable().scaledToFill())
+                framed(Image(uiImage: image).resizable()
+                    .widgetAccentedRenderingMode(.accentedDesaturated).scaledToFill())
             } else {
                 empty
             }
@@ -391,8 +391,8 @@ private struct MusicBlock: View {
         let shape = RoundedRectangle(cornerRadius: side * 0.14, style: .continuous)
         if !placeholders, let image = NowPlayingStore.loadCover() {
             Image(uiImage: image)
-                .widgetAccentedRenderingMode(.accentedDesaturated)
                 .resizable()
+                .widgetAccentedRenderingMode(.accentedDesaturated)
                 .scaledToFill()
                 .frame(width: side, height: side)
                 .clipShape(shape)
