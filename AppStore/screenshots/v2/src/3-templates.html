@@ -1,25 +1,26 @@
-<!doctype html>
-<html><head><meta charset="utf-8"><title>Start from a template</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>3-templates</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
 <style>
-  html, body { margin: 0; width: 1320px; height: 2868px; overflow: hidden; }
-  body {
-    background: linear-gradient(170deg, #F4E6D8 0%, #E3C2A4 100%);
-    font-family: "Segoe UI", "SF Pro Display", Arial, sans-serif;
-    color: #2B1A10;
-    position: relative;
-  }
-  .copy { position: absolute; top: 170px; left: 110px; right: 110px; text-align: center; }
-  h1 { margin: 0; font-size: 118px; line-height: 1.02; font-weight: 900; letter-spacing: -3px; }
-  p { margin: 34px auto 0; max-width: 1000px; font-size: 50px; line-height: 1.25; font-weight: 600; color: #6B4A36; }
-  .phone {
-    position: absolute; left: 50%; top: 660px; transform: translateX(-50%);
-    width: 920px; height: 2000px; padding: 26px;
-    background: #141010; border-radius: 150px;
-    box-shadow: 0 60px 120px rgba(60, 30, 10, 0.35), 0 0 0 4px #3A2A22 inset;
-  }
-  .phone img { display: block; width: 920px; height: 2000px; border-radius: 126px; }
-</style></head>
-<body>
-  <div class="copy"><h1>Start from a template</h1><p>Blank, clock hubs, app grids, type specimens and more.</p></div>
-  <div class="phone"><img src="../raw/3-templates.jpg" alt=""></div>
+*{box-sizing:border-box}
+body{margin:0;width:1320px;height:2868px;overflow:hidden;position:relative;font-family:Inter,-apple-system,sans-serif;color:#fff;
+ background:radial-gradient(70% 38% at 50% 64%,rgba(214,120,70,.30) 0%,rgba(214,120,70,0) 70%),radial-gradient(60% 25% at 50% 0%,rgba(255,199,102,.10) 0%,rgba(255,199,102,0) 70%),#120c09}
+.head{position:absolute;top:140px;left:0;right:0;text-align:center;padding:0 70px;z-index:6}
+h1{font-size:124px;line-height:1.02;font-weight:800;letter-spacing:-3.5px;margin:0}
+h1 em{font-style:normal;background:linear-gradient(90deg,#FFD58A,#FFB45C);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:48px;line-height:1.25;margin:28px 0 0;color:rgba(255,255,255,.78);font-weight:500}
+.ribbon{position:absolute;inset:0;z-index:1;pointer-events:none}
+.phone{position:absolute;left:174px;top:680px;width:972px;height:2052px;border-radius:150px;background:#0b0b0d;padding:26px;z-index:2;
+ box-shadow:0 80px 160px rgba(0,0,0,.65),0 0 0 2px rgba(255,255,255,.08),inset 0 0 0 4px #3b3a3f}
+.phone img{display:block;width:920px;height:2000px;border-radius:124px}
+.pill{position:absolute;z-index:8;padding:24px 40px;border-radius:999px;font-size:44px;font-weight:700;white-space:nowrap;box-shadow:0 20px 44px rgba(0,0,0,.5);
+ background:linear-gradient(180deg,#FFD58A,#FFBE5C);color:#1A1306}
+.badges{position:absolute;left:0;right:0;top:2740px;display:flex;justify-content:center;gap:22px;z-index:8}
+.badges span{padding:18px 32px;border-radius:999px;font-size:36px;font-weight:700;background:rgba(18,12,9,.85);border:2px solid rgba(255,255,255,.22);color:#fff}
+.badges span b{color:#FFC766}
+</style></head><body>
+<svg class="ribbon" width="1320" height="2868" viewBox="0 0 1320 2868"><defs><linearGradient id="rb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD58A"/><stop offset="1" stop-color="#D9783E"/></linearGradient></defs><path d="M1150 560 C 1290 700, 1230 860, 1150 760 C 1090 680, 1230 640, 1260 760" fill="none" stroke="url(#rb)" stroke-width="12" stroke-linecap="round" opacity=".95"/></svg>
+<div class="head"><h1>Start from a<br><em>template</em></h1><p class="sub">Blank, clock hubs, app grids, type and more.</p></div>
+<div class="phone"><img src="../raw/3-templates.jpg" alt=""></div>
+<div class="pill" style="left:780px;top:1500px">Ready in one tap</div>
+
 </body></html>
