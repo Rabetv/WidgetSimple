@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -107,6 +108,12 @@ struct DesignSandbox: View {
             Text(saved == nil ? "This new widget is not saved yet." : "Your changes are not saved yet.")
         }
         .sensoryFeedback(.selection, trigger: selected)
+        // A template can bring a Music or Vinyl block along: ask for Music access now.
+        .onAppear {
+            if draft.blocks.contains(where: { $0.kind.usesMusic }) {
+                NowPlayingMonitor.shared.requestAccessIfNeeded()
+            }
+        }
         .sensoryFeedback(.impact(weight: .heavy), trigger: deletions)
     }
 
@@ -184,6 +191,7 @@ struct DesignSandbox: View {
 
     /// A new block lands in the middle, already picked.
     private func add(_ kind: BlockKind) {
+        if kind.usesMusic { NowPlayingMonitor.shared.requestAccessIfNeeded() }
         let block = DesignBlock.dropped(kind, on: draft.canvas)
         withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
             draft.blocks.append(block)
@@ -519,6 +527,7 @@ extension BlockKind {
         case .digitalClock: return CGSize(width: 150, height: 60)
         case .analogClock, .countdownRing, .battery, .vinyl, .calendarIcon, .moon: return CGSize(width: 84, height: 84)
         case .music: return CGSize(width: 200, height: 84)
+        case .photo: return CGSize(width: 130, height: 130)
         case .health: return CGSize(width: 150, height: 80)
         case .wordClock: return CGSize(width: 170, height: 70)
         case .worldClock: return CGSize(width: 170, height: 84)
@@ -536,7 +545,7 @@ extension BlockKind {
     var hasOptions: Bool {
         switch self {
         case .apps, .text, .greeting, .quote, .digitalClock, .worldClock, .bigDate, .progress, .daysUntil,
-             .battery, .health:
+             .battery, .health, .photo:
             return true
         default:
             return false
@@ -801,6 +810,8 @@ private struct BlockOptions: View {
             Note("The charge updates when the widget redraws, about every half hour.")
         case .health:
             Note("A sample line. WidgetSimple never reads Health data.")
+        case .photo:
+            PhotoOptions(block: $block)
         default:
             EmptyView()
         }
@@ -817,6 +828,39 @@ private struct BlockOptions: View {
 
     private var date: Binding<Date> {
         Binding(get: { block.date ?? .now }, set: { block.date = $0 })
+    }
+}
+
+/// The Photo block's picture and frame. The picture is picked in the system picker,
+/// which shows the app only the one photo chosen.
+private struct PhotoOptions: View {
+    @Binding var block: DesignBlock
+    @State private var item: PhotosPickerItem?
+    @State private var failed = false
+
+    var body: some View {
+        TuneRow("Picture") {
+            PhotosPicker(selection: $item, matching: .images) {
+                Text(block.photoStamp == nil ? "Choose a photo" : "Choose another photo")
+            }
+            .buttonStyle(PillStyle(selected: block.photoStamp == nil))
+        }
+        if failed {
+            Note("Couldn't read that photo. Try another one.")
+        }
+        TuneRow("Frame") {
+            PillPicker(options: PhotoFrame.allCases.map { ($0, $0.title) }, selection: $block.photoFrame, compact: true)
+        }
+        .onChange(of: item) { _, picked in
+            guard let picked else { return }
+            item = nil
+            Task {
+                let data = try? await picked.loadTransferable(type: Data.self)
+                let saved = data.map { SharedStore.shared.saveBlockPhoto($0, for: block.id) } ?? false
+                failed = !saved
+                if saved { block.photoStamp = .now }
+            }
+        }
     }
 }
 
@@ -947,6 +991,7 @@ struct BlockIcon: View {
         case .daysUntil: return "hourglass"
         case .moon: return "moon"
         case .music: return "music.note"
+        case .photo: return "photo"
         default: return "rectangle.dashed"
         }
     }

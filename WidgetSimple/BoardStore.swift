@@ -44,6 +44,7 @@ final class BoardStore: ObservableObject {
 
     /// A new blank widget with one block in the middle, already in the sandbox.
     func start(with kind: BlockKind, model: AppModel) {
+        if kind.usesMusic { NowPlayingMonitor.shared.requestAccessIfNeeded() }
         var design = DesignBlueprint.blank(.medium).design(name: model.nextDesignName, look: model.look)
         design.blocks.append(DesignBlock.dropped(kind, on: design.canvas))
         sandbox = SandboxDraft(design: design, saved: nil)

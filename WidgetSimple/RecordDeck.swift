@@ -233,7 +233,15 @@ final class NowPlayingMonitor: ObservableObject {
         }
     }
 
-    /// Asks for Media & Apple Music access. The deck's key calls it, never the launch.
+    /// Asks for Media & Apple Music access the first time a Music or Vinyl block goes
+    /// into a widget, so the block can show and control the song right away.
+    func requestAccessIfNeeded() {
+        guard MPMediaLibrary.authorizationStatus() == .notDetermined else { return }
+        requestAccess()
+    }
+
+    /// Asks for Media & Apple Music access. The deck's key and the Music and Vinyl blocks
+    /// call it, never the launch.
     func requestAccess() {
         Task {
             _ = await MPMediaLibrary.requestAuthorization()
@@ -432,9 +440,6 @@ private struct VinylDisc: View {
             context.stroke(ModuleDrawing.circle(c, r * 0.34), with: .foreground, lineWidth: 1)
             faint.stroke(ModuleDrawing.circle(c, r * 0.3), with: .foreground, lineWidth: 1 / scale)
             context.stroke(ModuleDrawing.circle(c, r * 0.035), with: .foreground, lineWidth: 1)
-            if cover == nil {
-                context.draw(Text("WS · 27").font(.micro(7)).tracking(1.4), at: CGPoint(x: c.x, y: c.y - r * 0.17))
-            }
         }
         .accessibilityHidden(true)
     }

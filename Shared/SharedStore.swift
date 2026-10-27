@@ -63,6 +63,34 @@ final class SharedStore: @unchecked Sendable {
         return UIImage(cgImage: image)
     }
 
+    // MARK: Photo blocks
+
+    var blockPhotosURL: URL { rootURL.appendingPathComponent("BlockPhotos", isDirectory: true) }
+
+    func blockPhotoURL(_ id: UUID) -> URL {
+        blockPhotosURL.appendingPathComponent("\(id.uuidString).jpg")
+    }
+
+    /// Saves a Photo block's picture at most 420 px on its long side: WidgetKit refuses
+    /// an image larger than the widget, and a small widget is about 470 px square.
+    @discardableResult
+    func saveBlockPhoto(_ data: Data, for id: UUID) -> Bool {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 420,
+        ]
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary),
+              let jpeg = UIImage(cgImage: image).jpegData(compressionQuality: 0.85) else { return false }
+        try? FileManager.default.createDirectory(at: blockPhotosURL, withIntermediateDirectories: true)
+        return (try? jpeg.write(to: blockPhotoURL(id), options: .atomic)) != nil
+    }
+
+    func loadBlockPhoto(_ id: UUID) -> UIImage? {
+        UIImage(contentsOfFile: blockPhotoURL(id).path)
+    }
+
     // MARK: Wallpaper pieces (one per Home Screen slot, public API only)
 
     var seeThroughURL: URL { rootURL.appendingPathComponent("see-through.json") }

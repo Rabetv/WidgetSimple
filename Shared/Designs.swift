@@ -15,6 +15,7 @@ enum BlockKind: String, Codable, CaseIterable, Identifiable {
     case digitalClock, analogClock, wordClock, worldClock
     case bigDate, weekStrip, monthGrid, progress, daysUntil, moon
     case countdownRing, health, battery, vinyl, music, calendarIcon
+    case photo
     case spacer
 
     var id: String { rawValue }
@@ -41,9 +42,13 @@ enum BlockKind: String, Codable, CaseIterable, Identifiable {
         case .vinyl: return "Vinyl deck"
         case .music: return "Music"
         case .calendarIcon: return "Calendar page"
+        case .photo: return "Photo"
         case .spacer: return "Empty space"
         }
     }
+
+    /// Shows and controls what the Music app plays, so it needs Music access.
+    var usesMusic: Bool { self == .music || self == .vinyl }
 
     /// The module drawing a block shows, for the six structural modules.
     var module: ModuleKind? {
@@ -64,6 +69,7 @@ enum BlockKind: String, Codable, CaseIterable, Identifiable {
         ("Time", [.digitalClock, .analogClock, .wordClock, .worldClock]),
         ("Date", [.bigDate, .weekStrip, .monthGrid, .progress, .daysUntil, .moon]),
         ("Words", [.text, .quote, .greeting]),
+        ("Photo", [.photo]),
         ("Modules", [.countdownRing, .battery, .health, .vinyl, .music, .calendarIcon]),
         ("Space", [.spacer]),
     ]
@@ -107,6 +113,25 @@ enum BlockHeight: String, Codable, CaseIterable, Identifiable {
         case .small: return 1
         case .medium: return 2
         case .large: return 3
+        }
+    }
+}
+
+/// The frame around a Photo block's picture.
+enum PhotoFrame: String, Codable, CaseIterable, Identifiable {
+    /// The picture alone, edge to edge, with no frame at all.
+    case none
+    case rounded, circle, border, polaroid
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .none: return "No frame"
+        case .rounded: return "Rounded"
+        case .circle: return "Circle"
+        case .border: return "White border"
+        case .polaroid: return "Polaroid"
         }
     }
 }
@@ -219,6 +244,11 @@ struct DesignBlock: Codable, Hashable, Identifiable {
     var frame: BlockFrame?
     /// This block's own style (font, size, colour, alignment…); nil follows the design's.
     var look: Look?
+    /// Photo: the frame around the picture.
+    var photoFrame: PhotoFrame
+    /// Photo: changes whenever another picture is picked, so the design (and the widget)
+    /// redraws; the picture itself is a file in the App Group named after the block.
+    var photoStamp: Date?
 
     init(_ kind: BlockKind) {
         id = UUID()
@@ -236,10 +266,12 @@ struct DesignBlock: Codable, Hashable, Identifiable {
         progressStyle = .dots
         frame = nil
         look = nil
+        photoFrame = .none
+        photoStamp = nil
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, width, height, slots, text, lines, zones, date, clock, dateStyle, scope, progressStyle, frame, look
+        case id, kind, width, height, slots, text, lines, zones, date, clock, dateStyle, scope, progressStyle, frame, look, photoFrame, photoStamp
     }
 
     /// Tolerant, like `Look`: an unknown value falls back to the default, and only a
@@ -261,6 +293,8 @@ struct DesignBlock: Codable, Hashable, Identifiable {
         d.progressStyle = (try? c.decodeIfPresent(ProgressStyle.self, forKey: .progressStyle)) ?? d.progressStyle
         d.frame = (try? c.decodeIfPresent(BlockFrame.self, forKey: .frame))?.inside
         d.look = try? c.decodeIfPresent(Look.self, forKey: .look)
+        d.photoFrame = (try? c.decodeIfPresent(PhotoFrame.self, forKey: .photoFrame)) ?? d.photoFrame
+        d.photoStamp = try? c.decodeIfPresent(Date.self, forKey: .photoStamp)
         self = d
     }
 

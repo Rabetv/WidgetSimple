@@ -1,3 +1,4 @@
+import MediaPlayer
 import SwiftUI
 import WidgetKit
 
@@ -58,6 +59,8 @@ struct BlockFace: View {
             moon
         case .music:
             MusicBlock(look: look, box: box, placeholders: placeholders)
+        case .photo:
+            PhotoBlock(block: block, box: box)
         case .analogClock, .countdownRing, .health, .battery, .vinyl, .calendarIcon:
             if let module = block.kind.module {
                 ModuleTile(kind: module, date: date, battery: battery, look: look,
@@ -269,6 +272,80 @@ struct ModuleTile: View {
     }
 }
 
+/// The Photo block: the picture picked in the app, with no frame (edge to edge) or in one
+/// of the frames. Before a picture is picked it shows where it will go.
+private struct PhotoBlock: View {
+    let block: DesignBlock
+    let box: CGSize
+
+    private var side: CGFloat { max(min(box.width, box.height), 1) }
+
+    var body: some View {
+        Group {
+            if let image = SharedStore.shared.loadBlockPhoto(block.id) {
+                framed(Image(uiImage: image).resizable().scaledToFill())
+            } else {
+                empty
+            }
+        }
+        .frame(width: box.width, height: box.height)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Photo")
+    }
+
+    @ViewBuilder
+    private func framed(_ picture: some View) -> some View {
+        switch block.photoFrame {
+        case .none:
+            picture
+                .frame(width: box.width, height: box.height)
+                .clipped()
+        case .rounded:
+            picture
+                .frame(width: box.width, height: box.height)
+                .clipShape(RoundedRectangle(cornerRadius: side * 0.14, style: .continuous))
+        case .circle:
+            picture
+                .frame(width: side, height: side)
+                .clipShape(Circle())
+        case .border:
+            let shape = RoundedRectangle(cornerRadius: side * 0.1, style: .continuous)
+            picture
+                .frame(width: box.width, height: box.height)
+                .clipShape(shape)
+                .overlay { shape.strokeBorder(Color.white, lineWidth: max(side * 0.035, 2)) }
+        case .polaroid:
+            // A print: an even white margin, a deeper one below, tilted a little.
+            let margin = side * 0.06
+            let width = box.width * 0.86
+            let height = box.height * 0.86
+            picture
+                .frame(width: width - 2 * margin, height: height - margin * 4.5)
+                .clipped()
+                .padding(.top, margin)
+                .padding(.horizontal, margin)
+                .padding(.bottom, margin * 3.5)
+                .background(Color.white)
+                .shadow(color: .black.opacity(0.3), radius: side * 0.03, y: side * 0.015)
+                .rotationEffect(.degrees(-3))
+        }
+    }
+
+    private var empty: some View {
+        RoundedRectangle(cornerRadius: side * 0.12, style: .continuous)
+            .strokeBorder(.foreground.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            .overlay {
+                VStack(spacing: side * 0.05) {
+                    Image(systemName: "photo").font(.system(size: side * 0.22))
+                    Text("Pick a photo in the app").font(.system(size: max(side * 0.09, 9), weight: .medium))
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.7)
+                }
+                .padding(side * 0.06)
+            }
+    }
+}
+
 /// The Music block: the cover, the song and its artist, and three keys that skip, play
 /// and pause in the Music app. It shows what Music played when the widget last redrew:
 /// after every key tap, and every few minutes otherwise.
@@ -279,15 +356,17 @@ private struct MusicBlock: View {
 
     var body: some View {
         let record = placeholders ? nil : NowPlayingStore.load()
+        let allowed = placeholders || MPMediaLibrary.authorizationStatus() == .authorized
         let side = max(min(box.height, box.width * 0.42), 1)
         HStack(spacing: side * 0.12) {
             cover(side: side)
             VStack(alignment: .leading, spacing: side * 0.05) {
-                Text(record?.title ?? (placeholders ? "Song title" : "Nothing playing"))
+                Text(allowed ? record?.title ?? (placeholders ? "Song title" : "Nothing playing")
+                             : "Allow Music access")
                     .font(look.font(size: min(look.size, Double(side) * 0.22)))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                Text(record?.artist ?? "Music app")
+                Text(allowed ? record?.artist ?? "Music app" : "Open WidgetSimple")
                     .font(look.font(size: min(look.size * 0.75, Double(side) * 0.16)))
                     .opacity(0.7)
                     .lineLimit(1)

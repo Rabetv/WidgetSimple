@@ -108,27 +108,43 @@ struct HomeGrid: Equatable {
         return CGRect(x: x, y: y, width: size.width, height: size.height).integral
     }
 
-    /// Published Home Screen layouts, keyed by screenshot height in pixels: small widget
+    /// Home Screen layouts on iOS 27, keyed by screenshot height in pixels: small widget
     /// side, medium width, large height, top edge of the grid. Sizes are replaced by the
     /// widget's real ones once known; the top edge is the part only this table gives.
+    ///
+    /// Source: the community-measured iOS 18 tables (Scriptable "invisible widget"
+    /// scripts), moved down 4 pt for iOS 27. That shift is measured on a 17 Pro (2622,
+    /// 261 px on iOS 18, 273 px on iOS 27), and it matches the iOS 18 values reported for
+    /// the 12 mini and XS against the older tables. Settings › Wallpaper's nudge covers
+    /// a model that still sits differently, and Home Screens with large icons.
     private static let table: [Int: (small: CGFloat, medium: CGFloat, large: CGFloat, top: CGFloat)] = [
-        2868: (510, 1092, 1146, 276),   // 16 Pro Max, 17 Pro Max
-        2796: (510, 1092, 1146, 282),   // 14 Pro Max, 15 Plus, 15 Pro Max, 16 Plus
-        2778: (510, 1092, 1146, 246),   // 12 Pro Max, 13 Pro Max, 14 Plus
-        2688: (507, 1080, 1137, 228),   // XS Max, 11 Pro Max
-        2622: (486, 1032, 1098, 273),   // 16 Pro, 17, 17 Pro (top edge estimated)
-        2556: (474, 1014, 1062, 270),   // 14 Pro, 15, 15 Pro, 16
-        2532: (474, 1014, 1062, 231),   // 12, 12 Pro, 13, 13 Pro, 14
-        2436: (465, 987, 1035, 213),    // X, XS, 11 Pro
-        1792: (338, 720, 758, 160),     // XR, 11
+        2868: (510, 1092, 1146, 288),   // 16 Pro Max, 17 Pro Max
+        2796: (510, 1092, 1146, 264),   // 14 Pro Max, 15 Plus, 15 Pro Max, 16 Plus
+        2778: (510, 1092, 1146, 228),   // 12 Pro Max, 13 Pro Max, 14 Plus
+        2736: (498, 1062, 1122, 279),   // Air (estimated between 2622 and 2868)
+        2688: (507, 1080, 1137, 210),   // 11 Pro Max
+        2622: (486, 1032, 1098, 273),   // 16 Pro, 17, 17 Pro (measured on iOS 27)
+        2556: (474, 1017, 1062, 252),   // 14 Pro, 15, 15 Pro, 16
+        2532: (474, 1014, 1062, 213),   // 12, 12 Pro, 13, 13 Pro, 14, 16e
+        2436: (465, 987, 1035, 195),    // 11 Pro (12 mini and 13 mini: see `miniTop`)
+        1792: (338, 720, 758, 148),     // 11
+        1334: (296, 642, 648, 68),      // SE (2nd and 3rd generation)
     ]
+
+    /// Raised whenever `table` changes, so pieces cut with older values are cut again.
+    static let tableVersion = 2
+
+    /// The 12 mini and 13 mini render at 1125 × 2436 like the 11 Pro, with the grid lower.
+    private static let miniTop: CGFloat = 213
 
     /// The grid for a screenshot `width` × `height` pixels taken at `scale` pixels per
     /// point. `sizes` are the real widget sizes in points the widget reported;
-    /// `offsetY` (points) moves the whole grid down, or up when negative.
+    /// `offsetY` (points) moves the whole grid down, or up when negative. `isMini` tells
+    /// a 12 mini or 13 mini from an 11 Pro, which share the screenshot size.
     static func make(width: CGFloat, height: CGFloat, scale: CGFloat,
-                     sizes: [SpotFamily: CGSize], offsetY: CGFloat) -> HomeGrid {
-        let known = table[Int(height.rounded())]
+                     sizes: [SpotFamily: CGSize], offsetY: CGFloat, isMini: Bool = false) -> HomeGrid {
+        var known = table[Int(height.rounded())]
+        if isMini, Int(height.rounded()) == 2436 { known?.top = miniTop }
         func reported(_ family: SpotFamily) -> CGSize? {
             sizes[family].map { CGSize(width: $0.width * scale, height: $0.height * scale) }
         }

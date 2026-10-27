@@ -161,7 +161,7 @@ final class AppModel: ObservableObject {
             let date = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
             return date.map { "\(Int($0.timeIntervalSince1970))" } ?? "-"
         }
-        return "\(sizes)|\(seeThrough.offsetY)|\(shots.joined(separator: ","))|\(Self.screenPointsWide)"
+        return "\(HomeGrid.tableVersion)|\(sizes)|\(seeThrough.offsetY)|\(shots.joined(separator: ","))|\(Self.screenPointsWide)"
     }
 
     /// Cuts a piece for every Home Screen slot from the bright and the dark screenshot.
@@ -182,7 +182,7 @@ final class AppModel: ObservableObject {
         let signature = cutSignature()
         let grid = HomeGrid.make(width: CGFloat(reference.width), height: CGFloat(reference.height),
                                  scale: CGFloat(reference.width) / Self.screenPointsWide,
-                                 sizes: store.loadSizes(), offsetY: state.offsetY)
+                                 sizes: store.loadSizes(), offsetY: state.offsetY, isMini: Self.isMini)
         await Task.detached(priority: .userInitiated) { [bright, dark] in
             store.removeSpotImages()
             store.removeDarkSpotImages()
@@ -205,6 +205,16 @@ final class AppModel: ObservableObject {
         UIDevice.current.isBatteryMonitoringEnabled = true
         let level = UIDevice.current.batteryLevel
         return level < 0 ? nil : Double(level)
+    }
+
+    /// The 12 mini (iPhone13,1) or 13 mini (iPhone14,4), from the hardware model.
+    private static var isMini: Bool {
+        var info = utsname()
+        uname(&info)
+        let model = withUnsafeBytes(of: &info.machine) { bytes in
+            String(decoding: bytes.prefix { $0 != 0 }, as: UTF8.self)
+        }
+        return model == "iPhone13,1" || model == "iPhone14,4"
     }
 
     private static var screenPointsWide: CGFloat {
