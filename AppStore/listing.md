@@ -57,8 +57,8 @@ HOW IT LOOKS
 
 Each widget shows the piece of your wallpaper that sits behind it, so the words look like
 they are written on your Home Screen. Set-up takes two screenshots of an empty Home
-Screen page (Light and Dark Mode) and, once your widgets are placed, one more so the app
-can see where each widget sits.
+Screen page, one in Light Mode and one in Dark Mode. If a widget isn't at the top left,
+tell it where it sits in Edit Widget › Position.
 
 WHY THE APPS ARE PICKED IN EDIT WIDGET
 
@@ -171,9 +171,9 @@ The app uses public API only.
    iOS 27 RunSystemShortcutIntent. The app styles the words (font, colour, size,
    placement, clock) for all widgets at once.
 
-4. Optional: Settings › Wallpaper › Find your widgets turns every widget pink for a
-   moment so one more screenshot shows where each sits; that lines the wallpaper pieces
-   up exactly.
+4. WidgetKit doesn't tell a widget where it sits, so each widget has Position (Top,
+   Middle, Bottom) and Side (Left, Right, for small widgets) in Edit Widget; top left is
+   the default. The app cuts the wallpaper for every position from the two screenshots.
 
 No login is required. The app collects no data and makes no network requests of its own.
 ```

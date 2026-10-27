@@ -53,8 +53,15 @@ struct RootView: View {
         .environmentObject(board)
         #if APPSTORE
         // A subscription can lapse or be refunded while the app sits in the background.
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await license.refresh() } }
+        // Widgets placed meanwhile have reported their real sizes: cut the wallpaper
+        // pieces to them.
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            if phase == .active {
+                Task {
+                    await license.refresh()
+                    await model.refreshPiecesIfNeeded()
+                }
+            }
         }
         #endif
     }

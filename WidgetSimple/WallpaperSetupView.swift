@@ -3,13 +3,13 @@ import SwiftUI
 import UIKit
 import WidgetKit
 
-/// The see-through setup, once, in three big steps: the empty Home Screen page in Light
-/// Mode, the same page in Dark Mode, then one screenshot with the widgets pink so the app
-/// can find them. Or a photo of the user's own behind every widget instead.
+/// The see-through setup, once, in two steps: the empty Home Screen page in Light Mode,
+/// then the same page in Dark Mode. The app cuts the wallpaper for every widget slot from
+/// those; each widget picks its slot in Edit Widget. Or a photo of the user's own behind
+/// every widget instead.
 struct WallpaperSetupView: View {
-    /// The first-run step after the paywall: only the two wallpaper screenshots, which
-    /// every widget needs before it shows its apps. Matching comes later, once widgets
-    /// are on the Home Screen, from Settings › Wallpaper.
+    /// The first-run step after the paywall: the two wallpaper screenshots, which every
+    /// widget needs before it shows its apps. No photo alternative and no fine-tuning.
     let required: Bool
     /// Called by Continue once setup is complete; nil closes the screen instead.
     let onDone: (() -> Void)?
@@ -33,22 +33,18 @@ struct WallpaperSetupView: View {
     /// WidgetSimple widgets on the Home Screen; nil until iOS answers.
     @State private var placed: Int?
 
-    private enum Shot { case bright, dark, pink }
+    private enum Shot { case bright, dark }
 
     private var state: SeeThroughState { model.seeThrough }
-    /// The required step only needs the two screenshots; the full setup needs matched
-    /// widgets (or a photo) too.
     private var canContinue: Bool {
         if required { return model.hasWallpaperShots }
         return model.isWallpaperReady && (onDone != nil || isPresented)
     }
-    private var matched: Int { state.spots.count }
     private var usesPhoto: Bool { model.look.background == .photo }
     /// The first step still to do, which is drawn as the current one.
     private var current: Int? {
         if !state.hasWallpaper { return 1 }
         if !state.hasDarkWallpaper { return 2 }
-        if matched == 0 { return 3 }
         return nil
     }
 
@@ -58,17 +54,13 @@ struct WallpaperSetupView: View {
                 header
                 Text(required
                      ? "Before you add a widget, the app needs two screenshots of your wallpaper: one in Light Mode, one in Dark Mode. Your widgets show the piece of wallpaper behind them, so they blend into the Home Screen."
-                     : "Your widgets are see-through: each one shows the piece of wallpaper behind it. To cut those pieces the app needs three screenshots, taken once. It takes about a minute.")
+                     : "Your widgets are see-through: each one shows the piece of wallpaper behind it. The app cuts those pieces from two screenshots of an empty Home Screen page, taken once.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 brightStep
                 darkStep
-                if required {
-                    Hint("Next: add your widgets to the Home Screen. Then open Settings › Wallpaper here to line each one up with the wallpaper.")
-                } else {
-                    matchStep
-                }
+                positionNote
                 notice
                 if canContinue {
                     Button(action: finish) {
@@ -80,6 +72,7 @@ struct WallpaperSetupView: View {
                     .tint(.accentColor)
                 }
                 if !required {
+                    if state.isComplete { lineUp }
                     photoAlternative
                 }
             }
@@ -104,7 +97,6 @@ struct WallpaperSetupView: View {
                 switch shot {
                 case .bright: await model.useWallpaper(data)
                 case .dark: await model.useDarkWallpaper(data)
-                case .pink: await model.usePinkScreenshot(data)
                 }
             }
         }
@@ -173,25 +165,13 @@ struct WallpaperSetupView: View {
         }
     }
 
-    private var matchStep: some View {
-        SetupStep(number: 3, title: "Find your widgets", done: matched > 0 && !state.finding, current: current == 3 || state.finding) {
-            if state.finding {
-                Instructions(lines: [
-                    "Your widgets are pink now, each with a small black-and-white code.",
-                    "Go to the Home Screen page with your widgets and take a screenshot.",
-                    "Come back here and pick that pink screenshot. The widgets turn back on their own.",
-                ])
-            } else {
-                Instructions(lines: [
-                    "Put your WidgetSimple widgets where you want them, with their apps picked. Either appearance is fine for this step.",
-                    "Tap Turn on matching: for a moment every widget turns pink, so the app can see where each one sits.",
-                    "Take a screenshot of the Home Screen, come back, and pick it.",
-                ])
-                if placed == 0 {
-                    Hint("No WidgetSimple widget is on your Home Screen yet. Add one first: touch and hold the Home Screen, tap Edit › Add Widget, and choose WidgetSimple.")
-                } else if matched > 0 {
-                    Hint("\(matched) \(matched == 1 ? "widget" : "widgets") matched. Added or moved one since? Match again.")
-                }
+    /// How a widget finds its piece: WidgetKit doesn't say where a widget sits, so the
+    /// person tells it once in Edit Widget (top left is the default).
+    private var positionNote: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Hint("Each widget shows the wallpaper of its own spot. Not at the top left? Touch and hold the widget › Edit Widget › Position (and Side for a small widget).")
+            if placed == 0 && state.isComplete {
+                Hint("Next: add a widget. Touch and hold the Home Screen, tap Edit › Add Widget, and choose WidgetSimple.")
             }
             if model.working {
                 HStack(spacing: 10) {
@@ -199,17 +179,32 @@ struct WallpaperSetupView: View {
                     Micro("Cutting wallpaper pieces")
                 }
             }
-        } action: {
-            if state.finding {
+        }
+    }
+
+    /// Only for an iPhone whose Home Screen grid sits a little differently from the one
+    /// the app knows: moves the wallpaper inside every widget up or down.
+    private var lineUp: some View {
+        ModuleFrame("Fine-tune", stamp: state.offsetY == 0 ? nil : "\(Int(state.offsetY)) pt") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Wallpaper slightly off?")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                Text("If the wallpaper inside your widgets sits a little too high or too low, move it here. It applies to every widget.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
-                    Button("Pick the pink screenshot") { pick(.pink) }
-                        .buttonStyle(PillStyle(selected: true))
-                    Button("Cancel") { model.stopFinding() }
+                    // Cutting lower moves the picture inside the widget up.
+                    Button("Move up") { Task { await model.nudgeWallpaper(by: 1) } }
                         .buttonStyle(PillStyle())
+                    Button("Move down") { Task { await model.nudgeWallpaper(by: -1) } }
+                        .buttonStyle(PillStyle())
+                    if state.offsetY != 0 {
+                        Button("Reset") { Task { await model.resetWallpaperNudge() } }
+                            .buttonStyle(PillStyle())
+                    }
                 }
-            } else {
-                Button(matched > 0 ? "Match again" : "Turn on matching") { model.startFinding() }
-                    .buttonStyle(PillStyle(selected: current == 3))
+                .disabled(model.working)
             }
         }
     }
@@ -382,7 +377,7 @@ private struct Hint: View {
 // MARK: - Gate
 
 /// Shows `WallpaperSetupView` until the widgets can look right: bright and dark
-/// wallpaper and matched widgets, or a photo background. Then shows `content`.
+/// wallpaper screenshots, or a photo background. Then shows `content`.
 /// Setup finished here waits for its Continue button, so the last tick is seen.
 /// The AltStore build removes the widget container instead and never gates.
 ///

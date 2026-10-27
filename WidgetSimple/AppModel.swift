@@ -16,9 +16,8 @@ final class AppModel: ObservableObject {
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
-    /// The matched-wallpaper state: which widget sits where, and the pieces cut for it.
-    /// Used by the App Store flavour only; the AltStore build removes the container
-    /// instead and never needs a wallpaper.
+    /// The wallpaper state: which screenshots are in, the nudge, and what the pieces
+    /// for every Home Screen slot were cut for.
     @Published private(set) var seeThrough: SeeThroughState {
         didSet {
             store.saveSeeThrough(seeThrough)
@@ -48,6 +47,15 @@ final class AppModel: ObservableObject {
         // A launcher without a clock asks never to be reloaded, so an update would leave
         // the old snapshot on the Home Screen until something else touched it.
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Cuts the pieces again when something they depend on changed since the last cut,
+    /// such as a widget reporting its real size for the first time. Called on launch and
+    /// whenever the app comes to the front.
+    func refreshPiecesIfNeeded() async {
+        guard seeThrough.hasWallpaper || seeThrough.hasDarkWallpaper else { return }
+        guard seeThrough.cutSignature != cutSignature() else { return }
+        await makePieces()
     }
 
     // MARK: Designs
@@ -86,10 +94,10 @@ final class AppModel: ObservableObject {
         look.background = .photo
     }
 
-    // MARK: Matched wallpaper
+    // MARK: Wallpaper pieces
 
     /// True once every widget looks right in both appearances: the bright and the dark
-    /// wallpaper and the matched widgets — or the widgets show the user's photo instead.
+    /// wallpaper screenshot are in — or the widgets show the user's photo instead.
     var isWallpaperReady: Bool {
         look.background == .photo || seeThrough.isComplete
     }
@@ -131,87 +139,64 @@ final class AppModel: ObservableObject {
         await makePieces()
     }
 
-    /// Step 2: every widget shows a pink code so the app can find it.
-    func startFinding() {
-        seeThrough.finding = true
-    }
-
-    func stopFinding() {
-        seeThrough.finding = false
-    }
-
-    /// Step 2: the screenshot of the Home Screen with the pink widgets.
-    func usePinkScreenshot(_ data: Data) async {
-        guard let image = UIImage(data: data)?.cgImage else {
-            message = "Couldn't read that screenshot."
-            return
-        }
-        working = true
-        defer { working = false }
-        let sizes = store.loadSizes()
-        let pointsWide = Self.screenPointsWide
-        let spots = await Task.detached(priority: .userInitiated) {
-            SeeThroughMaker.findSpots(in: image, sizes: sizes, pointsWide: pointsWide)
-        }.value
-        guard !spots.isEmpty else {
-            message = "No pink widgets in that screenshot. Take it on the Home Screen while the widgets are pink."
-            return
-        }
-        var state = seeThrough
-        state.spots = spots
-        state.spotsWidth = Double(image.width)
-        state.spotsHeight = Double(image.height)
-        state.finding = false
-        seeThrough = state
+    /// Moves every piece by `points` (down when positive) for an iPhone whose Home
+    /// Screen grid sits a little differently from the table, and cuts them again.
+    func nudgeWallpaper(by points: Double) async {
+        seeThrough.offsetY = (seeThrough.offsetY + points).clamped(to: -40...40)
         await makePieces()
     }
 
-    /// Cuts the wallpaper pieces behind every widget found, from the bright and the dark
-    /// screenshot at the same spots. A widget without a piece simply keeps the system
-    /// background, and one without a dark piece keeps its bright one in Dark Mode, so
-    /// this can never make things worse.
+    func resetWallpaperNudge() async {
+        seeThrough.offsetY = 0
+        await makePieces()
+    }
+
+    /// The real widget sizes, the nudge and the screenshots the pieces depend on.
+    private func cutSignature() -> String {
+        let sizes = store.loadSizes()
+            .sorted { $0.key.rawValue < $1.key.rawValue }
+            .map { "\($0.key.rawValue):\(Int($0.value.width))x\(Int($0.value.height))" }
+            .joined(separator: ",")
+        let shots = [store.wallpaperURL, store.darkWallpaperURL].map { url in
+            let date = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+            return date.map { "\(Int($0.timeIntervalSince1970))" } ?? "-"
+        }
+        return "\(sizes)|\(seeThrough.offsetY)|\(shots.joined(separator: ","))|\(Self.screenPointsWide)"
+    }
+
+    /// Cuts a piece for every Home Screen slot from the bright and the dark screenshot.
+    /// A widget picks its slot in Edit Widget; one without a dark piece keeps its bright
+    /// one in Dark Mode.
     private func makePieces() async {
         let state = seeThrough
-        guard !state.spots.isEmpty else { return }
-        func fits(_ image: CGImage) -> Bool {
-            Double(image.width) == state.spotsWidth && Double(image.height) == state.spotsHeight
-        }
-        var bright = state.hasWallpaper ? store.loadWallpaper().flatMap { UIImage(data: $0)?.cgImage } : nil
+        let bright = state.hasWallpaper ? store.loadWallpaper().flatMap { UIImage(data: $0)?.cgImage } : nil
         var dark = state.hasDarkWallpaper ? store.loadDarkWallpaper().flatMap { UIImage(data: $0)?.cgImage } : nil
-        if let image = bright, !fits(image) {
-            bright = nil
-            message = "The Light Mode screenshot and the pink one have different sizes. Take both on this iPhone, held upright."
-        }
-        var staleDark = false
-        if let image = dark, !fits(image) {
+        if let bright, let image = dark, image.width != bright.width || image.height != bright.height {
             dark = nil
-            staleDark = true
-            message = "The Dark Mode screenshot and the pink one have different sizes. Take both on this iPhone, held upright."
+            message = "The Light and Dark Mode screenshots have different sizes. Take both on this iPhone, held upright."
         }
-        guard bright != nil || dark != nil || staleDark else { return }
+        guard let reference = bright ?? dark else { return }
         working = true
         defer { working = false }
         let store = self.store
-        await Task.detached(priority: .userInitiated) { [bright, dark, staleDark] in
-            if let bright {
-                store.removeSpotImages()
-                for spot in state.spots {
-                    if let png = SeeThroughMaker.crop(bright, to: spot.rect) {
-                        store.saveSpotImage(png, key: spot.key)
-                    }
+        let signature = cutSignature()
+        let grid = HomeGrid.make(width: CGFloat(reference.width), height: CGFloat(reference.height),
+                                 scale: CGFloat(reference.width) / Self.screenPointsWide,
+                                 sizes: store.loadSizes(), offsetY: state.offsetY)
+        await Task.detached(priority: .userInitiated) { [bright, dark] in
+            store.removeSpotImages()
+            store.removeDarkSpotImages()
+            for slot in HomeSlot.all {
+                let rect = grid.rect(for: slot)
+                if let bright, let png = SeeThroughMaker.crop(bright, to: rect) {
+                    store.saveSpotImage(png, key: slot.key)
                 }
-            }
-            // Old dark pieces may sit where widgets no longer are: drop them, so Dark
-            // Mode falls back to the bright piece instead of showing a wrong one.
-            if dark != nil || staleDark { store.removeDarkSpotImages() }
-            if let dark {
-                for spot in state.spots {
-                    if let png = SeeThroughMaker.crop(dark, to: spot.rect) {
-                        store.saveDarkSpotImage(png, key: spot.key)
-                    }
+                if let dark, let png = SeeThroughMaker.crop(dark, to: rect) {
+                    store.saveDarkSpotImage(png, key: slot.key)
                 }
             }
         }.value
+        seeThrough.cutSignature = signature
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -227,5 +212,11 @@ final class AppModel: ObservableObject {
             .compactMap { ($0 as? UIWindowScene)?.screen }
             .first
         return screen?.bounds.width ?? 393
+    }
+}
+
+private extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }

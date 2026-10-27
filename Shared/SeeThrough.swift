@@ -1,174 +1,179 @@
-import SwiftUI
+import AppIntents
+import CoreGraphics
 
 // See-through widgets on the normal Home Screen: each widget shows the piece of
-// wallpaper behind it, cut from a screenshot of an empty Home Screen page.
+// wallpaper behind it, cut from two screenshots of an empty Home Screen page (Light and
+// Dark Mode). That is all the person does.
 //
-// To learn where each widget sits, every widget turns pink for a moment and shows
-// its key as 4 × 4 black and white squares. One screenshot of the Home Screen then
-// gives the app each widget's exact frame and which widget it is.
+// WidgetKit never tells a widget where it sits, so the app cuts a piece for every slot
+// of the iPhone's widget grid, and each widget picks its slot in Edit Widget (Position,
+// and Side for small widgets). Top left is the default.
+//
+// The grid comes from the screenshot itself: the Home Screen grid is centred, so the
+// left edge is (width − medium width) / 2, and a large widget spans two small rows, so
+// the row gap is large height − 2 × small height. Widget sizes are the real ones the
+// widget reports once it has been on the Home Screen, or a per-iPhone table until then.
+// Only the grid's top edge needs the table outright; `offsetY` nudges it where a model
+// differs.
 
 enum SpotFamily: Int, Codable, CaseIterable {
     case small, medium, large, max
 }
 
-/// Which widget a background belongs to: its size (2 bits) and a 14-bit hash of what
-/// it shows. Two widgets of the same size with the same clock and apps share a key.
-enum SpotKey {
-    static func make(family: SpotFamily, clock: ClockOption, apps: [String]) -> Int {
-        // FNV-1a: stable across launches, unlike Hasher.
-        var hash: UInt32 = 2_166_136_261
-        for byte in "\(clock.rawValue)|\(apps.joined(separator: "\u{1F}"))".utf8 {
-            hash = (hash ^ UInt32(byte)) &* 16_777_619
-        }
-        let short = Int((hash >> 16) ^ (hash & 0xFFFF)) & 0x3FFF
-        return family.rawValue << 14 | short
-    }
+/// The row a widget sits in. A large widget spans two rows, so it is either at the top
+/// or starts in the middle row.
+enum SlotRow: Int, Codable, CaseIterable, AppEnum {
+    case top, middle, bottom
 
-    /// The Apps widget's key, the same one the timeline provider makes: with a design,
-    /// the design is part of the key (and the clock is not), so the same apps in a design
-    /// never take the plain widget's piece.
-    static func make(family: SpotFamily, clock: ClockOption, apps: [String], design: UUID?) -> Int {
-        design.map { make(family: family, clock: .off, apps: ["design:" + $0.uuidString] + apps) }
-            ?? make(family: family, clock: clock, apps: apps)
-    }
-
-    static func family(of key: Int) -> SpotFamily? {
-        SpotFamily(rawValue: (key >> 14) & 0x3)
-    }
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Position"
+    static let caseDisplayRepresentations: [SlotRow: DisplayRepresentation] = [
+        .top: "Top", .middle: "Middle", .bottom: "Bottom",
+    ]
 }
 
-/// Where one widget sits, in screenshot pixels.
-struct Spot: Codable, Hashable {
-    var key: Int
-    var x: Double
-    var y: Double
-    var width: Double
-    var height: Double
+/// The half of the row a small widget sits in.
+enum SlotSide: Int, Codable, CaseIterable, AppEnum {
+    case left, right
 
-    init(key: Int, rect: CGRect) {
-        self.key = key
-        x = Double(rect.minX)
-        y = Double(rect.minY)
-        width = Double(rect.width)
-        height = Double(rect.height)
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Side"
+    static let caseDisplayRepresentations: [SlotSide: DisplayRepresentation] = [
+        .left: "Left", .right: "Right",
+    ]
+}
+
+/// One place a widget can sit. Only places that exist: a medium, large or extra-large
+/// widget fills the row's width, a large one can't start in the bottom row, and an
+/// extra-large one fills the page.
+struct HomeSlot: Hashable {
+    let family: SpotFamily
+    let row: SlotRow
+    let side: SlotSide
+
+    init(family: SpotFamily, row: SlotRow, side: SlotSide) {
+        self.family = family
+        switch family {
+        case .small:
+            self.row = row
+            self.side = side
+        case .medium:
+            self.row = row
+            self.side = .left
+        case .large:
+            self.row = row == .top ? .top : .middle
+            self.side = .left
+        case .max:
+            self.row = .top
+            self.side = .left
+        }
     }
 
-    var rect: CGRect { CGRect(x: x, y: y, width: width, height: height) }
+    /// File name of this slot's piece.
+    var key: Int { family.rawValue << 4 | row.rawValue << 1 | side.rawValue }
+
+    static let all: [HomeSlot] = {
+        var slots: [HomeSlot] = []
+        for family in SpotFamily.allCases {
+            for row in SlotRow.allCases {
+                for side in SlotSide.allCases {
+                    let slot = HomeSlot(family: family, row: row, side: side)
+                    if !slots.contains(slot) { slots.append(slot) }
+                }
+            }
+        }
+        return slots
+    }()
+}
+
+/// The widget grid of one iPhone's Home Screen, in screenshot pixels.
+struct HomeGrid: Equatable {
+    var small: CGSize
+    var medium: CGSize
+    var large: CGSize
+    var max: CGSize
+    var left: CGFloat
+    var top: CGFloat
+    var rowGap: CGFloat
+
+    /// Where `slot` sits in the screenshot.
+    func rect(for slot: HomeSlot) -> CGRect {
+        let size: CGSize
+        switch slot.family {
+        case .small: size = small
+        case .medium: size = medium
+        case .large: size = large
+        case .max: size = max
+        }
+        let x = slot.side == .right ? left + medium.width - small.width : left
+        let y = top + CGFloat(slot.row.rawValue) * (small.height + rowGap)
+        return CGRect(x: x, y: y, width: size.width, height: size.height).integral
+    }
+
+    /// Published Home Screen layouts, keyed by screenshot height in pixels: small widget
+    /// side, medium width, large height, top edge of the grid. Sizes are replaced by the
+    /// widget's real ones once known; the top edge is the part only this table gives.
+    private static let table: [Int: (small: CGFloat, medium: CGFloat, large: CGFloat, top: CGFloat)] = [
+        2868: (510, 1092, 1146, 276),   // 16 Pro Max, 17 Pro Max
+        2796: (510, 1092, 1146, 282),   // 14 Pro Max, 15 Plus, 15 Pro Max, 16 Plus
+        2778: (510, 1092, 1146, 246),   // 12 Pro Max, 13 Pro Max, 14 Plus
+        2688: (507, 1080, 1137, 228),   // XS Max, 11 Pro Max
+        2622: (486, 1032, 1098, 273),   // 16 Pro, 17, 17 Pro (top edge estimated)
+        2556: (474, 1014, 1062, 270),   // 14 Pro, 15, 15 Pro, 16
+        2532: (474, 1014, 1062, 231),   // 12, 12 Pro, 13, 13 Pro, 14
+        2436: (465, 987, 1035, 213),    // X, XS, 11 Pro
+        1792: (338, 720, 758, 160),     // XR, 11
+    ]
+
+    /// The grid for a screenshot `width` × `height` pixels taken at `scale` pixels per
+    /// point. `sizes` are the real widget sizes in points the widget reported;
+    /// `offsetY` (points) moves the whole grid down, or up when negative.
+    static func make(width: CGFloat, height: CGFloat, scale: CGFloat,
+                     sizes: [SpotFamily: CGSize], offsetY: CGFloat) -> HomeGrid {
+        let known = table[Int(height.rounded())]
+        func reported(_ family: SpotFamily) -> CGSize? {
+            sizes[family].map { CGSize(width: $0.width * scale, height: $0.height * scale) }
+        }
+        // Without a table entry: proportions shared by every iPhone in the table.
+        let smallSide = known?.small ?? (width * 0.402).rounded()
+        let small = reported(.small) ?? CGSize(width: smallSide, height: smallSide)
+        let mediumWidth = known?.medium ?? (width * 0.856).rounded()
+        let medium = reported(.medium) ?? CGSize(width: mediumWidth, height: small.height)
+        let largeHeight = known?.large ?? (small.height * 2.24).rounded()
+        let large = reported(.large) ?? CGSize(width: medium.width, height: largeHeight)
+        let rowGap = Swift.max(0, large.height - 2 * small.height)
+        let max = reported(.max) ?? CGSize(width: medium.width, height: 3 * small.height + 2 * rowGap)
+        let top = (known?.top ?? (height * 0.1).rounded()) + offsetY * scale
+        return HomeGrid(small: small, medium: medium, large: large, max: max,
+                        left: ((width - medium.width) / 2).rounded(), top: top.rounded(), rowGap: rowGap)
+    }
 }
 
 struct SeeThroughState: Codable, Hashable {
-    /// While true every widget turns pink and shows its key.
-    var finding = false
-    var spots: [Spot] = []
-    /// Pixel size of the pink screenshot the spots come from.
-    var spotsWidth: Double = 0
-    var spotsHeight: Double = 0
     /// The bright (Light Mode) wallpaper screenshot.
     var hasWallpaper = false
-    /// The same Home Screen page in Dark Mode. The spots serve both: widgets don't move
-    /// when the appearance changes.
+    /// The same Home Screen page in Dark Mode. Both are cut at the same slots: widgets
+    /// don't move when the appearance changes.
     var hasDarkWallpaper = false
+    /// Moves every piece down (or up when negative), in points, for an iPhone whose grid
+    /// sits a little differently from the table.
+    var offsetY: Double = 0
+    /// What the pieces were last cut for. When it changes (new screenshot, new real
+    /// widget sizes, a nudge) the app cuts them again.
+    var cutSignature = ""
 
-    /// Both wallpapers and at least one matched widget: every widget found has a piece
-    /// for Light and for Dark Mode.
-    var isComplete: Bool { hasWallpaper && hasDarkWallpaper && !spots.isEmpty }
+    /// Both screenshots are in: every slot has a piece for Light and Dark Mode.
+    var isComplete: Bool { hasWallpaper && hasDarkWallpaper }
 
     init() {}
 
-    enum CodingKeys: String, CodingKey { case finding, spots, spotsWidth, spotsHeight, hasWallpaper, hasDarkWallpaper }
+    enum CodingKeys: String, CodingKey { case hasWallpaper, hasDarkWallpaper, offsetY, cutSignature }
 
+    // Builds that matched widgets with a pink screenshot stored more; those fields are
+    // simply ignored.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        finding = try c.decodeIfPresent(Bool.self, forKey: .finding) ?? false
-        spots = try c.decodeIfPresent([Spot].self, forKey: .spots) ?? []
-        spotsWidth = try c.decodeIfPresent(Double.self, forKey: .spotsWidth) ?? 0
-        spotsHeight = try c.decodeIfPresent(Double.self, forKey: .spotsHeight) ?? 0
         hasWallpaper = try c.decodeIfPresent(Bool.self, forKey: .hasWallpaper) ?? false
         hasDarkWallpaper = try c.decodeIfPresent(Bool.self, forKey: .hasDarkWallpaper) ?? false
-    }
-}
-
-/// What a widget shows while the app looks for it: its key as 16 squares on pink
-/// (the pink is the widget's container background).
-struct SpotCode: View {
-    let key: Int
-
-    static let marker = Color(red: 1, green: 0, blue: 1)
-    /// Side of the code square, as a share of the widget's shorter side.
-    static let sideRatio: CGFloat = 0.6
-
-    var body: some View {
-        GeometryReader { geo in
-            let cell = min(geo.size.width, geo.size.height) * Self.sideRatio / 4
-            VStack(spacing: 0) {
-                ForEach(0..<4, id: \.self) { row in
-                    HStack(spacing: 0) {
-                        ForEach(0..<4, id: \.self) { column in
-                            Rectangle()
-                                .fill(Self.bit(key, row * 4 + column) ? Color.black : Color.white)
-                                .frame(width: cell, height: cell)
-                        }
-                    }
-                }
-            }
-            .position(x: geo.size.width / 2, y: geo.size.height / 2)
-        }
-    }
-
-    /// Bit `index` (0 = top left, row by row) of `key`.
-    static func bit(_ key: Int, _ index: Int) -> Bool {
-        (key >> (15 - index)) & 1 == 1
-    }
-}
-
-// MARK: - Positions for Edit Widget
-
-extension SeeThroughState {
-    /// A matched spot with a stable id and a name a person can pick in Edit Widget.
-    struct NamedSpot: Hashable {
-        let id: String
-        let key: Int
-        let name: String
-    }
-
-    /// The matched spots top to bottom, left to right, named by size and place:
-    /// "Small · top left", "Medium · middle". Two spots with the same name get a number.
-    var namedSpots: [NamedSpot] {
-        guard spotsWidth > 0, spotsHeight > 0 else { return [] }
-        let ordered = spots.sorted { ($0.y, $0.x) < ($1.y, $1.x) }
-        var seen: [String: Int] = [:]
-        return ordered.map { spot in
-            var name = "\(Self.sizeName(of: spot.key)) · \(placeName(of: spot))"
-            seen[name, default: 0] += 1
-            if let count = seen[name], count > 1 { name += " \(count)" }
-            return NamedSpot(id: Self.id(of: spot), key: spot.key, name: name)
-        }
-    }
-
-    func spot(withID id: String) -> Spot? {
-        spots.first { Self.id(of: $0) == id }
-    }
-
-    static func id(of spot: Spot) -> String {
-        "\(spot.key)@\(Int(spot.x)),\(Int(spot.y))"
-    }
-
-    private static func sizeName(of key: Int) -> String {
-        switch SpotKey.family(of: key) {
-        case .small: return String(localized: "Small")
-        case .medium: return String(localized: "Medium")
-        case .large: return String(localized: "Large")
-        case .max, .none: return String(localized: "Extra large")
-        }
-    }
-
-    /// Thirds of the screen: top/middle/bottom and left/centre/right.
-    private func placeName(of spot: Spot) -> String {
-        let column = (spot.x + spot.width / 2) / spotsWidth
-        let row = (spot.y + spot.height / 2) / spotsHeight
-        let vertical = row < 1 / 3 ? String(localized: "top") : row > 2 / 3 ? String(localized: "bottom") : String(localized: "middle")
-        if column < 1 / 3 { return "\(vertical) \(String(localized: "left"))" }
-        if column > 2 / 3 { return "\(vertical) \(String(localized: "right"))" }
-        return vertical
+        offsetY = try c.decodeIfPresent(Double.self, forKey: .offsetY) ?? 0
+        cutSignature = try c.decodeIfPresent(String.self, forKey: .cutSignature) ?? ""
     }
 }

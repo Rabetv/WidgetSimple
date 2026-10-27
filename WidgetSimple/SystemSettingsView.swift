@@ -215,10 +215,9 @@ struct SystemSettingsView: View {
     private var wallpaperStatus: String {
         let state = model.seeThrough
         if model.look.background == .photo { return "Photo" }
-        if state.finding { return "Matching" }
         if state.isComplete { return "Ready" }
-        let done = [state.hasWallpaper, state.hasDarkWallpaper, !state.spots.isEmpty].filter { $0 }.count
-        return "\(done) of 3"
+        let done = [state.hasWallpaper, state.hasDarkWallpaper].filter { $0 }.count
+        return "\(done) of 2"
     }
 
     private var wallpaperDetail: String {
@@ -227,10 +226,9 @@ struct SystemSettingsView: View {
             return "Your widgets show your own photo. Open to change it or go back to see-through."
         }
         if state.isComplete {
-            let count = state.spots.count
-            return "Light and dark screenshots, \(count) \(count == 1 ? "widget" : "widgets") matched. Redo it after you change the wallpaper or move a widget."
+            return "Light and Dark Mode screenshots are in. Redo them after you change the wallpaper; pick each widget's spot in Edit Widget › Position."
         }
-        return "Finish the screenshots so your widgets show the wallpaper behind them in Light and Dark Mode."
+        return "Add the two screenshots so your widgets show the wallpaper behind them in Light and Dark Mode."
     }
 
     private func actionRow(_ title: String, detail: String? = nil, symbol: String,

@@ -63,7 +63,7 @@ final class SharedStore: @unchecked Sendable {
         return UIImage(cgImage: image)
     }
 
-    // MARK: Matched wallpaper (App Store see-through, public API only)
+    // MARK: Wallpaper pieces (one per Home Screen slot, public API only)
 
     var seeThroughURL: URL { rootURL.appendingPathComponent("see-through.json") }
     var wallpaperURL: URL { rootURL.appendingPathComponent("wallpaper.png") }
@@ -96,10 +96,10 @@ final class SharedStore: @unchecked Sendable {
         removeFiles(in: spotsURL)
     }
 
-    /// The wallpaper piece for a widget: its own, or the only one of its size.
-    /// nil means "not matched", which the widget renders as the system background.
-    func spotImage(key: Int, state: SeeThroughState) -> UIImage? {
-        piece(key: key, state: state, url: spotImageURL)
+    /// The wallpaper piece for a slot (`HomeSlot.key`). nil means no piece yet, which
+    /// the widget renders as the system background.
+    func spotImage(key: Int) -> UIImage? {
+        UIImage(contentsOfFile: spotImageURL(key: key).path)
     }
 
     // The same Home Screen page in Dark Mode: its own screenshot and pieces, cut at the
@@ -126,17 +126,9 @@ final class SharedStore: @unchecked Sendable {
         removeFiles(in: darkSpotsURL)
     }
 
-    /// The Dark Mode piece for a widget, found like `spotImage(key:state:)`.
-    func darkSpotImage(key: Int, state: SeeThroughState) -> UIImage? {
-        piece(key: key, state: state, url: darkSpotImageURL)
-    }
-
-    private func piece(key: Int, state: SeeThroughState, url: (Int) -> URL) -> UIImage? {
-        if let image = UIImage(contentsOfFile: url(key).path) { return image }
-        let family = SpotKey.family(of: key)
-        let sameSize = state.spots.filter { SpotKey.family(of: $0.key) == family }
-        guard sameSize.count == 1 else { return nil }
-        return UIImage(contentsOfFile: url(sameSize[0].key).path)
+    /// The Dark Mode piece for a slot; nil falls back to the bright one.
+    func darkSpotImage(key: Int) -> UIImage? {
+        UIImage(contentsOfFile: darkSpotImageURL(key: key).path)
     }
 
     private func removeFiles(in directory: URL) {

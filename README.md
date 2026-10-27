@@ -9,8 +9,9 @@ widget. Tap a word and the app opens.
   as a word in the font you chose. A tap opens that app directly
   (`RunSystemShortcutIntent`, iOS 27).
 - **Matched wallpaper.** Each widget draws the piece of wallpaper that sits behind it,
-  cut from screenshots of an empty Home Screen page (Light and Dark Mode) and one
-  screenshot that shows where the widgets are. Public API only.
+  cut from two screenshots of an empty Home Screen page (Light and Dark Mode). The app
+  cuts a piece for every slot of the iPhone's widget grid; each widget picks its slot in
+  Edit Widget (Position, Side). Public API only.
 - **Style it in the app.** Font (system, rounded, serif, mono, 40 built-in families,
   your own `.ttf`/`.otf`), size slider, alignment, letter case, white/black/any colour,
   soft shadow, line spacing.

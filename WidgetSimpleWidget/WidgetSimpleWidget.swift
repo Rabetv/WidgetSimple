@@ -63,9 +63,10 @@ struct DirectLauncherIntent: WidgetConfigurationIntent {
 
     // First in Edit Widget. Added after the apps; widgets placed earlier keep them.
     @Parameter(title: "Design") var design: DesignEntity?
-    // Which matched spot of the wallpaper this widget sits on. Empty means automatic:
-    // the spot found for this widget's size and apps.
-    @Parameter(title: "Position") var position: PositionEntity?
+    // Where the widget sits on the Home Screen, so it shows the wallpaper behind that
+    // spot. WidgetKit doesn't tell a widget its place; top left is the default.
+    @Parameter(title: "Position", default: .top) var row: SlotRow
+    @Parameter(title: "Side (small widget)", default: .left) var side: SlotSide
     // Per-widget touches on top of the look set in the app.
     @Parameter(title: "Text size", default: .app) var textSize: WordScale
     @Parameter(title: "Text colour", default: .app) var textColour: InkOverride
@@ -115,8 +116,6 @@ struct LauncherEntry: TimelineEntry {
     var tappable = true
     /// Black over the wallpaper piece, 0…1, so light words stay readable.
     var dim = 0.0
-    /// Set while the app is finding the widgets: show this key on pink.
-    var findingKey: Int? = nil
 
     static func sample(look: Look) -> LauncherEntry {
         LauncherEntry(date: .now, look: look, clock: .time, apps: [],
@@ -202,24 +201,16 @@ struct LauncherProvider: AppIntentTimelineProvider {
             }
         }
         #if APPSTORE
-        // Public-API see-through: draw the piece of wallpaper behind this widget.
-        // No match (never set up, wallpaper changed, widget moved) means the system
-        // background — never a wrong piece. A design is part of the key, so the same
-        // apps in a design never take the plain widget's piece.
+        // Public-API see-through: draw the piece of wallpaper cut for this widget's slot
+        // (Position and Side in Edit Widget). No piece yet means the system background.
         if !context.isPreview, let family = SpotFamily(context.family) {
-            let key = SpotKey.make(family: family, clock: clock, apps: names, design: design?.id)
             let state = SharedStore.shared.loadSeeThrough()
             if !state.hasWallpaper || !state.hasDarkWallpaper {
                 entry.needsSetup = true
-            } else if state.finding {
-                entry.findingKey = key
-            } else if let picked = configuration.position.flatMap({ state.spot(withID: $0.id) }) {
-                // Picked in Edit Widget: that spot's piece, whatever the widget shows.
-                entry.background = SharedStore.shared.spotImage(key: picked.key, state: state)
-                entry.darkBackground = SharedStore.shared.darkSpotImage(key: picked.key, state: state)
             } else {
-                entry.background = SharedStore.shared.spotImage(key: key, state: state)
-                entry.darkBackground = SharedStore.shared.darkSpotImage(key: key, state: state)
+                let slot = HomeSlot(family: family, row: configuration.row, side: configuration.side)
+                entry.background = SharedStore.shared.spotImage(key: slot.key)
+                entry.darkBackground = SharedStore.shared.darkSpotImage(key: slot.key)
             }
         }
         #endif
@@ -279,36 +270,6 @@ enum WidgetLog {
         } else {
             try? Data(line.utf8).write(to: file)
         }
-    }
-}
-
-/// A matched spot of the wallpaper, as Edit Widget lists it: its size and where it
-/// sits, e.g. "Small · top left". Found by the matching step in the app.
-struct PositionEntity: AppEntity {
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Position"
-    static let defaultQuery = PositionQuery()
-
-    let id: String
-    let name: String
-
-    var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(name)")
-    }
-}
-
-/// Lists the spots from the last matching screenshot. A spot that is gone (matched
-/// again since) still resolves, so the widget keeps its other settings and falls back
-/// to automatic.
-struct PositionQuery: EntityQuery {
-    func entities(for identifiers: [String]) async throws -> [PositionEntity] {
-        let spots = SharedStore.shared.loadSeeThrough().namedSpots
-        return identifiers.map { id in
-            PositionEntity(id: id, name: spots.first { $0.id == id }?.name ?? String(localized: "Automatic"))
-        }
-    }
-
-    func suggestedEntities() async throws -> [PositionEntity] {
-        SharedStore.shared.loadSeeThrough().namedSpots.map { PositionEntity(id: $0.id, name: $0.name) }
     }
 }
 
@@ -408,12 +369,6 @@ struct LauncherWidgetView: View {
                 // No buttons, so a tap opens the app at its setup screen.
                 SetupPrompt()
                     .containerBackground(for: .widget) { Color.clear }
-            } else if let key = entry.findingKey {
-                // The app is looking for the widgets: pink with a code it can read.
-                // The container itself must be magenta, or the screenshot finder has
-                // no rectangle to measure.
-                SpotCode(key: key)
-                    .containerBackground(for: .widget) { SpotCode.marker }
             } else {
                 face
                     .containerBackground(for: .widget) { widgetBackground }
