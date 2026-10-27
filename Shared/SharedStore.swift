@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import UIKit
 
 /// File-based storage in the App Group container, shared by the app and the widget.
@@ -28,7 +29,7 @@ final class SharedStore: @unchecked Sendable {
             rootURL = docs.appendingPathComponent("WidgetSimple", isDirectory: true)
             isAppGroupAvailable = false
         }
-        for dir in [rootURL, fontsURL, spotsURL] {
+        for dir in [rootURL, fontsURL, spotsURL, darkSpotsURL] {
             try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
     }
@@ -48,11 +49,49 @@ final class SharedStore: @unchecked Sendable {
         try? data.write(to: backgroundImageURL, options: .atomic)
     }
 
+    /// The photo, at most 1200 px on its long side. A full-size camera photo decodes to
+    /// tens of megabytes, more than a widget extension may use, and the widget then
+    /// renders blank.
     func loadBackgroundImage() -> UIImage? {
-        UIImage(contentsOfFile: backgroundImageURL.path)
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 1200,
+        ]
+        guard let source = CGImageSourceCreateWithURL(backgroundImageURL as CFURL, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return UIImage(cgImage: image)
     }
 
-    // MARK: Matched wallpaper (App Store see-through, public API only)
+    // MARK: Photo blocks
+
+    var blockPhotosURL: URL { rootURL.appendingPathComponent("BlockPhotos", isDirectory: true) }
+
+    func blockPhotoURL(_ id: UUID) -> URL {
+        blockPhotosURL.appendingPathComponent("\(id.uuidString).jpg")
+    }
+
+    /// Saves a Photo block's picture at most 420 px on its long side: WidgetKit refuses
+    /// an image larger than the widget, and a small widget is about 470 px square.
+    @discardableResult
+    func saveBlockPhoto(_ data: Data, for id: UUID) -> Bool {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 420,
+        ]
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary),
+              let jpeg = UIImage(cgImage: image).jpegData(compressionQuality: 0.85) else { return false }
+        try? FileManager.default.createDirectory(at: blockPhotosURL, withIntermediateDirectories: true)
+        return (try? jpeg.write(to: blockPhotoURL(id), options: .atomic)) != nil
+    }
+
+    func loadBlockPhoto(_ id: UUID) -> UIImage? {
+        UIImage(contentsOfFile: blockPhotoURL(id).path)
+    }
+
+    // MARK: Wallpaper pieces (one per Home Screen slot, public API only)
 
     var seeThroughURL: URL { rootURL.appendingPathComponent("see-through.json") }
     var wallpaperURL: URL { rootURL.appendingPathComponent("wallpaper.png") }
@@ -82,20 +121,49 @@ final class SharedStore: @unchecked Sendable {
     }
 
     func removeSpotImages() {
-        let fm = FileManager.default
-        for url in (try? fm.contentsOfDirectory(at: spotsURL, includingPropertiesForKeys: nil)) ?? [] {
-            try? fm.removeItem(at: url)
-        }
+        removeFiles(in: spotsURL)
     }
 
-    /// The wallpaper piece for a widget: its own, or the only one of its size.
-    /// nil means "not matched", which the widget renders as the system background.
-    func spotImage(key: Int, state: SeeThroughState) -> UIImage? {
-        if let image = UIImage(contentsOfFile: spotImageURL(key: key).path) { return image }
-        let family = SpotKey.family(of: key)
-        let sameSize = state.spots.filter { SpotKey.family(of: $0.key) == family }
-        guard sameSize.count == 1 else { return nil }
-        return UIImage(contentsOfFile: spotImageURL(key: sameSize[0].key).path)
+    /// The wallpaper piece for a slot (`HomeSlot.key`). nil means no piece yet, which
+    /// the widget renders as the system background.
+    func spotImage(key: Int) -> UIImage? {
+        UIImage(contentsOfFile: spotImageURL(key: key).path)
+    }
+
+    // The same Home Screen page in Dark Mode: its own screenshot and pieces, cut at the
+    // same spots. The widget falls back to the bright piece when there is no dark one.
+
+    var darkWallpaperURL: URL { rootURL.appendingPathComponent("wallpaper-dark.png") }
+    var darkSpotsURL: URL { rootURL.appendingPathComponent("SpotsDark", isDirectory: true) }
+
+    func darkSpotImageURL(key: Int) -> URL { darkSpotsURL.appendingPathComponent("\(key).png") }
+
+    func saveDarkWallpaper(_ data: Data) {
+        try? data.write(to: darkWallpaperURL, options: .atomic)
+    }
+
+    func loadDarkWallpaper() -> Data? {
+        try? Data(contentsOf: darkWallpaperURL)
+    }
+
+    func saveDarkSpotImage(_ png: Data, key: Int) {
+        try? png.write(to: darkSpotImageURL(key: key), options: .atomic)
+    }
+
+    func removeDarkSpotImages() {
+        removeFiles(in: darkSpotsURL)
+    }
+
+    /// The Dark Mode piece for a slot; nil falls back to the bright one.
+    func darkSpotImage(key: Int) -> UIImage? {
+        UIImage(contentsOfFile: darkSpotImageURL(key: key).path)
+    }
+
+    private func removeFiles(in directory: URL) {
+        let fm = FileManager.default
+        for url in (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? [] {
+            try? fm.removeItem(at: url)
+        }
     }
 
     /// Real on-screen widget sizes in points, reported by the widget.
@@ -124,13 +192,6 @@ final class SharedStore: @unchecked Sendable {
 
     func loadViewLog() -> String {
         (try? String(contentsOf: viewLogURL, encoding: .utf8)) ?? "Nothing yet. Add the widget, then come back."
-    }
-
-    /// What the descriptor hook wrote: install result and every descriptor it rewrote.
-    var hookLogURL: URL { rootURL.appendingPathComponent("hook.log") }
-
-    func loadHookLog() -> String {
-        (try? String(contentsOf: hookLogURL, encoding: .utf8)) ?? ""
     }
 
     func clearViewLog() {
@@ -165,6 +226,18 @@ final class SharedStore: @unchecked Sendable {
 
     func saveClock(_ clock: ClockOption) {
         write(clock, to: clockURL)
+    }
+
+    // MARK: Designs (built in the app, picked per widget in Edit Widget)
+
+    var designsURL: URL { rootURL.appendingPathComponent("designs.json") }
+
+    func loadDesigns() -> [WidgetDesign] {
+        read([WidgetDesign].self, from: designsURL) ?? []
+    }
+
+    func saveDesigns(_ designs: [WidgetDesign]) {
+        write(designs, to: designsURL)
     }
 
     // MARK: Custom fonts index

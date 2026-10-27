@@ -11,6 +11,16 @@
 #   APP_STORE_CONNECT_KEY_IDENTIFIER  Key ID of the API key (Admin role)
 #   APP_STORE_CONNECT_PRIVATE_KEY     Full contents of the AuthKey_XXXX.p8 file
 #   CERTIFICATE_PRIVATE_KEY           RSA private key (PEM) of the distribution certificate
+#
+# TestFlight and App Store builds use separate keys. The job runs in a GitHub
+# environment (Settings › Environments) picked by `paywall_unlock`:
+#   testflight   tester builds (unlock button on)
+#   app-store    the build submitted to App Review (unlock button off)
+# Put the App Store Connect API key meant for App Store releases into the
+# `app-store` environment's secrets, under the same three APP_STORE_CONNECT_*
+# names; environment secrets override the repository ones. Add yourself as a
+# required reviewer there, so an App Store upload waits for your approval.
+# An environment without its own secrets falls back to the repository secrets.
 
 name: TestFlight
 
@@ -37,6 +47,7 @@ jobs:
   upload:
     runs-on: xcode-27
     timeout-minutes: 45
+    environment: ${{ inputs.paywall_unlock && 'testflight' || 'app-store' }}
     env:
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
@@ -197,12 +208,10 @@ jobs:
             ${EXTRA[@]+"${EXTRA[@]}"} \
             archive
 
-      # Gate before anything reaches App Store Connect: the archived binaries, not the
-      # sources, must be free of the hook.
-      - name: "Audit App Store archive (report only: the hook is included)"
-        continue-on-error: true
+      # Every build must pass the audit before anything reaches App Store Connect.
+      - name: "Audit App Store archive"
         run: |
-          set -o pipefail
+          set -euo pipefail
           Scripts/audit-appstore.sh "$RUNNER_TEMP/WidgetSimple.xcarchive/Products/Applications/WidgetSimple.app" 2>&1 | tee "$RUNNER_TEMP/audit.log"
           { echo '### App Store archive audit'; echo '```'; cat "$RUNNER_TEMP/audit.log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 

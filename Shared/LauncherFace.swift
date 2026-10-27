@@ -3,7 +3,8 @@ import WidgetKit
 
 /// Widget size, as far as the layout cares.
 enum FaceSize: String, CaseIterable, Identifiable {
-    case small, medium, large
+    /// `.extraLarge` is `.systemExtraLargePortrait`: as wide as large, three rows tall.
+    case small, medium, large, extraLarge
 
     var id: String { rawValue }
 
@@ -12,6 +13,7 @@ enum FaceSize: String, CaseIterable, Identifiable {
         case .small: return "Small"
         case .medium: return "Medium"
         case .large: return "Large"
+        case .extraLarge: return "XL"
         }
     }
 
@@ -21,6 +23,18 @@ enum FaceSize: String, CaseIterable, Identifiable {
         case .small: return 158.0 / 158.0
         case .medium: return 338.0 / 158.0
         case .large: return 338.0 / 354.0
+        case .extraLarge: return 338.0 / 550.0
+        }
+    }
+
+    /// The widget's real size in points on a 393-point-wide iPhone; other iPhones scale
+    /// it a little. Extra large is three small rows and their two gaps.
+    var pointSize: CGSize {
+        switch self {
+        case .small: return CGSize(width: 158, height: 158)
+        case .medium: return CGSize(width: 338, height: 158)
+        case .large: return CGSize(width: 338, height: 354)
+        case .extraLarge: return CGSize(width: 338, height: 550)
         }
     }
 }
@@ -44,10 +58,16 @@ struct LauncherFace<Cell: View>: View {
     let color: Color
     /// Shown when there is nothing else to show.
     var hint: String = ""
+    /// The room kept clear inside each edge; nil keeps the widget's own edge padding.
+    /// A design narrows it on the side its modules sit.
+    var insets: EdgeInsets? = nil
     @ViewBuilder let cell: (Int, AppName) -> Cell
 
     private var align: HorizontalAlignment { look.align.horizontal }
     private var edgePadding: CGFloat { size == .small ? 16 : 20 }
+    private var padding: EdgeInsets {
+        insets ?? EdgeInsets(top: edgePadding, leading: edgePadding, bottom: edgePadding, trailing: edgePadding)
+    }
     private var isEmpty: Bool { apps.isEmpty && clock == .off }
 
     var body: some View {
@@ -76,7 +96,7 @@ struct LauncherFace<Cell: View>: View {
                 candidateLayouts
             }
         }
-        .padding(edgePadding)
+        .padding(padding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.alignment)
     }
 
@@ -130,7 +150,7 @@ struct LauncherFace<Cell: View>: View {
             if clock != .off {
                 ClockText(date: date, option: clock, look: look, size: size)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.clockPosition.alignment)
-                    .padding(edgePadding)
+                    .padding(padding)
                     .offset(x: look.clockDX, y: look.clockDY)
             }
             if !apps.isEmpty {
@@ -139,7 +159,7 @@ struct LauncherFace<Cell: View>: View {
                 } else {
                     appList
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: look.appsPosition.alignment)
-                        .padding(edgePadding)
+                        .padding(padding)
                         .offset(x: look.appsDX, y: look.appsDY)
                 }
             }
@@ -155,7 +175,7 @@ struct LauncherFace<Cell: View>: View {
             ForEach(apps.indices, id: \.self) { index in
                 cell(index, AppName(name: apps[index], look: look, fillWidth: false))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: anchor(for: index).alignment)
-                    .padding(edgePadding)
+                    .padding(padding)
                     .offset(x: look.appsDX, y: look.appsDY)
             }
         }
@@ -271,7 +291,7 @@ struct ClockText: View {
         switch size {
         case .small: return base * 1.8
         case .medium: return base * 2.2
-        case .large: return base * 2.8
+        case .large, .extraLarge: return base * 2.8
         }
     }
 

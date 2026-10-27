@@ -157,10 +157,6 @@ final class LicenseStore: ObservableObject {
     @Published private(set) var status: Status = .checking
     @Published private(set) var message: String?
     @Published private(set) var busy = false
-    @Published private(set) var product: Product?
-    /// The free trial set up in App Store Connect, when this Apple Account can still
-    /// get it (one introductory offer per subscription group and person).
-    @Published private(set) var trial: Product.SubscriptionOffer?
 
     private var updates: Task<Void, Never>?
 
@@ -201,74 +197,9 @@ final class LicenseStore: ObservableObject {
         }
     }
 
-    /// "€1 per year", in the person's storefront currency once the product has loaded.
-    var priceLine: String {
-        guard let product else { return "" }
-        return String(localized: "\(product.displayPrice) per year")
-    }
-
-    /// "3 months free", or nil when there is no trial for this person.
-    var trialLine: String? {
-        guard let trial else { return nil }
-        let count = trial.period.value * trial.periodCount
-        switch trial.period.unit {
-        case .day: return count == 1 ? String(localized: "1 day free") : String(localized: "\(count) days free")
-        case .week: return count == 1 ? String(localized: "1 week free") : String(localized: "\(count) weeks free")
-        case .month: return count == 1 ? String(localized: "1 month free") : String(localized: "\(count) months free")
-        case .year: return count == 1 ? String(localized: "1 year free") : String(localized: "\(count) years free")
-        @unknown default: return String(localized: "Free trial")
-        }
-    }
-
     /// Called on launch and when the app comes back to the foreground.
     func refresh() async {
         await refreshEntitlement()
-        if product == nil { await loadProduct() }
-    }
-
-    func loadProduct() async {
-        message = nil
-        do {
-            product = try await Product.products(for: [StoreConfig.productID]).first
-            if product == nil { message = String(localized: "The subscription is not available right now.") }
-            if let subscription = product?.subscription,
-               let offer = subscription.introductoryOffer, offer.paymentMode == .freeTrial,
-               await subscription.isEligibleForIntroOffer {
-                trial = offer
-            } else {
-                trial = nil
-            }
-        } catch {
-            message = String(localized: "Could not reach the App Store. Check your connection and try again.")
-        }
-    }
-
-    /// Buys the subscription through the system sheet (`@Environment(\.purchase)`).
-    func purchase(with purchase: PurchaseAction) async {
-        guard let product else {
-            await loadProduct()
-            return
-        }
-        busy = true
-        defer { busy = false }
-        message = nil
-        do {
-            switch try await purchase(product) {
-            case .success(.verified(let transaction)):
-                await transaction.finish()
-                await refreshEntitlement()
-            case .success(.unverified):
-                message = String(localized: "The App Store could not verify this purchase.")
-            case .pending:
-                message = String(localized: "The purchase is waiting for approval.")
-            case .userCancelled:
-                break
-            @unknown default:
-                break
-            }
-        } catch {
-            message = String(localized: "The purchase did not go through. Try again.")
-        }
     }
 
     /// Restore Purchases: syncs with the App Store, which may ask the person to sign in.

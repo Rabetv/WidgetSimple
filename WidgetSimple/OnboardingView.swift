@@ -40,3 +40,27 @@ struct OnboardingView: View {
         .background(AppBackground())
     }
 }
+
+/// The three steps from the Home Screen to a working widget.
+struct TutorialSteps: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            step(1, "Touch and hold the Home Screen, then tap **Edit › Add Widget**.")
+            step(2, "Search **WidgetSimple** and pick a size.")
+            step(3, "Tap the widget's **Edit Widget** and choose your apps.")
+        }
+    }
+
+    private func step(_ number: Int, _ text: LocalizedStringKey) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 14) {
+            Text("\(number)")
+                .font(.subheadline.bold())
+                .foregroundStyle(number == 1 ? Color.black : Color.accentColor)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(number == 1 ? Color.accentColor : Color.accentColor.opacity(0.18)))
+            Text(text)
+                .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}

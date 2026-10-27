@@ -21,8 +21,7 @@ jobs:
       - name: Build app + widget (unsigned, device SDK)
         run: |
           set -o pipefail
-          # One build, App Store only: APPSTORE selects the StoreKit paywall in Swift,
-          # and the descriptor hook is compiled in on purpose (see RELEASES.md).
+          # One build, App Store only: APPSTORE selects the StoreKit paywall in Swift.
           xcodebuild \
             -project WidgetSimple.xcodeproj \
             -scheme WidgetSimple \
@@ -37,12 +36,11 @@ jobs:
             build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
 
-      # The hook is part of the product, so this reports what is in the binary instead
-      # of failing the build. It prints every private symbol it finds.
-      - name: "Audit (report only: the hook is included)"
-        continue-on-error: true
+      # The audit must find no private-API traces or external payment code, and
+      # the app must have a visible display name. This gate is not continue-on-error.
+      - name: "Audit App Store build"
         run: |
-          set -o pipefail
+          set -euo pipefail
           bash Scripts/audit-appstore.sh DerivedData/Build/Products/Release-iphoneos/WidgetSimple.app 2>&1 | tee audit.log
           { echo '### Audit'; echo '```'; cat audit.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 

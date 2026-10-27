@@ -4,8 +4,6 @@
 <dict>
 	<key>AppGroupID</key>
 	<string>$(APP_GROUP_ID)</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
