@@ -1,11 +1,15 @@
 import SwiftUI
 
-/// The app: a one-time tutorial, the paywall until the subscription is active, then
-/// the four configurator screens — Home, Templates, Components, Settings — with the
-/// sandbox opening full-screen over them.
+/// The app: a one-time tutorial, the paywall until the subscription is active, the
+/// wallpaper screenshots (App Store build), then the four configurator screens — Home,
+/// Templates, Components, Settings — with the sandbox opening full-screen over them.
 struct RootView: View {
     @StateObject private var license = LicenseStore()
     @StateObject private var board = BoardStore()
+    @EnvironmentObject private var model: AppModel
+    /// True while the required setup is on screen, so its last tick is seen before
+    /// Continue moves on.
+    @State private var settingUp = false
     @AppStorage("onboarded") private var onboarded = false
     @Environment(\.scenePhase) private var scenePhase
 
@@ -73,8 +77,19 @@ struct RootView: View {
                 PaywallView(license: license)
                     .preferredColorScheme(.dark)
             case .licensed:
+                #if APPSTORE
+                if model.hasWallpaperShots && !settingUp {
+                    MainTabs(license: license)
+                        .preferredColorScheme(.dark)
+                } else {
+                    WallpaperSetupView(required: true) { settingUp = false }
+                        .onAppear { settingUp = true }
+                        .preferredColorScheme(.dark)
+                }
+                #else
                 MainTabs(license: license)
                     .preferredColorScheme(.dark)
+                #endif
             }
         }
     }

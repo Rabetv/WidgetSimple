@@ -60,16 +60,14 @@ struct PresetGalleryView: View {
     private var header: some View {
         if welcome {
             VStack(alignment: .leading, spacing: 10) {
-                ScreenHeader(index: "01", section: "Home", title: "Start here",
-                             stamps: ["\(DesignBlueprint.all.count) templates"])
+                ScreenHeader(title: "Start here")
                 Text("Pick a widget to start from. Then move things with your finger, and save it.")
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         } else {
-            ScreenHeader(index: "02", section: "Template catalog", title: "Templates",
-                         stamps: ["\(DesignBlueprint.all.count + LookTemplate.all.count) items"])
+            ScreenHeader(title: "Templates")
         }
     }
 

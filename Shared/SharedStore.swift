@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import UIKit
 
 /// File-based storage in the App Group container, shared by the app and the widget.
@@ -48,8 +49,18 @@ final class SharedStore: @unchecked Sendable {
         try? data.write(to: backgroundImageURL, options: .atomic)
     }
 
+    /// The photo, at most 1200 px on its long side. A full-size camera photo decodes to
+    /// tens of megabytes, more than a widget extension may use, and the widget then
+    /// renders blank.
     func loadBackgroundImage() -> UIImage? {
-        UIImage(contentsOfFile: backgroundImageURL.path)
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 1200,
+        ]
+        guard let source = CGImageSourceCreateWithURL(backgroundImageURL as CFURL, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return UIImage(cgImage: image)
     }
 
     // MARK: Matched wallpaper (App Store see-through, public API only)

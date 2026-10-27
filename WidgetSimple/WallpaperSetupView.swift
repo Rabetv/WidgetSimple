@@ -7,10 +7,15 @@ import WidgetKit
 /// Mode, the same page in Dark Mode, then one screenshot with the widgets pink so the app
 /// can find them. Or a photo of the user's own behind every widget instead.
 struct WallpaperSetupView: View {
+    /// The first-run step after the paywall: only the two wallpaper screenshots, which
+    /// every widget needs before it shows its apps. Matching comes later, once widgets
+    /// are on the Home Screen, from Settings › Wallpaper.
+    let required: Bool
     /// Called by Continue once setup is complete; nil closes the screen instead.
     let onDone: (() -> Void)?
 
-    init(onDone: (() -> Void)? = nil) {
+    init(required: Bool = false, onDone: (() -> Void)? = nil) {
+        self.required = required
         self.onDone = onDone
     }
 
@@ -31,11 +36,14 @@ struct WallpaperSetupView: View {
     private enum Shot { case bright, dark, pink }
 
     private var state: SeeThroughState { model.seeThrough }
+    /// The required step only needs the two screenshots; the full setup needs matched
+    /// widgets (or a photo) too.
+    private var canContinue: Bool {
+        if required { return model.hasWallpaperShots }
+        return model.isWallpaperReady && (onDone != nil || isPresented)
+    }
     private var matched: Int { state.spots.count }
     private var usesPhoto: Bool { model.look.background == .photo }
-    private var stepsDone: Int {
-        [state.hasWallpaper, state.hasDarkWallpaper, matched > 0].filter { $0 }.count
-    }
     /// The first step still to do, which is drawn as the current one.
     private var current: Int? {
         if !state.hasWallpaper { return 1 }
@@ -48,15 +56,21 @@ struct WallpaperSetupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 header
-                Text("Your widgets are see-through: each one shows the piece of wallpaper behind it. To cut those pieces the app needs three screenshots, taken once. It takes about a minute.")
+                Text(required
+                     ? "Before you add a widget, the app needs two screenshots of your wallpaper: one in Light Mode, one in Dark Mode. Your widgets show the piece of wallpaper behind them, so they blend into the Home Screen."
+                     : "Your widgets are see-through: each one shows the piece of wallpaper behind it. To cut those pieces the app needs three screenshots, taken once. It takes about a minute.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 brightStep
                 darkStep
-                matchStep
+                if required {
+                    Hint("Next: add your widgets to the Home Screen. Then open Settings › Wallpaper here to line each one up with the wallpaper.")
+                } else {
+                    matchStep
+                }
                 notice
-                if model.isWallpaperReady && (onDone != nil || isPresented) {
+                if canContinue {
                     Button(action: finish) {
                         Label("Continue", systemImage: "arrow.right")
                             .font(.system(size: 17, weight: .bold, design: .rounded))
@@ -65,7 +79,9 @@ struct WallpaperSetupView: View {
                     .buttonStyle(.glassProminent)
                     .tint(.accentColor)
                 }
-                photoAlternative
+                if !required {
+                    photoAlternative
+                }
             }
             .padding(.horizontal, LineArt.margin)
             .padding(.bottom, 40)
@@ -114,8 +130,7 @@ struct WallpaperSetupView: View {
 
     private var header: some View {
         HStack(alignment: .top) {
-            ScreenHeader(index: "W", section: "Wallpaper setup", title: "Wallpaper",
-                         stamps: [usesPhoto ? "Photo" : "\(stepsDone) / 3"])
+            ScreenHeader(title: "Wallpaper")
             if isPresented {
                 Button { dismiss() } label: { Image(systemName: "xmark") }
                     .buttonStyle(BevelKeyStyle(size: 36))

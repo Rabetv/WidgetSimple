@@ -120,3 +120,55 @@ struct SpotCode: View {
         (key >> (15 - index)) & 1 == 1
     }
 }
+
+// MARK: - Positions for Edit Widget
+
+extension SeeThroughState {
+    /// A matched spot with a stable id and a name a person can pick in Edit Widget.
+    struct NamedSpot: Hashable {
+        let id: String
+        let key: Int
+        let name: String
+    }
+
+    /// The matched spots top to bottom, left to right, named by size and place:
+    /// "Small · top left", "Medium · middle". Two spots with the same name get a number.
+    var namedSpots: [NamedSpot] {
+        guard spotsWidth > 0, spotsHeight > 0 else { return [] }
+        let ordered = spots.sorted { ($0.y, $0.x) < ($1.y, $1.x) }
+        var seen: [String: Int] = [:]
+        return ordered.map { spot in
+            var name = "\(Self.sizeName(of: spot.key)) · \(placeName(of: spot))"
+            seen[name, default: 0] += 1
+            if let count = seen[name], count > 1 { name += " \(count)" }
+            return NamedSpot(id: Self.id(of: spot), key: spot.key, name: name)
+        }
+    }
+
+    func spot(withID id: String) -> Spot? {
+        spots.first { Self.id(of: $0) == id }
+    }
+
+    static func id(of spot: Spot) -> String {
+        "\(spot.key)@\(Int(spot.x)),\(Int(spot.y))"
+    }
+
+    private static func sizeName(of key: Int) -> String {
+        switch SpotKey.family(of: key) {
+        case .small: return String(localized: "Small")
+        case .medium: return String(localized: "Medium")
+        case .large: return String(localized: "Large")
+        case .max, .none: return String(localized: "Extra large")
+        }
+    }
+
+    /// Thirds of the screen: top/middle/bottom and left/centre/right.
+    private func placeName(of spot: Spot) -> String {
+        let column = (spot.x + spot.width / 2) / spotsWidth
+        let row = (spot.y + spot.height / 2) / spotsHeight
+        let vertical = row < 1 / 3 ? String(localized: "top") : row > 2 / 3 ? String(localized: "bottom") : String(localized: "middle")
+        if column < 1 / 3 { return "\(vertical) \(String(localized: "left"))" }
+        if column > 2 / 3 { return "\(vertical) \(String(localized: "right"))" }
+        return vertical
+    }
+}

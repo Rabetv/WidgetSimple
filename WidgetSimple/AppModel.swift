@@ -94,6 +94,13 @@ final class AppModel: ObservableObject {
         look.background == .photo || seeThrough.isComplete
     }
 
+    /// True once both wallpaper screenshots (Light and Dark Mode) are in. Until then the
+    /// App Store build keeps the app on the setup screen and every widget shows a
+    /// setup prompt instead of its apps.
+    var hasWallpaperShots: Bool {
+        seeThrough.hasWallpaper && seeThrough.hasDarkWallpaper
+    }
+
     /// Step 1: a screenshot of an empty Home Screen page (the wallpaper), in Light Mode.
     func useWallpaper(_ data: Data) async {
         guard UIImage(data: data)?.cgImage != nil else {

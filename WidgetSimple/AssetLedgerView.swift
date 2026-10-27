@@ -228,8 +228,7 @@ struct AssetLedgerView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: LineArt.breath) {
-                ScreenHeader(index: "03", section: "Blocks & assets", title: "Components",
-                             stamps: ["\(items.count) installed"])
+                ScreenHeader(title: "Components")
                 PillPicker(options: [(AssetFamily?.none, "All")] + AssetFamily.allCases.map { (Optional($0), $0.title) },
                            selection: $filter)
                     .environment(\.largeTargets, true)

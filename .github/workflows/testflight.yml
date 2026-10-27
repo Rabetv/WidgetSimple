@@ -11,6 +11,16 @@
 #   APP_STORE_CONNECT_KEY_IDENTIFIER  Key ID of the API key (Admin role)
 #   APP_STORE_CONNECT_PRIVATE_KEY     Full contents of the AuthKey_XXXX.p8 file
 #   CERTIFICATE_PRIVATE_KEY           RSA private key (PEM) of the distribution certificate
+#
+# TestFlight and App Store builds use separate keys. The job runs in a GitHub
+# environment (Settings › Environments) picked by `paywall_unlock`:
+#   testflight   tester builds (unlock button on)
+#   app-store    the build submitted to App Review (unlock button off)
+# Put the App Store Connect API key meant for App Store releases into the
+# `app-store` environment's secrets, under the same three APP_STORE_CONNECT_*
+# names; environment secrets override the repository ones. Add yourself as a
+# required reviewer there, so an App Store upload waits for your approval.
+# An environment without its own secrets falls back to the repository secrets.
 
 name: TestFlight
 
@@ -37,6 +47,7 @@ jobs:
   upload:
     runs-on: xcode-27
     timeout-minutes: 45
+    environment: ${{ inputs.paywall_unlock && 'testflight' || 'app-store' }}
     env:
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}

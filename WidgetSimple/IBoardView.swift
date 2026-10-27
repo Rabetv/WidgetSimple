@@ -20,8 +20,7 @@ struct IBoardView: View {
     private var hub: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: LineArt.breath) {
-                ScreenHeader(index: "01", section: "Home", title: "iBoard",
-                             stamps: ["Build \(LineArt.version)"])
+                ScreenHeader(title: "iBoard")
                 DateTimeBlock()
                 DesignsModule()
                 HomeScreenModule()

@@ -42,8 +42,13 @@ struct DesignEntity: AppEntity {
 struct DesignQuery: EntityQuery {
     func entities(for identifiers: [UUID]) async throws -> [DesignEntity] {
         let designs = SharedStore.shared.loadDesigns()
-        return identifiers.compactMap { id in
-            id == DesignEntity.noDesign.id ? DesignEntity.noDesign : designs.first { $0.id == id }.map(DesignEntity.init)
+        // Every identifier resolves, even one whose design is gone or unreadable right
+        // now: dropping it can make iOS discard the widget's whole configuration,
+        // apps included. The widget draws the plain Apps face for a missing design.
+        return identifiers.map { id in
+            if id == DesignEntity.noDesign.id { return DesignEntity.noDesign }
+            return designs.first { $0.id == id }.map(DesignEntity.init)
+                ?? DesignEntity(id: id, name: String(localized: "Missing design"))
         }
     }
 
@@ -58,6 +63,14 @@ struct DirectLauncherIntent: WidgetConfigurationIntent {
 
     // First in Edit Widget. Added after the apps; widgets placed earlier keep them.
     @Parameter(title: "Design") var design: DesignEntity?
+    // Which matched spot of the wallpaper this widget sits on. Empty means automatic:
+    // the spot found for this widget's size and apps.
+    @Parameter(title: "Position") var position: PositionEntity?
+    // Per-widget touches on top of the look set in the app.
+    @Parameter(title: "Text size", default: .app) var textSize: WordScale
+    @Parameter(title: "Text colour", default: .app) var textColour: InkOverride
+    @Parameter(title: "Dim the wallpaper", default: .off) var dim: WallpaperDim
+    @Parameter(title: "Open apps on tap", default: true) var tappable: Bool
     @Parameter(title: "App 1") var app1: SystemShortcut?
     @Parameter(title: "App 2") var app2: SystemShortcut?
     @Parameter(title: "App 3") var app3: SystemShortcut?
@@ -92,6 +105,14 @@ struct LauncherEntry: TimelineEntry {
     var battery: Double? = nil
     /// Matched wallpaper piece (App Store flavour). nil keeps the system background.
     var background: UIImage? = nil
+    /// The same piece cut from the Dark Mode screenshot; nil reuses `background`.
+    var darkBackground: UIImage? = nil
+    /// The wallpaper screenshots are missing: show the setup prompt, not the apps.
+    var needsSetup = false
+    /// False shows the words without opening anything (no accidental launches).
+    var tappable = true
+    /// Black over the wallpaper piece, 0…1, so light words stay readable.
+    var dim = 0.0
     /// Set while the app is finding the widgets: show this key on pink.
     var findingKey: Int? = nil
 
@@ -125,7 +146,11 @@ struct LauncherProvider: AppIntentTimelineProvider {
             return Timeline(entries: [entry], policy: .after(design.nextChange(after: .now)))
         }
         // Without a clock nothing changes on its own: the app and Edit Widget reload it.
-        guard entry.design != nil || entry.clock != .off else { return Timeline(entries: [entry], policy: .never) }
+        // Still ask again every few hours, so a snapshot made while the App Group or the
+        // app list was unavailable doesn't stay on the Home Screen for good.
+        guard entry.design != nil || entry.clock != .off else {
+            return Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(6 * 3600)))
+        }
         // One entry per minute; WidgetKit shows each one on time.
         let start = Calendar.current.dateInterval(of: .minute, for: .now)?.start ?? .now
         let entries = (0..<60).map { minute in
@@ -149,14 +174,25 @@ struct LauncherProvider: AppIntentTimelineProvider {
             sample.design = design
             return sample
         }
-        let names = apps.map { String(localized: $0.displayRepresentation.title) }
+        // A title iOS can't resolve right now still gets a word, so the slot stays
+        // visible and tappable instead of looking like the app was removed.
+        let names = apps.enumerated().map { index, app in
+            let title = String(localized: app.displayRepresentation.title)
+            return title.trimmingCharacters(in: .whitespaces).isEmpty ? String(localized: "App \(index + 1)") : title
+        }
         #if TESTFLIGHT
         // Tells us whether a blank widget lost its intent or only its contrast.
         WidgetLog.write("entry family=\(context.family) apps=\(apps.count) titles=\(names.map(\.count)) design=\(design != nil)")
         #endif
         let clock = SharedStore.shared.loadClock()
-        var entry = LauncherEntry(date: .now, look: look, clock: clock, apps: apps, names: names)
-        if let design {
+        var styled = look
+        styled.size *= configuration.textSize.factor
+        if let tone = configuration.textColour.tone { styled.tone = tone }
+        var entry = LauncherEntry(date: .now, look: styled, clock: clock, apps: apps, names: names)
+        entry.tappable = configuration.tappable
+        entry.dim = configuration.dim.opacity
+        if var design {
+            if let tone = configuration.textColour.tone { design.look.tone = tone }
             entry.design = design
             if design.blocks.contains(where: { $0.kind == .battery }) {
                 entry.battery = await Self.batteryLevel()
@@ -168,13 +204,19 @@ struct LauncherProvider: AppIntentTimelineProvider {
         // background — never a wrong piece. A design is part of the key, so the same
         // apps in a design never take the plain widget's piece.
         if !context.isPreview, let family = SpotFamily(context.family) {
-            let key = design.map { SpotKey.make(family: family, clock: .off, apps: ["design:" + $0.id.uuidString] + names) }
-                ?? SpotKey.make(family: family, clock: clock, apps: names)
+            let key = SpotKey.make(family: family, clock: clock, apps: names, design: design?.id)
             let state = SharedStore.shared.loadSeeThrough()
-            if state.finding {
+            if !state.hasWallpaper || !state.hasDarkWallpaper {
+                entry.needsSetup = true
+            } else if state.finding {
                 entry.findingKey = key
+            } else if let picked = configuration.position.flatMap({ state.spot(withID: $0.id) }) {
+                // Picked in Edit Widget: that spot's piece, whatever the widget shows.
+                entry.background = SharedStore.shared.spotImage(key: picked.key, state: state)
+                entry.darkBackground = SharedStore.shared.darkSpotImage(key: picked.key, state: state)
             } else {
                 entry.background = SharedStore.shared.spotImage(key: key, state: state)
+                entry.darkBackground = SharedStore.shared.darkSpotImage(key: key, state: state)
             }
         }
         #endif
@@ -210,6 +252,107 @@ enum WidgetLog {
     }
 }
 
+/// A matched spot of the wallpaper, as Edit Widget lists it: its size and where it
+/// sits, e.g. "Small · top left". Found by the matching step in the app.
+struct PositionEntity: AppEntity {
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Position"
+    static let defaultQuery = PositionQuery()
+
+    let id: String
+    let name: String
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(name)")
+    }
+}
+
+/// Lists the spots from the last matching screenshot. A spot that is gone (matched
+/// again since) still resolves, so the widget keeps its other settings and falls back
+/// to automatic.
+struct PositionQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [PositionEntity] {
+        let spots = SharedStore.shared.loadSeeThrough().namedSpots
+        return identifiers.map { id in
+            PositionEntity(id: id, name: spots.first { $0.id == id }?.name ?? String(localized: "Automatic"))
+        }
+    }
+
+    func suggestedEntities() async throws -> [PositionEntity] {
+        SharedStore.shared.loadSeeThrough().namedSpots.map { PositionEntity(id: $0.id, name: $0.name) }
+    }
+}
+
+/// What a widget shows until the wallpaper screenshots are in.
+private struct SetupPrompt: View {
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "photo.badge.plus")
+                .font(.system(size: 26, weight: .semibold))
+            Text("Open WidgetSimple to add your wallpaper")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// Text size for one widget, relative to the size set in the app.
+enum WordScale: String, AppEnum {
+    case smaller, app, larger, largest
+
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Text size"
+    static let caseDisplayRepresentations: [WordScale: DisplayRepresentation] = [
+        .smaller: "Smaller", .app: "As in the app", .larger: "Larger", .largest: "Largest",
+    ]
+
+    var factor: Double {
+        switch self {
+        case .smaller: return 0.8
+        case .app: return 1
+        case .larger: return 1.25
+        case .largest: return 1.5
+        }
+    }
+}
+
+/// Text colour for one widget; "As in the app" keeps the shared look.
+enum InkOverride: String, AppEnum {
+    case app, white, black
+
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Text colour"
+    static let caseDisplayRepresentations: [InkOverride: DisplayRepresentation] = [
+        .app: "As in the app", .white: "White", .black: "Black",
+    ]
+
+    var tone: TextTone? {
+        switch self {
+        case .app: return nil
+        case .white: return .white
+        case .black: return .black
+        }
+    }
+}
+
+/// A dark veil over the wallpaper piece, for words on a bright photo.
+enum WallpaperDim: String, AppEnum {
+    case off, light, strong
+
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Dim"
+    static let caseDisplayRepresentations: [WallpaperDim: DisplayRepresentation] = [
+        .off: "Off", .light: "Light", .strong: "Strong",
+    ]
+
+    var opacity: Double {
+        switch self {
+        case .off: return 0
+        case .light: return 0.2
+        case .strong: return 0.4
+        }
+    }
+}
+
 extension SpotFamily {
     /// Bridges WidgetKit's family to the four sizes the wallpaper matching knows.
     init?(_ family: WidgetFamily) {
@@ -231,7 +374,11 @@ struct LauncherWidgetView: View {
 
     var body: some View {
         Group {
-            if let key = entry.findingKey {
+            if entry.needsSetup {
+                // No buttons, so a tap opens the app at its setup screen.
+                SetupPrompt()
+                    .containerBackground(for: .widget) { Color.clear }
+            } else if let key = entry.findingKey {
                 // The app is looking for the widgets: pink with a code it can read.
                 // The container itself must be magenta, or the screenshot finder has
                 // no rectangle to measure.
@@ -250,9 +397,10 @@ struct LauncherWidgetView: View {
     @ViewBuilder
     private var widgetBackground: some View {
         if let matched = entry.background {
-            Image(uiImage: darkPiece ?? matched)
+            Image(uiImage: colorScheme == .dark ? entry.darkBackground ?? matched : matched)
                 .resizable()
                 .scaledToFill()
+                .overlay(Color.black.opacity(entry.dim))
         } else {
             switch entry.look.background {
             case .photo:
@@ -265,14 +413,6 @@ struct LauncherWidgetView: View {
                 Color.clear
             }
         }
-    }
-
-    /// In Dark Mode, the piece cut from the dark wallpaper screenshot; nil keeps the
-    /// bright one (no dark screenshot yet, or no dark piece for this widget).
-    private var darkPiece: UIImage? {
-        guard colorScheme == .dark, let spotFamily = SpotFamily(family) else { return nil }
-        let key = SpotKey.make(family: spotFamily, clock: entry.clock, apps: entry.names, design: entry.design?.id)
-        return SharedStore.shared.darkSpotImage(key: key, state: SharedStore.shared.loadSeeThrough())
     }
 
     /// The words, with one button per app: on their own, or in the picked design's
@@ -299,7 +439,7 @@ struct LauncherWidgetView: View {
     /// One word; a button that opens its app once an app is picked for it.
     @ViewBuilder
     private func appCell(_ index: Int, _ name: AppName) -> some View {
-        if index < entry.apps.count {
+        if entry.tappable, index < entry.apps.count {
             Button(intent: RunSystemShortcutIntent(shortcut: entry.apps[index])) {
                 name
             }

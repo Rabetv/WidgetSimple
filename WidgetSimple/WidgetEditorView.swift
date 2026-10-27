@@ -16,8 +16,7 @@ struct WidgetEditorScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 HStack(alignment: .top, spacing: 12) {
-                    ScreenHeader(index: "01", section: "Apps widget", title: "Style",
-                                 stamps: ["No design"])
+                    ScreenHeader(title: "Style")
                     CloseKey { dismiss() }
                 }
                 LivePreview(design: nil, size: $previewSize)

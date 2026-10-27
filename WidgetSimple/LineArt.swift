@@ -236,27 +236,17 @@ struct ModuleFrame<Content: View>: View {
     }
 }
 
-/// The title block at the top of each screen: index, section, a rule, stamps, title.
+/// The title at the top of each screen.
 struct ScreenHeader: View {
-    let index: String
-    let section: String
     let title: String
-    var stamps: [String] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Micro("\(index) / \(section)")
-                Hairline()
-                ForEach(stamps, id: \.self) { Stamp($0) }
-            }
-            Text(title)
-                .font(.system(size: 40, weight: .heavy, design: .rounded))
-                .tracking(-1)
-        }
-        .padding(.top, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
+        Text(title)
+            .font(.system(size: 40, weight: .heavy, design: .rounded))
+            .tracking(-1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 8)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 

@@ -10,6 +10,7 @@ struct SystemSettingsView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.openURL) private var openURL
     @AppStorage("onboarded") private var onboarded = true
+    @AppStorage(AppWallpaper.storageKey) private var appWallpaper = AppWallpaper.standard
     @State private var managing = false
     @State private var lastSync: Date?
     @State private var settingUpWallpaper = false
@@ -20,8 +21,8 @@ struct SystemSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: LineArt.breath) {
-                ScreenHeader(index: "05", section: "System & permissions", title: "Settings",
-                             stamps: ["v\(LineArt.version)"])
+                ScreenHeader(title: "Settings")
+                appearanceSection
                 syncSection
                 permissionsSection
                 subscriptionSection
@@ -47,6 +48,23 @@ struct SystemSettingsView: View {
     }
 
     // MARK: Sections
+
+    private var appearanceSection: some View {
+        SettingsSection(code: "S-00", title: "Appearance") {
+            SettingRow(title: "App Wallpaper",
+                       detail: model.seeThrough.hasWallpaper || model.seeThrough.hasDarkWallpaper
+                           ? "What WidgetSimple shows behind its own screens."
+                           : "Add your wallpaper screenshots to use your Home Screen here.") {
+                Picker("App Wallpaper", selection: $appWallpaper) {
+                    ForEach(AppWallpaper.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
+        }
+    }
 
     private var syncSection: some View {
         SettingsSection(code: "S-01", title: "Refresh & sync") {
