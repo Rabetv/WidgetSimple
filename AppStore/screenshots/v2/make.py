@@ -1,8 +1,9 @@
-"""App Store screenshots from real app screens, in the listing's own style.
+"""App Store screenshots from real app screens, in the listing's style with extra flair.
 
-Same look as AppStore/screenshots/src: a dark warm stage, a white headline with one
-amber word, an amber ribbon, amber callout pills and a phone. The phone holds a real
-screen (raw/*.jpg, 920 x 2000) at its native size.
+The listing's look (dark warm stage, amber accents) plus: a three-line headline with an
+amber last line, one long swooping ribbon, a tilted sticker, a piece of the real screen
+popping out of the phone, and amber callouts with dotted leader lines. The phone holds a
+real screen (raw/*.jpg, 920 x 2000) at its native size; pop-outs are cut from it.
 
 Writes src/*.html (1320 x 2868, the 6.9" size); render.sh renders them and also writes
 1206 x 2622 copies for the "iPhone with Dynamic Island" slot.
@@ -10,66 +11,106 @@ Writes src/*.html (1320 x 2868, the 6.9" size); render.sh renders them and also 
 from pathlib import Path
 
 HERE = Path(__file__).parent
+PHONE_LEFT, PHONE_TOP, BEZEL = 174, 600, 26
 
-# name, headline (one <em> word in amber), line, pills [(text, left, top)], badges,
-# ribbon path
+# Each shot:
+#   lines    three headline lines; the last is amber
+#   pop      a piece of the screen (x, y, w, h in raw pixels) shown larger outside the
+#            phone: (crop, left, top, scale, degrees)
+#   sticker  (text, left, top, degrees, round)
+#   callouts (text, left, top, side the dotted leader points to, leader length)
+#   ribbon   SVG path drawn behind the phone
 SHOTS = [
-    ("1-designer", "Build <em>your own</em><br>widget", "Clocks, dates, greetings and up to 12 apps.",
-     [("Drag &#183; resize &#183; save", 760, 1180), ("Up to 12 apps", 40, 2140)],
-     ["<b>iOS 27</b>", "Liquid Glass", "No ads"],
-     "M1150 560 C 1290 700, 1230 860, 1150 760 C 1090 680, 1230 640, 1260 760"),
-    ("2-block-style", "Style <em>every</em><br>block", "Its own font, size and colour — or all at once.",
-     [("This block", 40, 1980), ("Whole design", 820, 2130)],
-     [],
-     "M170 560 C 30 700, 90 860, 170 760 C 230 680, 90 640, 60 760"),
-    ("3-templates", "Start from a<br><em>template</em>", "Blank, clock hubs, app grids, type and more.",
-     [("Ready in one tap", 780, 1500)],
-     [],
-     "M1150 560 C 1290 700, 1230 860, 1150 760 C 1090 680, 1230 640, 1260 760"),
-    ("4-home", "All your designs,<br><em>one place</em>", "Pick one per widget in Edit Widget.",
-     [("Live preview", 40, 1300)],
-     [],
-     "M170 560 C 30 700, 90 860, 170 760 C 230 680, 90 640, 60 760"),
-    ("5-settings", "Matched to your<br><em>wallpaper</em>", "Two screenshots, and every widget blends in.",
-     [("Light &amp; Dark Mode", 790, 1520)],
-     ["No account", "No tracking", "<b>Public API</b>"],
-     "M1150 560 C 1290 700, 1230 860, 1150 760 C 1090 680, 1230 640, 1260 760"),
+    dict(name="1-designer", lines=("Design", "Your Own", "Widgets"),
+         pop=((100, 450, 720, 100), 60, 1060, 1.42, -4),
+         sticker=("iOS 27", 860, 430, -12, False),
+         callouts=[("Drag, resize, save", 640, 1760, "left", 90), ("Up to 12 apps", 40, 2380, "right", 110)],
+         ribbon="M-60 560 C 260 300, 520 980, 860 620 S 1300 300, 1380 520"),
+    dict(name="2-block-style", lines=("Style", "Every Block", "Your Way"),
+         pop=((60, 1555, 580, 100), 380, 1960, 1.55, 5),
+         sticker=None,
+         callouts=[("Font · size · colour", 40, 2460, "right", 120)],
+         ribbon="M1380 560 C 1060 300, 800 980, 460 620 S 20 300, -60 520"),
+    dict(name="3-templates", lines=("Start From", "Ready-Made", "Templates"),
+         pop=((30, 335, 820, 335), 40, 900, 1.2, -3),
+         sticker=("NEW", 1000, 470, 10, True),
+         callouts=[("One tap to use", 700, 1960, "left", 110)],
+         ribbon="M-60 600 C 300 260, 640 1000, 980 640 S 1320 360, 1380 560"),
+    dict(name="4-home", lines=("All Your", "Designs in", "One Place"),
+         pop=((35, 340, 850, 530), 40, 1180, 1.12, -3),
+         sticker=None,
+         callouts=[("Live preview", 760, 2280, "left", 100)],
+         ribbon="M1380 600 C 1020 260, 680 1000, 340 640 S 0 360, -60 560"),
+    dict(name="5-settings", lines=("Blends Into", "Your Own", "Wallpaper"),
+         pop=((70, 900, 780, 280), 300, 1500, 1.3, 4),
+         sticker=("2 screenshots", 620, 450, -8, False),
+         callouts=[("Light & Dark Mode", 40, 2280, "right", 110)],
+         ribbon="M-60 560 C 260 300, 520 980, 860 620 S 1300 300, 1380 520"),
 ]
 
 PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{name}</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap">
 <style>
 *{{box-sizing:border-box}}
 body{{margin:0;width:1320px;height:2868px;overflow:hidden;position:relative;font-family:Inter,-apple-system,sans-serif;color:#fff;
- background:radial-gradient(70% 38% at 50% 64%,rgba(214,120,70,.30) 0%,rgba(214,120,70,0) 70%),radial-gradient(60% 25% at 50% 0%,rgba(255,199,102,.10) 0%,rgba(255,199,102,0) 70%),#120c09}}
-.head{{position:absolute;top:140px;left:0;right:0;text-align:center;padding:0 70px;z-index:6}}
-h1{{font-size:124px;line-height:1.02;font-weight:800;letter-spacing:-3.5px;margin:0}}
-h1 em{{font-style:normal;background:linear-gradient(90deg,#FFD58A,#FFB45C);-webkit-background-clip:text;background-clip:text;color:transparent}}
-.sub{{font-size:48px;line-height:1.25;margin:28px 0 0;color:rgba(255,255,255,.78);font-weight:500}}
+ background:radial-gradient(75% 40% at 50% 62%,rgba(214,120,70,.34) 0%,rgba(214,120,70,0) 70%),radial-gradient(60% 22% at 50% 0%,rgba(255,199,102,.12) 0%,rgba(255,199,102,0) 70%),#120c09}}
+.head{{position:absolute;top:110px;left:0;right:0;text-align:center;z-index:6}}
+h1{{font-size:116px;line-height:1.04;font-weight:900;letter-spacing:-3px;margin:0}}
+h1 span{{display:block}}
+h1 em{{display:block;font-style:normal;background:linear-gradient(90deg,#FFD58A,#FF9A4A);-webkit-background-clip:text;background-clip:text;color:transparent}}
 .ribbon{{position:absolute;inset:0;z-index:1;pointer-events:none}}
-.phone{{position:absolute;left:174px;top:{phone_top}px;width:972px;height:2052px;border-radius:150px;background:#0b0b0d;padding:26px;z-index:2;
+.phone{{position:absolute;left:{phone_left}px;top:{phone_top}px;width:972px;height:2052px;border-radius:150px;background:#0b0b0d;padding:{bezel}px;z-index:2;
  box-shadow:0 80px 160px rgba(0,0,0,.65),0 0 0 2px rgba(255,255,255,.08),inset 0 0 0 4px #3b3a3f}}
 .phone img{{display:block;width:920px;height:2000px;border-radius:124px}}
-.pill{{position:absolute;z-index:8;padding:24px 40px;border-radius:999px;font-size:44px;font-weight:700;white-space:nowrap;box-shadow:0 20px 44px rgba(0,0,0,.5);
+.pop{{position:absolute;z-index:7;border-radius:44px;background-repeat:no-repeat;
+ box-shadow:0 50px 90px rgba(0,0,0,.6),0 0 0 5px rgba(255,213,138,.85)}}
+.sticker{{position:absolute;z-index:9;white-space:nowrap;padding:26px 46px;border-radius:40px;font-size:76px;font-weight:900;letter-spacing:-1px;
+ background:linear-gradient(180deg,#E8783A,#B9471B);color:#fff;border:7px solid #FFE3B8;box-shadow:0 24px 50px rgba(0,0,0,.55)}}
+.sticker.round{{width:250px;height:250px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:84px}}
+.callout{{position:absolute;z-index:8;display:flex;align-items:center}}
+.pill{{padding:22px 40px;border-radius:999px;font-size:46px;font-weight:800;white-space:nowrap;box-shadow:0 20px 44px rgba(0,0,0,.5);
  background:linear-gradient(180deg,#FFD58A,#FFBE5C);color:#1A1306}}
-.badges{{position:absolute;left:0;right:0;top:2740px;display:flex;justify-content:center;gap:22px;z-index:8}}
-.badges span{{padding:18px 32px;border-radius:999px;font-size:36px;font-weight:700;background:rgba(18,12,9,.85);border:2px solid rgba(255,255,255,.22);color:#fff}}
-.badges span b{{color:#FFC766}}
+.leader{{border-top:5px dotted #FFD58A;height:0}}
 </style></head><body>
-<svg class="ribbon" width="1320" height="2868" viewBox="0 0 1320 2868"><defs><linearGradient id="rb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD58A"/><stop offset="1" stop-color="#D9783E"/></linearGradient></defs><path d="{ribbon}" fill="none" stroke="url(#rb)" stroke-width="12" stroke-linecap="round" opacity=".95"/></svg>
-<div class="head"><h1>{title}</h1><p class="sub">{line}</p></div>
+<svg class="ribbon" width="1320" height="2868" viewBox="0 0 1320 2868"><defs><linearGradient id="rb" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFD58A"/><stop offset=".55" stop-color="#E8783A"/><stop offset="1" stop-color="#9C3A17"/></linearGradient></defs><path d="{ribbon}" fill="none" stroke="url(#rb)" stroke-width="16" stroke-linecap="round" opacity=".95"/></svg>
+<div class="head"><h1><span>{l1}</span><span>{l2}</span><em>{l3}</em></h1></div>
 <div class="phone"><img src="../raw/{name}.jpg" alt=""></div>
-{pills}
-{badges}
+{pop}
+{sticker}
+{callouts}
 </body></html>
 """
 
-for name, title, line, pills, badges, ribbon in SHOTS:
-    pill_html = "\n".join(f'<div class="pill" style="left:{x}px;top:{y}px">{text}</div>' for text, x, y in pills)
-    badge_html = f'<div class="badges">{"".join(f"<span>{b}</span>" for b in badges)}</div>' if badges else ""
-    # With badges the phone sits a little higher so they fit below it.
-    phone_top = 640 if badges else 680
-    (HERE / "src" / f"{name}.html").write_text(
-        PAGE.format(name=name, title=title, line=line, pills=pill_html, badges=badge_html,
-                    ribbon=ribbon, phone_top=phone_top), encoding="utf-8")
+
+def pop_html(name, pop):
+    (x, y, w, h), left, top, scale, degrees = pop
+    return (f'<div class="pop" style="left:{left}px;top:{top}px;width:{w * scale:.0f}px;height:{h * scale:.0f}px;'
+            f'background-image:url(../raw/{name}.jpg);background-size:{920 * scale:.0f}px {2000 * scale:.0f}px;'
+            f'background-position:-{x * scale:.0f}px -{y * scale:.0f}px;transform:rotate({degrees}deg)"></div>')
+
+
+def sticker_html(sticker):
+    if not sticker:
+        return ""
+    text, left, top, degrees, round_ = sticker
+    cls = "sticker round" if round_ else "sticker"
+    return f'<div class="{cls}" style="left:{left}px;top:{top}px;transform:rotate({degrees}deg)">{text}</div>'
+
+
+def callout_html(text, left, top, side, length):
+    leader = f'<div class="leader" style="width:{length}px"></div>'
+    pill = f'<div class="pill">{text}</div>'
+    inner = leader + pill if side == "left" else pill + leader
+    return f'<div class="callout" style="left:{left}px;top:{top}px">{inner}</div>'
+
+
+for shot in SHOTS:
+    name = shot["name"]
+    l1, l2, l3 = shot["lines"]
+    html = PAGE.format(
+        name=name, l1=l1, l2=l2, l3=l3, ribbon=shot["ribbon"],
+        phone_left=PHONE_LEFT, phone_top=PHONE_TOP, bezel=BEZEL,
+        pop=pop_html(name, shot["pop"]), sticker=sticker_html(shot["sticker"]),
+        callouts="\n".join(callout_html(*c) for c in shot["callouts"]))
+    (HERE / "src" / f"{name}.html").write_text(html, encoding="utf-8")
     print("wrote", name)

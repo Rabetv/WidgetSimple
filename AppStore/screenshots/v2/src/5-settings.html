@@ -1,26 +1,31 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>5-settings</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap">
 <style>
 *{box-sizing:border-box}
 body{margin:0;width:1320px;height:2868px;overflow:hidden;position:relative;font-family:Inter,-apple-system,sans-serif;color:#fff;
- background:radial-gradient(70% 38% at 50% 64%,rgba(214,120,70,.30) 0%,rgba(214,120,70,0) 70%),radial-gradient(60% 25% at 50% 0%,rgba(255,199,102,.10) 0%,rgba(255,199,102,0) 70%),#120c09}
-.head{position:absolute;top:140px;left:0;right:0;text-align:center;padding:0 70px;z-index:6}
-h1{font-size:124px;line-height:1.02;font-weight:800;letter-spacing:-3.5px;margin:0}
-h1 em{font-style:normal;background:linear-gradient(90deg,#FFD58A,#FFB45C);-webkit-background-clip:text;background-clip:text;color:transparent}
-.sub{font-size:48px;line-height:1.25;margin:28px 0 0;color:rgba(255,255,255,.78);font-weight:500}
+ background:radial-gradient(75% 40% at 50% 62%,rgba(214,120,70,.34) 0%,rgba(214,120,70,0) 70%),radial-gradient(60% 22% at 50% 0%,rgba(255,199,102,.12) 0%,rgba(255,199,102,0) 70%),#120c09}
+.head{position:absolute;top:110px;left:0;right:0;text-align:center;z-index:6}
+h1{font-size:116px;line-height:1.04;font-weight:900;letter-spacing:-3px;margin:0}
+h1 span{display:block}
+h1 em{display:block;font-style:normal;background:linear-gradient(90deg,#FFD58A,#FF9A4A);-webkit-background-clip:text;background-clip:text;color:transparent}
 .ribbon{position:absolute;inset:0;z-index:1;pointer-events:none}
-.phone{position:absolute;left:174px;top:640px;width:972px;height:2052px;border-radius:150px;background:#0b0b0d;padding:26px;z-index:2;
+.phone{position:absolute;left:174px;top:600px;width:972px;height:2052px;border-radius:150px;background:#0b0b0d;padding:26px;z-index:2;
  box-shadow:0 80px 160px rgba(0,0,0,.65),0 0 0 2px rgba(255,255,255,.08),inset 0 0 0 4px #3b3a3f}
 .phone img{display:block;width:920px;height:2000px;border-radius:124px}
-.pill{position:absolute;z-index:8;padding:24px 40px;border-radius:999px;font-size:44px;font-weight:700;white-space:nowrap;box-shadow:0 20px 44px rgba(0,0,0,.5);
+.pop{position:absolute;z-index:7;border-radius:44px;background-repeat:no-repeat;
+ box-shadow:0 50px 90px rgba(0,0,0,.6),0 0 0 5px rgba(255,213,138,.85)}
+.sticker{position:absolute;z-index:9;white-space:nowrap;padding:26px 46px;border-radius:40px;font-size:76px;font-weight:900;letter-spacing:-1px;
+ background:linear-gradient(180deg,#E8783A,#B9471B);color:#fff;border:7px solid #FFE3B8;box-shadow:0 24px 50px rgba(0,0,0,.55)}
+.sticker.round{width:250px;height:250px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:84px}
+.callout{position:absolute;z-index:8;display:flex;align-items:center}
+.pill{padding:22px 40px;border-radius:999px;font-size:46px;font-weight:800;white-space:nowrap;box-shadow:0 20px 44px rgba(0,0,0,.5);
  background:linear-gradient(180deg,#FFD58A,#FFBE5C);color:#1A1306}
-.badges{position:absolute;left:0;right:0;top:2740px;display:flex;justify-content:center;gap:22px;z-index:8}
-.badges span{padding:18px 32px;border-radius:999px;font-size:36px;font-weight:700;background:rgba(18,12,9,.85);border:2px solid rgba(255,255,255,.22);color:#fff}
-.badges span b{color:#FFC766}
+.leader{border-top:5px dotted #FFD58A;height:0}
 </style></head><body>
-<svg class="ribbon" width="1320" height="2868" viewBox="0 0 1320 2868"><defs><linearGradient id="rb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD58A"/><stop offset="1" stop-color="#D9783E"/></linearGradient></defs><path d="M1150 560 C 1290 700, 1230 860, 1150 760 C 1090 680, 1230 640, 1260 760" fill="none" stroke="url(#rb)" stroke-width="12" stroke-linecap="round" opacity=".95"/></svg>
-<div class="head"><h1>Matched to your<br><em>wallpaper</em></h1><p class="sub">Two screenshots, and every widget blends in.</p></div>
+<svg class="ribbon" width="1320" height="2868" viewBox="0 0 1320 2868"><defs><linearGradient id="rb" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFD58A"/><stop offset=".55" stop-color="#E8783A"/><stop offset="1" stop-color="#9C3A17"/></linearGradient></defs><path d="M-60 560 C 260 300, 520 980, 860 620 S 1300 300, 1380 520" fill="none" stroke="url(#rb)" stroke-width="16" stroke-linecap="round" opacity=".95"/></svg>
+<div class="head"><h1><span>Blends Into</span><span>Your Own</span><em>Wallpaper</em></h1></div>
 <div class="phone"><img src="../raw/5-settings.jpg" alt=""></div>
-<div class="pill" style="left:790px;top:1520px">Light &amp; Dark Mode</div>
-<div class="badges"><span>No account</span><span>No tracking</span><span><b>Public API</b></span></div>
+<div class="pop" style="left:300px;top:1500px;width:1014px;height:364px;background-image:url(../raw/5-settings.jpg);background-size:1196px 2600px;background-position:-91px -1170px;transform:rotate(4deg)"></div>
+<div class="sticker" style="left:620px;top:450px;transform:rotate(-8deg)">2 screenshots</div>
+<div class="callout" style="left:40px;top:2280px"><div class="pill">Light & Dark Mode</div><div class="leader" style="width:110px"></div></div>
 </body></html>
