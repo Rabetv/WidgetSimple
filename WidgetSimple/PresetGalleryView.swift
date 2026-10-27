@@ -150,7 +150,6 @@ private struct TemplateCard: View {
                 Hairline()
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Stamp(blueprint.id)
                         Spacer(minLength: 0)
                         Micro("Use ›", size: 7.5, tone: .primary)
                     }
@@ -345,7 +344,6 @@ private struct TypeCard: View {
                 .padding(14)
                 Hairline()
                 VStack(alignment: .leading, spacing: 4) {
-                    Stamp(code)
                     Text(template.name)
                         .font(.system(size: 15, weight: .heavy, design: .rounded))
                         .lineLimit(1)

@@ -62,6 +62,8 @@ struct SystemSettingsView: View {
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()
+                .lineLimit(1)
+                .fixedSize()
             }
         }
     }
@@ -259,11 +261,8 @@ private struct SettingsSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Stamp(code)
-                Micro(title, tone: .primary)
-            }
-            .padding(.bottom, 10)
+            Micro(title, tone: .primary)
+                .padding(.bottom, 10)
             .accessibilityAddTraits(.isHeader)
             Hairline(opacity: 0.7)
             ForEach(subviews: content) { row in

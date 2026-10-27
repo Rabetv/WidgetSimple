@@ -250,7 +250,8 @@ struct ScreenHeader: View {
     }
 }
 
-/// A group heading inside a screen: code stamp, title, rule, count.
+/// A group heading inside a screen: title, rule, count. `code` only names the group in
+/// the source; it is not drawn.
 struct SectionRule: View {
     let code: String
     let title: String
@@ -258,7 +259,6 @@ struct SectionRule: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Stamp(code)
             Text(title)
                 .font(.system(size: 20, weight: .heavy, design: .rounded))
                 .lineLimit(1)

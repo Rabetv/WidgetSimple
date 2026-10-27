@@ -122,15 +122,11 @@ struct DesignSandbox: View {
             CloseKey {
                 if draft == original { dismiss() } else { confirmingLeave = true }
             }
-            VStack(alignment: .leading, spacing: 3) {
-                Micro("Sandbox · \(draft.canvas.title) widget")
-                Text(draft.displayName)
-                    .font(.system(size: 22, weight: .heavy, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
+            Text(draft.displayName)
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Spacer(minLength: 8)
-            Stamp(draft.blocks.count == 1 ? "1 block" : "\(draft.blocks.count) blocks")
         }
     }
 
@@ -659,7 +655,7 @@ private struct BlockSheet: View {
                     CloseKey { dismiss() }
                 }
                 if block.kind.hasOptions {
-                    ModuleFrame("Options", stamp: block.kind.title) {
+                    ModuleFrame("Options") {
                         VStack(alignment: .leading, spacing: 14) {
                             BlockOptions(block: $block)
                         }
@@ -1038,7 +1034,7 @@ private struct TuningPanel: View {
     private var tabs: [TuneTab] { showsClock ? TuneTab.allCases : TuneTab.allCases.filter { $0 != .clock } }
 
     var body: some View {
-        ModuleFrame("Style", stamp: "FT · \(tab.title)", foot: scope, marks: [.topTrailing]) {
+        ModuleFrame("Style", foot: scope, marks: [.topTrailing]) {
             VStack(alignment: .leading, spacing: 18) {
                 PillPicker(options: tabs.map { ($0, $0.title) }, selection: $tab)
                 Hairline()
@@ -1374,7 +1370,6 @@ private struct WordAnchorsSheet: View {
                     Hairline(opacity: 0.6)
                     ForEach(0..<12, id: \.self) { slot in
                         HStack(spacing: 12) {
-                            Stamp(String(format: "A-%02d", slot + 1))
                             Text("App \(slot + 1)")
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                             Spacer()
