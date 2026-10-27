@@ -107,6 +107,8 @@ struct LauncherEntry: TimelineEntry {
     var background: UIImage? = nil
     /// The same piece cut from the Dark Mode screenshot; nil reuses `background`.
     var darkBackground: UIImage? = nil
+    /// The photo picked in the app, when the look's background is Photo.
+    var photo: UIImage? = nil
     /// The wallpaper screenshots are missing: show the setup prompt, not the apps.
     var needsSetup = false
     /// False shows the words without opening anything (no accidental launches).
@@ -151,9 +153,10 @@ struct LauncherProvider: AppIntentTimelineProvider {
         guard entry.design != nil || entry.clock != .off else {
             return Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(6 * 3600)))
         }
-        // One entry per minute; WidgetKit shows each one on time.
+        // One entry per minute; WidgetKit shows each one on time. WidgetKit renders and
+        // stores every entry ahead of time, so keep the run short.
         let start = Calendar.current.dateInterval(of: .minute, for: .now)?.start ?? .now
-        let entries = (0..<60).map { minute in
+        let entries = (0..<30).map { minute in
             var next = entry
             next.date = start.addingTimeInterval(Double(minute) * 60)
             return next
@@ -220,7 +223,34 @@ struct LauncherProvider: AppIntentTimelineProvider {
             }
         }
         #endif
+        if entry.look.background == .photo, !context.isPreview {
+            entry.photo = SharedStore.shared.loadBackgroundImage()
+        }
+        // WidgetKit refuses to store an image larger than the widget itself and then
+        // shows the placeholder (grey bars) instead of the apps. Every picture goes in at
+        // the widget's size.
+        entry.background = entry.background.flatMap { Self.fitted($0, to: context.displaySize) }
+        entry.darkBackground = entry.darkBackground.flatMap { Self.fitted($0, to: context.displaySize) }
+        entry.photo = entry.photo.flatMap { Self.fitted($0, to: context.displaySize) }
+        #if TESTFLIGHT
+        WidgetLog.write("entry ok family=\(context.family) size=\(Int(context.displaySize.width))x\(Int(context.displaySize.height)) background=\(entry.background != nil) setup=\(entry.needsSetup)")
+        #endif
         return entry
+    }
+
+    /// `image` filled into `size` points at 2x, cropped like `.scaledToFill()`: well
+    /// under the widget's own pixel area, which is WidgetKit's limit.
+    private static func fitted(_ image: UIImage, to size: CGSize) -> UIImage? {
+        guard size.width > 0, size.height > 0, image.size.width > 0, image.size.height > 0 else { return nil }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 2
+        format.opaque = true
+        let fill = max(size.width / image.size.width, size.height / image.size.height)
+        let drawn = CGSize(width: image.size.width * fill, height: image.size.height * fill)
+        let origin = CGPoint(x: (size.width - drawn.width) / 2, y: (size.height - drawn.height) / 2)
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            image.draw(in: CGRect(origin: origin, size: drawn))
+        }
     }
 
     /// The iPhone's charge, read when the timeline is made; nil when iOS doesn't say.
@@ -404,7 +434,7 @@ struct LauncherWidgetView: View {
         } else {
             switch entry.look.background {
             case .photo:
-                if let photo = SharedStore.shared.loadBackgroundImage() {
+                if let photo = entry.photo {
                     Image(uiImage: photo).resizable().scaledToFill()
                 } else {
                     Color.clear
