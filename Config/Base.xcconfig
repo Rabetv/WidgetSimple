@@ -10,12 +10,13 @@ DEVELOPMENT_TEAM = HN6QY3V757
 // Reverse-domain prefix for the bundle identifiers. Must be unique to you.
 BUNDLE_ID_PREFIX = com.rabetv
 
-// Name shown under the app icon AND under every WidgetSimple widget on the
-// Home Screen. The default is U+2800 (an invisible "blank" character) so the
-// widget has no label. If App Review rejects the app under Guideline 2.3.8
-// (name on device differs from App Store name), change it to:
-//     HOME_SCREEN_NAME = WidgetSimple
-HOME_SCREEN_NAME = ⠀
+// Name shown under the app icon. It must match the App Store name: the
+// repository audit checks for "WidgetSimple" under Guideline 2.3.8.
+HOME_SCREEN_NAME = WidgetSimple
+
+// Label under each Home Screen widget. U+2800 (an invisible "blank" character)
+// keeps the widget label empty without affecting the app's 2.3.8 display name.
+WIDGET_SCREEN_NAME = ⠀
 
 MARKETING_VERSION = 1.0
 CURRENT_PROJECT_VERSION = 1

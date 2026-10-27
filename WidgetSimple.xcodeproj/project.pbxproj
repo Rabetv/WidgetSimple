@@ -35,9 +35,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		F8589DA57FC74F12F5B00E66 /* WidgetSimple.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WidgetSimple.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		787FDBE93775A4A18E973BD6 /* WidgetSimpleWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WidgetSimpleWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C003B65FC9330B83C0C5E4BE /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		F8589DA57FC74F12F5B00E66 /* WidgetSimple.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WidgetSimple.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -45,7 +45,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				WidgetSimple.entitlements,
 			);
 			target = E633335030B7468E034A6D14 /* WidgetSimple */;
 		};
@@ -53,19 +52,18 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				WidgetSimpleWidget.entitlements,
 			);
 			target = 59B4B292EC5A8289A926E56E /* WidgetSimpleWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		ECFC32BC96DBF8AD40E04D73 /* WidgetSimple */ = {
+		11199EB6BC44D87F7182ABD7 /* WidgetSimpleWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				258979BBC3CAC4CBD265AE8F /* Exceptions for "WidgetSimple" folder in "WidgetSimple" target */,
+				566C928C7F2119C4337D33A4 /* Exceptions for "WidgetSimpleWidget" folder in "WidgetSimpleWidgetExtension" target */,
 			);
-			path = WidgetSimple;
+			path = WidgetSimpleWidget;
 			sourceTree = "<group>";
 		};
 		1897A7B2D5C137D5B6D00142 /* Shared */ = {
@@ -73,12 +71,12 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
-		11199EB6BC44D87F7182ABD7 /* WidgetSimpleWidget */ = {
+		ECFC32BC96DBF8AD40E04D73 /* WidgetSimple */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				566C928C7F2119C4337D33A4 /* Exceptions for "WidgetSimpleWidget" folder in "WidgetSimpleWidgetExtension" target */,
+				258979BBC3CAC4CBD265AE8F /* Exceptions for "WidgetSimple" folder in "WidgetSimple" target */,
 			);
-			path = WidgetSimpleWidget;
+			path = WidgetSimple;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -112,14 +110,6 @@
 			);
 			sourceTree = "<group>";
 		};
-		C3BD887E1C01962CBF870D66 /* Config */ = {
-			isa = PBXGroup;
-			children = (
-				C003B65FC9330B83C0C5E4BE /* Base.xcconfig */,
-			);
-			path = Config;
-			sourceTree = "<group>";
-		};
 		7CC7944473968E0F9F9E9A44 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -129,34 +119,17 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		C3BD887E1C01962CBF870D66 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				C003B65FC9330B83C0C5E4BE /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		E633335030B7468E034A6D14 /* WidgetSimple */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 36657839BC789E88951EA287 /* Build configuration list for PBXNativeTarget "WidgetSimple" */;
-			buildPhases = (
-				3E6585B7B6CE24651BC86502 /* Sources */,
-				109E6783D0215F3C2E1043D4 /* Frameworks */,
-				E249C28BBC2E9D73077843AE /* Resources */,
-				B8ECD9DD10937748638AFABF /* Embed Foundation Extensions */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				7B3C570C5BF99BED967A04DC /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				ECFC32BC96DBF8AD40E04D73 /* WidgetSimple */,
-				1897A7B2D5C137D5B6D00142 /* Shared */,
-			);
-			name = WidgetSimple;
-			packageProductDependencies = (
-			);
-			productName = WidgetSimple;
-			productReference = F8589DA57FC74F12F5B00E66 /* WidgetSimple.app */;
-			productType = "com.apple.product-type.application";
-		};
 		59B4B292EC5A8289A926E56E /* WidgetSimpleWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 357E4FCEC655D6FC80DBBB3E /* Build configuration list for PBXNativeTarget "WidgetSimpleWidgetExtension" */;
@@ -180,6 +153,31 @@
 			productReference = 787FDBE93775A4A18E973BD6 /* WidgetSimpleWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		E633335030B7468E034A6D14 /* WidgetSimple */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 36657839BC789E88951EA287 /* Build configuration list for PBXNativeTarget "WidgetSimple" */;
+			buildPhases = (
+				3E6585B7B6CE24651BC86502 /* Sources */,
+				109E6783D0215F3C2E1043D4 /* Frameworks */,
+				E249C28BBC2E9D73077843AE /* Resources */,
+				B8ECD9DD10937748638AFABF /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7B3C570C5BF99BED967A04DC /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				1897A7B2D5C137D5B6D00142 /* Shared */,
+				ECFC32BC96DBF8AD40E04D73 /* WidgetSimple */,
+			);
+			name = WidgetSimple;
+			packageProductDependencies = (
+			);
+			productName = WidgetSimple;
+			productReference = F8589DA57FC74F12F5B00E66 /* WidgetSimple.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -190,10 +188,10 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
-					E633335030B7468E034A6D14 = {
+					59B4B292EC5A8289A926E56E = {
 						CreatedOnToolsVersion = 26.0;
 					};
-					59B4B292EC5A8289A926E56E = {
+					E633335030B7468E034A6D14 = {
 						CreatedOnToolsVersion = 26.0;
 					};
 				};
@@ -237,14 +235,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		3E6585B7B6CE24651BC86502 /* Sources */ = {
+		24DE42B1838037BBD0C06B09 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		24DE42B1838037BBD0C06B09 /* Sources */ = {
+		3E6585B7B6CE24651BC86502 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -262,64 +260,57 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		FD7D64D526EA6EE952A558BD /* Debug */ = {
+		16BFCD5D6251E37DA8F18919 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C003B65FC9330B83C0C5E4BE /* Base.xcconfig */;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				COPY_PHASE_STRIP = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GCC_NO_COMMON_BLOCKS = YES;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				SDKROOT = iphoneos;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_TESTABILITY = YES;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = WidgetSimpleWidget/WidgetSimpleWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WidgetSimpleWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(WIDGET_SCREEN_NAME)";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
 				);
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				ONLY_ACTIVE_ARCH = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-			};
-			name = Debug;
-		};
-		E4310AE3B0D0FF103C33E1D4 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = C003B65FC9330B83C0C5E4BE /* Base.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				COPY_PHASE_STRIP = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GCC_NO_COMMON_BLOCKS = YES;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				SDKROOT = iphoneos;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				VALIDATE_PRODUCT = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(WIDGET_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "$(WIDGET_PROFILE_SPECIFIER)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
+		};
+		61734600D152CFFC9A981501 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = WidgetSimpleWidget/WidgetSimpleWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WidgetSimpleWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(WIDGET_SCREEN_NAME)";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(WIDGET_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "$(WIDGET_PROFILE_SPECIFIER)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
 		};
 		76917D8EBF9065C39867931F /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -331,8 +322,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WidgetSimple/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "$(HOME_SCREEN_NAME)";
+				INFOPLIST_KEY_CFBundleDisplayName = WidgetSimple;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSAppleMusicUsageDescription = "WidgetSimple shows the cover, title and artist of the song the Music app is playing on its record deck and widget. Nothing else is read.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
@@ -341,8 +334,8 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
-				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROFILE_SPECIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROFILE_SPECIFIER)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -362,8 +355,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WidgetSimple/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "$(HOME_SCREEN_NAME)";
+				INFOPLIST_KEY_CFBundleDisplayName = WidgetSimple;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSAppleMusicUsageDescription = "WidgetSimple shows the cover, title and artist of the song the Music app is playing on its record deck and widget. Nothing else is read.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
@@ -372,8 +367,8 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
-				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROFILE_SPECIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "$(APP_PROFILE_SPECIFIER)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -383,66 +378,75 @@
 			};
 			name = Release;
 		};
-		61734600D152CFFC9A981501 /* Debug */ = {
+		E4310AE3B0D0FF103C33E1D4 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C003B65FC9330B83C0C5E4BE /* Base.xcconfig */;
 			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = WidgetSimpleWidget/WidgetSimpleWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = WidgetSimpleWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "$(HOME_SCREEN_NAME)";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "$(WIDGET_BUNDLE_ID)";
-				PROVISIONING_PROFILE_SPECIFIER = "$(WIDGET_PROFILE_SPECIFIER)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Debug;
-		};
-		16BFCD5D6251E37DA8F18919 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = WidgetSimpleWidget/WidgetSimpleWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = WidgetSimpleWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "$(HOME_SCREEN_NAME)";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "$(WIDGET_BUNDLE_ID)";
-				PROVISIONING_PROFILE_SPECIFIER = "$(WIDGET_PROFILE_SPECIFIER)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				TARGETED_DEVICE_FAMILY = 1;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = HN6QY3V757;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
+		};
+		FD7D64D526EA6EE952A558BD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C003B65FC9330B83C0C5E4BE /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = HN6QY3V757;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		CDB0DB99EDE9B235599BDBFA /* Build configuration list for PBXProject "WidgetSimple" */ = {
+		357E4FCEC655D6FC80DBBB3E /* Build configuration list for PBXNativeTarget "WidgetSimpleWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				FD7D64D526EA6EE952A558BD /* Debug */,
-				E4310AE3B0D0FF103C33E1D4 /* Release */,
+				61734600D152CFFC9A981501 /* Debug */,
+				16BFCD5D6251E37DA8F18919 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -456,11 +460,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		357E4FCEC655D6FC80DBBB3E /* Build configuration list for PBXNativeTarget "WidgetSimpleWidgetExtension" */ = {
+		CDB0DB99EDE9B235599BDBFA /* Build configuration list for PBXProject "WidgetSimple" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				61734600D152CFFC9A981501 /* Debug */,
-				16BFCD5D6251E37DA8F18919 /* Release */,
+				FD7D64D526EA6EE952A558BD /* Debug */,
+				E4310AE3B0D0FF103C33E1D4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

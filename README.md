@@ -1,17 +1,17 @@
 # WidgetSimple
 
-Your apps as plain words on the iPhone Home Screen — in widgets that are **fully
-transparent**: no glass, no rounded rim, no wallpaper screenshots. Tap a word and the
-app opens.
+Your apps as plain words on the iPhone Home Screen, over the wallpaper behind each
+widget. Tap a word and the app opens.
 
 ## What it does
 
 - **One widget, up to 12 apps.** Hold it › *Edit Widget* and pick apps; each one shows
   as a word in the font you chose. A tap opens that app directly
   (`RunSystemShortcutIntent`, iOS 27).
-- **Truly transparent.** The widget has no background of its own, so the wallpaper runs
-  edge to edge behind the words — on any wallpaper, any position, and with Focus modes.
-  No setup: no screenshot of an empty Home Screen, no per-slot slices.
+- **Matched wallpaper.** Each widget draws the piece of wallpaper that sits behind it,
+  cut from two screenshots of an empty Home Screen page (Light and Dark Mode). The app
+  cuts a piece for every slot of the iPhone's widget grid; each widget picks its slot in
+  Edit Widget (Position, Side). Public API only.
 - **Style it in the app.** Font (system, rounded, serif, mono, 40 built-in families,
   your own `.ttf`/`.otf`), size slider, alignment, letter case, white/black/any colour,
   soft shadow, line spacing.
@@ -21,29 +21,14 @@ app opens.
 - **Clock.** Off, time, time + date, or date, in the same font; 12/24 h follows the
   iPhone setting.
 
-## How the transparency works
+## How the background works
 
-Since iOS 26 every widget is drawn inside a system-owned container: a rounded rectangle
-with a Liquid Glass coating and a rim. Nothing the app draws can cover that rim, because
-the host composites it after the extension's snapshot. A container background of
-`Color.clear` gets replaced by the system's glass, and
-`.containerBackgroundRemovable(false)` keeps the container but paints it black.
-
-The container is described by the **widget descriptor** the extension returns to Chrono
-over XPC, so that descriptor is the only host-facing data an extension controls.
-`WidgetDescriptorHook.mm` swizzles
-`-[_TtCC9WidgetKit24WidgetExtensionXPCServer14ExportedObject getAllCurrentDescriptorsWithCompletion:]`,
-rewrites the returned `CHSMutableWidgetDescriptor`s with
-`setBackgroundRemovable:`, `setTransparent:` and `setPreferredBackgroundStyle:`, and hands
-the rebuilt result back.
-
-The Swift result type has no Objective-C accessor and its stored properties have no type
-encoding, so the descriptors are reached by encoding the result, decoding it into a plain
-Objective-C shim, mutating the descriptors there and letting `DescriptorFetchResult`
-rebuild itself from the archive. Every stage is guarded and logged to the App Group
-(`WidgetSimple/hook.log`); on any failure the original object is passed through, so the
-widget can only ever behave as it did before.
-
+Since iOS 26 every widget is drawn inside a system-owned container with a Liquid Glass
+coating and a rim, and an app cannot remove it. WidgetSimple draws the matching piece of
+wallpaper as the container background instead (`Shared/SeeThrough.swift`,
+`WidgetSimple/WallpaperSetupView.swift`), so the widget blends into the Home Screen. A
+widget without a matched piece keeps the system background. The app only uses public
+API; `Scripts/audit-appstore.sh` checks App Store builds for that.
 
 ## Why the apps are picked in Edit Widget
 
@@ -86,12 +71,12 @@ distribution certificate and profiles through the App Store Connect API.
 > starting with *"recent account payments have failed or your spending limit needs to be
 > increased"*; a temporary public fork of the repo builds and uploads for free.
 
-## No name under the widget
+## Name under the widget
 
-The label under a Home Screen widget is the app's Home Screen name
-(`CFBundleDisplayName`). `HOME_SCREEN_NAME` in `Config/Base.xcconfig` is U+2800
-(invisible). If App Review rejects the app under Guideline 2.3.8, set it to
-`WidgetSimple`; large icons hide all labels anyway.
+The label under a Home Screen widget is the widget extension's `CFBundleDisplayName`.
+`HOME_SCREEN_NAME` (the app) is `WidgetSimple`, matching the App Store name as
+Guideline 2.3.8 requires. `WIDGET_SCREEN_NAME` (the widget) is U+2800, so the widget
+label stays invisible.
 
 ## Project layout
 
@@ -99,6 +84,6 @@ The label under a Home Screen widget is the app's Home Screen name
 Config/Base.xcconfig        team, bundle ids, app group, home screen name
 Shared/                     app + widget: look model, fonts, storage, the widget face
 WidgetSimple/               the app (one screen: preview, apps, clock, style)
-WidgetSimpleWidget/         the widget + the descriptor hook that makes it transparent
+WidgetSimpleWidget/         the widget
 AppStore/listing.md         the copy for the App Store listing
 ```

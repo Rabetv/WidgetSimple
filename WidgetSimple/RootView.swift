@@ -1,33 +1,41 @@
-import PhotosUI
-import StoreKit
 import SwiftUI
-import UIKit
 
-/// The app: a one-time tutorial, the paywall until the subscription is active, then
-/// three tabs over the app background — widgets, templates, settings.
+/// The app: a one-time tutorial, the paywall until the subscription is active, the
+/// wallpaper screenshots (App Store build), then the four configurator screens — Home,
+/// Templates, Components, Settings — with the sandbox opening full-screen over them.
 struct RootView: View {
     @StateObject private var license = LicenseStore()
+    @StateObject private var board = BoardStore()
+    @EnvironmentObject private var model: AppModel
+    /// True while the required setup is on screen, so its last tick is seen before
+    /// Continue moves on.
+    @State private var settingUp = false
     @AppStorage("onboarded") private var onboarded = false
     @Environment(\.scenePhase) private var scenePhase
 
     #if targetEnvironment(simulator)
-    /// "-screenshot [-screen editor|templates|settings]" in a simulator build.
+    /// "-screenshot [-screen home|templates|components|settings|style]" in a simulator build.
     static var screenshotScreen: String? {
         let args = ProcessInfo.processInfo.arguments
         guard args.contains("-screenshot") else { return nil }
         if let index = args.firstIndex(of: "-screen"), args.indices.contains(index + 1) {
             return args[index + 1]
         }
-        return "editor"
+        return "home"
     }
 
     @ViewBuilder
     private func screenshotView(_ screen: String) -> some View {
-        switch screen {
-        case "templates": NavigationStack { TemplatesView() }
-        case "settings": NavigationStack { AccountView(license: license) }
-        default: NavigationStack { EditorView() }
+        Group {
+            switch screen {
+            case "home", "iboard": IBoardView()
+            case "gallery", "templates": PresetGalleryView()
+            case "assets", "components": AssetLedgerView()
+            case "settings": SystemSettingsView(license: license)
+            default: WidgetEditorScreen()
+            }
         }
+        .preferredColorScheme(.dark)
     }
     #endif
     var body: some View {
@@ -42,20 +50,28 @@ struct RootView: View {
             normalFlow
             #endif
         }
-        // The design is dark glass over a dark wallpaper in both system appearances.
-        .preferredColorScheme(.dark)
+        .environmentObject(board)
         #if APPSTORE
         // A subscription can lapse or be refunded while the app sits in the background.
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await license.refresh() } }
+        // Widgets placed meanwhile have reported their real sizes: cut the wallpaper
+        // pieces to them.
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            if phase == .active {
+                Task {
+                    await license.refresh()
+                    await model.refreshPiecesIfNeeded()
+                }
+            }
         }
         #endif
     }
 
+    // Every screen is dark glass over the app's own wallpaper, in both system appearances.
     @ViewBuilder
     private var normalFlow: some View {
         if !onboarded {
             OnboardingView { onboarded = true }
+                .preferredColorScheme(.dark)
         } else {
             switch license.status {
             case .checking:
@@ -63,10 +79,24 @@ struct RootView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(AppBackground())
                     .task { await license.refresh() }
+                    .preferredColorScheme(.dark)
             case .unlicensed:
                 PaywallView(license: license)
+                    .preferredColorScheme(.dark)
             case .licensed:
+                #if APPSTORE
+                if model.hasWallpaperShots && !settingUp {
+                    MainTabs(license: license)
+                        .preferredColorScheme(.dark)
+                } else {
+                    WallpaperSetupView(required: true) { settingUp = false }
+                        .onAppear { settingUp = true }
+                        .preferredColorScheme(.dark)
+                }
+                #else
                 MainTabs(license: license)
+                    .preferredColorScheme(.dark)
+                #endif
             }
         }
     }
@@ -74,436 +104,116 @@ struct RootView: View {
 
 private struct MainTabs: View {
     @ObservedObject var license: LicenseStore
-
-    var body: some View {
-        TabView {
-            Tab("Widgets", systemImage: "square.grid.2x2") {
-                HomeView()
-            }
-            Tab("Templates", systemImage: "rectangle.grid.1x2") {
-                TemplatesView()
-            }
-            Tab("Settings", systemImage: "gearshape") {
-                NavigationStack { AccountView(license: license) }
-            }
-        }
-    }
-}
-
-/// Every control that styles the launcher widget, with a live preview. All launcher
-/// widgets on the Home Screen follow this one look.
-struct EditorView: View {
+    @EnvironmentObject private var board: BoardStore
     @EnvironmentObject private var model: AppModel
-    @State private var previewSize: FaceSize = .medium
-    @State private var pickingWallpaper = false
-    @State private var pickingPink = false
-    @State private var wallpaperItem: PhotosPickerItem?
-    @State private var pinkItem: PhotosPickerItem?
-    @State private var pickingBackground = false
-    @State private var backgroundItem: PhotosPickerItem?
 
     var body: some View {
-        Form {
-            previewSection
-            backgroundSection.listRowBackground(GlassRowBackground())
-            #if APPSTORE
-            seeThroughSection.listRowBackground(GlassRowBackground())
-            #endif
-            appsSection.listRowBackground(GlassRowBackground())
-            clockSection.listRowBackground(GlassRowBackground())
-            styleSection.listRowBackground(GlassRowBackground())
-        }
-        .glassList()
-        .navigationTitle("Launcher")
-        .navigationBarTitleDisplayMode(.inline)
-        .photosPicker(isPresented: $pickingWallpaper, selection: $wallpaperItem, matching: .screenshots)
-        .photosPicker(isPresented: $pickingPink, selection: $pinkItem, matching: .screenshots)
-        .photosPicker(isPresented: $pickingBackground, selection: $backgroundItem, matching: .images)
-        .onChange(of: backgroundItem) { _, item in
-            guard let item else { return }
-            backgroundItem = nil
-            Task {
-                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-                model.useBackgroundPhoto(data)
+        TabView(selection: $board.tab) {
+            Tab("Home", systemImage: "house", value: AppTab.home) {
+                IBoardView()
+            }
+            Tab("Templates", systemImage: "rectangle.3.group", value: AppTab.templates) {
+                PresetGalleryView()
+            }
+            Tab("Components", systemImage: "square.stack.3d.up", value: AppTab.components) {
+                AssetLedgerView()
+            }
+            Tab("Settings", systemImage: "slider.horizontal.3", value: AppTab.settings) {
+                SystemSettingsView(license: license)
             }
         }
-        .onChange(of: wallpaperItem) { _, item in
-            guard let item else { return }
-            wallpaperItem = nil
-            Task {
-                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-                await model.useWallpaper(data)
-            }
-        }
-        .onChange(of: pinkItem) { _, item in
-            guard let item else { return }
-            pinkItem = nil
-            Task {
-                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-                await model.usePinkScreenshot(data)
-            }
-        }
-    }
-
-    #if APPSTORE
-    /// Clear or your own photo. Everything here is part of the subscription; nothing
-    /// inside the app is sold separately.
-    private var backgroundSection: some View {
-        Section {
-            Picker("Background", selection: Binding(
-                get: { model.look.background },
-                set: { model.setBackground($0) }
-            )) {
-                ForEach(WidgetBackground.allCases) { option in
-                    Text(option.title).tag(option)
+        .fullScreenCover(item: $board.sandbox) { draft in
+            // Using a template (a new design) waits for the wallpaper setup first.
+            Group {
+                if draft.saved == nil {
+                    DesignSandbox(draft: draft).wallpaperGated()
+                } else {
+                    DesignSandbox(draft: draft)
                 }
             }
-            .pickerStyle(.segmented)
-
-            if model.look.background == .photo {
-                Button {
-                    pickingBackground = true
-                } label: {
-                    Label("Choose a photo", systemImage: "photo")
-                }
-            }
-        } header: {
-            Text("Background")
-        } footer: {
-            Text("Clear removes the widget background so the wallpaper shows through. Photo draws your own picture instead.")
+            .environmentObject(model)
+                .environmentObject(board)
+                .preferredColorScheme(.dark)
         }
-    }
-
-    /// Matched wallpaper: two screenshots, once. Public API only, and a widget without
-    /// a match keeps the system background instead of showing a wrong piece.
-    private var seeThroughSection: some View {
-        Section {
-            Button {
-                pickingWallpaper = true
-            } label: {
-                Label(model.seeThrough.hasWallpaper ? "New wallpaper screenshot" : "Pick a wallpaper screenshot",
-                      systemImage: "photo")
-            }
-
-            if model.seeThrough.finding {
-                Button {
-                    pickingPink = true
-                } label: {
-                    Label("Pick the pink screenshot", systemImage: "camera.viewfinder")
-                }
-                Button("Cancel", role: .cancel) { model.stopFinding() }
-            } else {
-                Button {
-                    model.startFinding()
-                } label: {
-                    Label("Match my widgets", systemImage: "viewfinder")
-                }
-            }
-
-            if model.working {
-                ProgressView()
-            } else if !model.seeThrough.spots.isEmpty {
-                Label("\(model.seeThrough.spots.count) widget\(model.seeThrough.spots.count == 1 ? "" : "s") matched",
-                      systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            }
-        } header: {
-            Text("See-through")
-        } footer: {
-            Text("Two screenshots, once. Redo it only if you change the wallpaper or move a widget — a widget with no match keeps the system background.")
+        .fullScreenCover(isPresented: $board.stylingApps) {
+            WidgetEditorScreen()
+                .environmentObject(model)
+                .environmentObject(board)
+                .preferredColorScheme(.dark)
         }
-    }
-    #endif
-
-    // MARK: Sections
-
-    private var previewSection: some View {
-        Section {
-            Picker("Size", selection: $previewSize) {
-                ForEach(FaceSize.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .listRowBackground(Color.clear)
-
-            WidgetPreviewCard(look: model.look, clock: model.clock, size: previewSize)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-        } header: {
-            Text("Preview")
-        } footer: {
-            #if APPSTORE
-            Text("Your words on the widget background iOS draws. Add the widget once from the Home Screen and style it here.")
-            #else
-            Text("The widget is see-through — the wallpaper shows behind the words. Add it once from the Home Screen and style it here.")
-            #endif
-        }
-    }
-
-    private var appsSection: some View {
-        Section {
-            Label("Hold the widget › Edit Widget to pick the apps.", systemImage: "hand.tap")
-            Label("A tap on a word opens that app directly.", systemImage: "arrow.up.forward.app")
-            Label("Every widget can open a different set.", systemImage: "square.grid.2x2")
-        } header: {
-            Text("Apps")
-        } footer: {
-            Text("iOS only lets the system fill the app list, so it lives in Edit Widget.")
-        }
-    }
-
-    private var clockSection: some View {
-        Section("Clock") {
-            Picker("Clock", selection: $model.clock) {
-                ForEach(ClockOption.allCases, id: \.self) { option in
-                    Text(option.title).tag(option)
-                }
-            }
-            .pickerStyle(.menu)
-        }
-    }
-
-    private var styleSection: some View {
-        Section {
-            NavigationLink {
-                FontPickerView(selection: $model.look.fontID)
-            } label: {
-                LabeledContent("Font", value: FontCatalog.displayName(for: model.look.fontID))
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                LabeledContent("Size", value: "\(Int(model.look.size)) pt")
-                Slider(value: $model.look.size, in: 12...34, step: 1)
-            }
-
-            Picker("Alignment", selection: $model.look.align) {
-                ForEach(TextAlign.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-
-            Picker("Position", selection: $model.look.vAlign) {
-                ForEach(TextVAlign.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-
-            Picker("Arrangement", selection: $model.look.arrangement) {
-                ForEach(Arrangement.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-
-            if model.look.arrangement == .free {
-                Picker("Clock position", selection: $model.look.clockPosition) {
-                    ForEach(WidgetPosition.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.menu)
-
-                nudge("Clock nudge", x: $model.look.clockDX, y: $model.look.clockDY)
-
-                Picker("Apps position", selection: $model.look.appsPosition) {
-                    ForEach(WidgetPosition.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.menu)
-
-                Toggle("Place every word separately", isOn: $model.look.perWordPlacement)
-
-                if model.look.perWordPlacement {
-                    NavigationLink("Word placement") {
-                        WordPlacementView(look: $model.look)
-                    }
-                }
-
-                nudge("Apps nudge", x: $model.look.appsDX, y: $model.look.appsDY)
-            }
-
-            Picker("Letter case", selection: $model.look.letterCase) {
-                ForEach(LetterCase.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-
-            Picker("Color", selection: $model.look.tone) {
-                ForEach(TextTone.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-
-            if model.look.tone == .custom {
-                ColorPicker("Custom color", selection: customColorBinding, supportsOpacity: false)
-            }
-
-            Toggle("Shadow", isOn: $model.look.shadow)
-
-            VStack(alignment: .leading, spacing: 6) {
-                LabeledContent("Spacing", value: String(format: "%.1f×", model.look.spacing))
-                Slider(value: $model.look.spacing, in: 0.6...2.0, step: 0.1)
-            }
-        } header: {
-            Text("Style")
-        }
-    }
-
-    /// Two sliders that move a block by points on top of its anchor.
-    private func nudge(_ title: String, x: Binding<Double>, y: Binding<Double>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            LabeledContent(title, value: "\(Int(x.wrappedValue)), \(Int(y.wrappedValue)) pt")
-            HStack(spacing: 12) {
-                Image(systemName: "arrow.left.and.right")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Slider(value: x, in: -80...80, step: 1)
-            }
-            HStack(spacing: 12) {
-                Image(systemName: "arrow.up.and.down")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Slider(value: y, in: -80...80, step: 1)
-            }
-        }
-    }
-
-    /// The custom colour, kept as a hex string in the look.
-    private var customColorBinding: Binding<Color> {
-        Binding(
-            get: { Color(hex: model.look.customHex) },
-            set: { model.look.customHex = $0.toHex() }
-        )
-    }
-}
-
-// MARK: - Word placement
-
-/// Per-word anchors. The app can't see the app names (iOS resolves them in Edit
-/// Widget), so the rows are word slots: slot 1 is the first app picked.
-private struct WordPlacementView: View {
-    @Binding var look: Look
-
-    var body: some View {
-        List {
-            Section {
-                ForEach(0..<12, id: \.self) { slot in
-                    Picker("Word \(slot + 1)", selection: anchorBinding(slot)) {
-                        ForEach(WidgetPosition.allCases) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.menu)
-                }
-            } footer: {
-                Text("Words you haven't picked in Edit Widget are ignored.")
-            }
-        }
-        .navigationTitle("Word placement")
-    }
-
-    private func anchorBinding(_ slot: Int) -> Binding<WidgetPosition> {
-        Binding(
-            get: { look.wordAnchors["\(slot)"] ?? look.appsPosition },
-            set: { look.wordAnchors["\(slot)"] = $0 }
-        )
-    }
-}
-
-// MARK: - Account
-
-/// Licence controls: manage the subscription or forget the key on this iPhone.
-private struct AccountView: View {
-    @ObservedObject var license: LicenseStore
-    @Environment(\.openURL) private var openURL
-    @State private var viewLog = ""
-    @State private var managing = false
-    @AppStorage("onboarded") private var onboarded = true
-
-    var body: some View {
-        List {
-            #if APPSTORE
-            Section("Subscription") {
-                Button("Manage subscription") { managing = true }
-                Button("Restore Purchases") { Task { await license.restore() } }
-                    .disabled(license.busy)
-                #if TESTFLIGHT
-                if license.testUnlocked {
-                    Button("Re-lock (test the paywall)", role: .destructive) {
-                        license.relockForTesting()
-                    }
-                }
-                #endif
-                // No StoreKit products in a simulator; keep the screenshot clean.
-                if let message = license.message,
-                   !ProcessInfo.processInfo.arguments.contains("-screenshot") {
-                    Text(message).font(.footnote).foregroundStyle(.secondary)
-                }
-                Link("Terms of Use", destination: StoreConfig.termsURL)
-                Link("Support", destination: StoreConfig.supportURL)
-                Link("Privacy Policy", destination: StoreConfig.privacyURL)
-            }
-            .listRowBackground(GlassRowBackground())
-            #else
-            Section("Subscription") {
-                Button("Manage subscription") { openURL(license.manageSubscription()) }
-                Button("Sign out on this iPhone", role: .destructive) { license.signOut() }
-            }
-            .listRowBackground(GlassRowBackground())
-            #endif
-            Section {
-                Button("Show the tutorial again") { onboarded = false }
-                #if TESTFLIGHT
-                NavigationLink("Widget diagnostics") { DiagnosticsView() }
-                #endif
-                LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-            } header: {
-                Text("About")
-            } footer: {
-                #if APPSTORE
-                Text("Widgets keep working when the subscription ends; the subscription unlocks the editor.")
-                #else
-                Text("Widgets stay see-through when the app is locked; the subscription unlocks the editor.")
-                #endif
-            }
-            .listRowBackground(GlassRowBackground())
-        }
-        .glassList()
-        .navigationTitle("Settings")
-        #if APPSTORE
-        .manageSubscriptionsSheet(isPresented: $managing)
-        #else
-        .task { viewLog = SharedStore.shared.loadViewLog() }
-        #endif
     }
 }
 
 // MARK: - Preview
 
-/// The widget as it will look on the Home Screen: just the words.
+/// The widget as it will look on the Home Screen: just the words, in the real ink.
 struct WidgetPreviewCard: View {
     let look: Look
     let clock: ClockOption
     let size: FaceSize
-    /// True for template thumbnails: a neutral panel instead of the app wallpaper, so
-    /// six cards do not all show the same picture.
-    var plainBackdrop = false
+    var apps = ["Phone", "Messages", "Music"]
 
     var body: some View {
         TimelineView(.everyMinute) { context in
             LauncherFace(look: look, clock: clock, date: context.date, size: size,
-                         apps: ["Phone", "Messages", "Music"], color: look.color)
+                         apps: apps, color: look.color)
         }
         .aspectRatio(size.aspectRatio, contentMode: .fit)
         .padding(18)
-        .background {
-            if plainBackdrop {
-                LinearGradient(colors: [look.color.opacity(0.30), Color.black.opacity(0.55)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-            } else {
-                Image("AppBackground").resizable().scaledToFill()
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
+        // The widget as iOS 27 draws it: words on the system's Liquid Glass.
+        .glassEffect(.regular, in: .rect(cornerRadius: 34, style: .continuous))
         .animation(.easeInOut(duration: 0.2), value: look)
         .frame(maxWidth: .infinity)
     }
 }
 
+/// A widget as it lands on the Home Screen, for the app's own pages: its real point
+/// size scaled to fit, in the real ink on the iOS 27 widget glass. With a design, its
+/// Open App slots read App 1, App 2… — the apps themselves are picked in Edit Widget.
+struct WidgetMockup: View {
+    /// nil shows the Apps widget without a design, in the shared look and clock.
+    let design: WidgetDesign?
+    let size: FaceSize
+    @EnvironmentObject private var model: AppModel
+
+    private var real: CGSize { size.pointSize }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: size == .small ? 24 : 28, style: .continuous)
+        GeometryReader { geo in
+            TimelineView(.everyMinute) { context in
+                face(at: context.date)
+                    .frame(width: real.width, height: real.height)
+                    .scaleEffect(geo.size.width / real.width, anchor: .topLeading)
+            }
+        }
+        .aspectRatio(real.width / real.height, contentMode: .fit)
+        .clipShape(shape)
+        // The system widget container: Liquid Glass with its rim, not the app's artwork.
+        .glassEffect(.regular, in: shape)
+        .animation(.easeInOut(duration: 0.2), value: design)
+        .animation(.easeInOut(duration: 0.2), value: model.look)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(design.map { "Preview of \($0.displayName)" } ?? "Preview of the Apps widget")
+    }
+
+    @ViewBuilder
+    private func face(at date: Date) -> some View {
+        if let design {
+            DesignFace(design: design, date: date, size: size, placeholders: true,
+                       color: design.look.color, battery: AppModel.batteryLevel)
+        } else {
+            LauncherFace(look: model.look, clock: model.clock, date: date, size: size,
+                         apps: (1...3).map { String(localized: "App \($0)") }, color: model.look.color)
+        }
+    }
+}
+
 #if TESTFLIGHT
-/// TestFlight only: what the widget extension and the descriptor hook wrote into the
-/// App Group. Without a Mac or Console this is the only way to see a hook that failed
-/// to install, or an extension that cannot reach the shared container.
-private struct DiagnosticsView: View {
-    @State private var hook = ""
+/// TestFlight only: what the widget extension wrote into the App Group. Without a Mac
+/// or Console this is the only way to see an extension that cannot reach the shared
+/// container.
+struct DiagnosticsView: View {
     @State private var view = ""
 
     private var groupID: String {
@@ -520,15 +230,10 @@ private struct DiagnosticsView: View {
             Section("Current look") {
                 LabeledContent("Background", value: SharedStore.shared.loadLook().background.title)
             }
-            Section("hook.log (widget extension)") {
-                Text(hook.isEmpty
+            Section("view.log (widget extension)") {
+                Text(view.isEmpty
                      ? "Empty. The extension has not run, or it cannot see the App Group."
-                     : hook)
-                    .font(.caption.monospaced())
-                    .textSelection(.enabled)
-            }
-            Section("view.log") {
-                Text(view.isEmpty ? "Nothing yet." : view)
+                     : view)
                     .font(.caption.monospaced())
                     .textSelection(.enabled)
             }
@@ -543,19 +248,7 @@ private struct DiagnosticsView: View {
     }
 
     private func load() {
-        hook = SharedStore.shared.loadHookLog()
         view = SharedStore.shared.loadViewLog()
     }
 }
 #endif
-
-private extension Color {
-    /// "#RRGGBB", matching the decoder in `Models.swift`.
-    func toHex() -> String {
-        let ui = UIColor(self)
-        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
-        ui.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        return String(format: "#%02X%02X%02X",
-                      Int((red * 255).rounded()), Int((green * 255).rounded()), Int((blue * 255).rounded()))
-    }
-}

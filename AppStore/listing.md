@@ -2,10 +2,9 @@
 
 Paste-ready copy for App Store Connect. Character limits are noted for each field.
 
-This listing describes the single App Store build (see `RELEASES.md`).
-editor is unlocked by a StoreKit subscription. Nothing here may promise the truly
-the widget removes the system container so the wallpaper shows through, the name under the icon is
-invisible, and the editor is unlocked by a StoreKit subscription.
+This listing describes the App Store build (see `RELEASES.md`): public API only, widgets
+drawn over the matching piece of the person's wallpaper, the name under the icon visible,
+and the editor unlocked by a StoreKit subscription.
 
 ## Name (30)
 
@@ -51,11 +50,15 @@ WHAT YOU GET
 • Stacked layout, or free placement: put the clock and the words anywhere on the widget
 • Every widget on the Home Screen follows the look you set, instantly
 • Small, medium, large and extra-large sizes
+• Per widget in Edit Widget: position, text size, text colour, a dimmer for bright
+  wallpapers, and an option to show the words without opening apps
 
 HOW IT LOOKS
 
-Your words sit on the standard iOS widget background. With the Clear or Tinted Home
-Screen appearance, iOS shows that background as glass over your wallpaper.
+Each widget shows the piece of your wallpaper that sits behind it, so the words look like
+they are written on your Home Screen. Set-up takes two screenshots of an empty Home
+Screen page, one in Light Mode and one in Dark Mode. If a widget isn't at the top left,
+tell it where it sits in Edit Widget › Position.
 
 WHY THE APPS ARE PICKED IN EDIT WIDGET
 
@@ -91,7 +94,7 @@ Privacy Policy: https://rabetv.github.io/widgetsimple-site/privacy.html
 | Introductory offer | Free trial, 3 months, all storefronts, no end date (new subscribers only; Apple enforces one per group and Apple Account) |
 | Display name | WidgetSimple Pro |
 | Description | Unlocks the style editor for all widgets. |
-| Review screenshot | the paywall of the `appstore` build (shows price, length, Restore, Terms, Privacy) |
+| Review screenshot | Apple's subscription screen in the `appstore` build (price, trial, Restore, Terms, Privacy) |
 | Review notes | see "Notes for review" below |
 
 The first subscription must be **submitted together with the app version** (Distribution
@@ -147,28 +150,30 @@ Paste into App Review Information › Notes:
 
 ```
 WidgetSimple shows apps as words in a Home Screen widget; tapping a word opens the app.
+The app uses public API only.
 
-1. Appearance. The widget draws its words over a clear container background and asks WidgetKit
-   to leave the system container out, so the wallpaper shows through. Where that request is not
-   honoured, iOS draws its standard widget background (glass under Clear and Tinted).
+1. Subscription. The first screens are a short tutorial and the StoreKit subscription
+   screen (SubscriptionStoreView) for "WidgetSimple Pro"
+   (com.rabetv.widgetsimple.pro.yearly, 1 year). Restore Purchases, Terms of Use and
+   Privacy Policy are on that screen; Settings › Manage subscription opens the system
+   sheet. Please subscribe with a sandbox account.
 
-2. Choosing apps. Apps are chosen in the widget's Edit Widget sheet (long-press the
+2. Wallpaper set-up. Each widget draws the piece of the wallpaper behind it, cut from
+   screenshots the person picks in the system photo picker. After subscribing the app asks
+   for two screenshots of an empty Home Screen page, one in Light Mode and one in Dark
+   Mode. Until both are picked, widgets show "Open WidgetSimple to add your wallpaper".
+   Any two Home Screen screenshots work for review; one must be taken in Dark Mode.
+
+3. Choosing apps. Apps are chosen in the widget's Edit Widget sheet (touch and hold the
    widget › Edit Widget › App 1…12). Each slot is an App Intents parameter of type
    SystemShortcut, which has no public initializer and cannot be enumerated, so only
-   the system can offer the list of installed apps. The app itself styles the words
-   (font, colour, size, placement, clock) for all widgets at once.
+   the system can offer the list of installed apps. Opening an app uses the public
+   iOS 27 RunSystemShortcutIntent. The app styles the words (font, colour, size,
+   placement, clock) for all widgets at once.
 
-3. Opening an app uses the public iOS 27 system shortcut intent (RunSystemShortcutIntent).
+4. WidgetKit doesn't tell a widget where it sits, so each widget has Position (Top,
+   Middle, Bottom) and Side (Left, Right, for small widgets) in Edit Widget; top left is
+   the default. The app cuts the wallpaper for every position from the two screenshots.
 
-4. Subscription. The style editor unlocks with the auto-renewable subscription
-   "WidgetSimple Pro" (com.rabetv.widgetsimple.pro.yearly, 1 year) with a 3-month free
-   trial for new subscribers; the paywall states the trial length and the yearly price
-   that follows. Buy it from the first screen with a sandbox account; "Restore Purchases", Terms of Use and Privacy
-   Policy are on the same screen, and Account › Manage subscription opens the system
-   subscription sheet. Widgets keep rendering without a subscription.
-
-No login is required. The app collects no data.
-
-To test: install, tap Subscribe and confirm with the sandbox account, then add the
-WidgetSimple widget from the Home Screen gallery and pick apps in Edit Widget.
+No login is required. The app collects no data and makes no network requests of its own.
 ```
