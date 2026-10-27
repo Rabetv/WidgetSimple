@@ -59,7 +59,10 @@ for bin in "${BINARIES[@]}"; do
 done
 
 main="$APP/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")"
-if strings -a "$main" | grep -qF com.rabetv.widgetsimple.pro.yearly; then
+# Read everything first: grep -q stops at the first match, and the closed pipe would
+# make strings fail under pipefail even though the id is there.
+main_strings="$(strings -a "$main")"
+if grep -qF com.rabetv.widgetsimple.pro.yearly <<<"$main_strings"; then
   echo "ok   StoreKit product id compiled into the app (Swift APPSTORE active)"
 else
   echo "FAIL StoreKit product id missing: Swift did not see APPSTORE"; fail=1
