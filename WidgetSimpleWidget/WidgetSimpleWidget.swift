@@ -154,8 +154,17 @@ struct LauncherProvider: AppIntentTimelineProvider {
         }
         // One entry per minute; WidgetKit shows each one on time. WidgetKit renders and
         // stores every entry ahead of time, so keep the run short.
+        // WidgetKit renders and archives every entry up front. Each one carries the
+        // wallpaper pieces (light and dark) or the photo as a full widget-sized bitmap,
+        // so 30 of them blow the archive budget and iOS shows the placeholder (grey bars)
+        // instead. With a picture keep the run short; plain widgets keep 30 minutes.
+        let carriesPicture = entry.background != nil || entry.darkBackground != nil || entry.photo != nil
+        let count = carriesPicture ? 6 : 30
+        #if TESTFLIGHT
+        WidgetLog.write("timeline entries=\(count) picture=\(carriesPicture)")
+        #endif
         let start = Calendar.current.dateInterval(of: .minute, for: .now)?.start ?? .now
-        let entries = (0..<30).map { minute in
+        let entries = (0..<count).map { minute in
             var next = entry
             next.date = start.addingTimeInterval(Double(minute) * 60)
             return next
